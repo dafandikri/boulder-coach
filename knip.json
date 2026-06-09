@@ -9,8 +9,6 @@
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": ["e2e/**"],
   "ignoreDependencies": [
-    "@vitest/coverage-v8",
-    "vitest",
     "tailwindcss",
     "dependency-cruiser",
     "type-coverage",

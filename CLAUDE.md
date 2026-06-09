@@ -34,11 +34,12 @@ Any edit to `src/domain/adaptation.ts` or `src/domain/loadMetrics.ts` MUST be re
 Before starting a task, grep `../docs/superpowers/LEARNINGS.md` for the file/module you're touching.
 On any gate failure, append an entry (see ledger header for format). Fix from the lesson, not blind retry.
 
-## Knip temporary ignores
+## Knip ignores
 
-`knip.json` ignores some deps that Plan 1 code will import but doesn't yet: `dexie`, `fake-indexeddb`,
-`vitest`, `@vitest/coverage-v8`. Remove them from `ignoreDependencies` once the domain/test code imports
-them, so dead-dependency detection is restored.
+`knip.json` `ignoreDependencies` now lists only permanent CLI/config-invoked tooling (prettier,
+dependency-cruiser, type-coverage, knip, tailwind, etc.) — never imported, so knip can't see usage.
+The Plan-1 temporary ignores (dexie, fake-indexeddb, vitest) were removed once the code imported them;
+keep this list to genuine CLI tooling only.
 
 ## Documentation discipline (keep docs current)
 

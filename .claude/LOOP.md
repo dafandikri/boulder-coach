@@ -23,10 +23,11 @@ Drives ANY plan in `../docs/superpowers/plans/` task-by-task. Currently targets 
   bootstrap (Task 9) → Today screen (Task 10) → PWA manifest (Task 11).
 - Use `superpowers:dispatching-parallel-agents` only for the parallel-safe set.
 
-## Knip cleanup (do during/after Plan 1)
+## Knip cleanup — DONE (Plan 1)
 
-As Plan 1 code imports them, REMOVE these from `knip.json` `ignoreDependencies` so dead-dependency
-detection is restored: `dexie`, `fake-indexeddb`, `vitest`, `@vitest/coverage-v8`.
+The temporary ignores (`dexie`, `fake-indexeddb`, `vitest`, `@vitest/coverage-v8`) were removed once
+Plan 1 code imported them. `knip.json` `ignoreDependencies` now holds only permanent CLI tooling.
+When adding a new runtime/test dep, do NOT add it to ignores — let knip verify it's actually imported.
 
 ## Escalation
 
