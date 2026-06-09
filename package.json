@@ -11,7 +11,10 @@
     "format:check": "prettier --check .",
     "depcruise": "depcruise src --config .dependency-cruiser.cjs",
     "type-coverage": "type-coverage --at-least 99 --strict --ignore-files \".next/**\" --ignore-files \"e2e/**\"",
-    "knip": "knip"
+    "knip": "knip",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "gate": "bash scripts/gate.sh"
   },
   "dependencies": {
     "dexie": "^4.4.3",
