@@ -107,3 +107,12 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 - **Fix:** Moved docs INTO the repo at `docs/{specs,plans}` + `docs/LEARNINGS.md` (+ `docs/README.md` index). Added `CONTRIBUTING.md` + `.editorconfig`. Elevated `AGENTS.md` as the canonical cross-tool contract (Codex/OpenCode/Cursor/Aider/Claude); documented `.claude/` as optional convenience. Updated all path refs.
 - **Prevention:** "The gate is the contract" — enforcement is plain shell+git+CI, tool-independent. Any agent or human contributes the same way. Docs are version-controlled with the code.
 - **Attempts to green:** 1
+
+## 2026-06-09 — .github/workflows/ci.yml — CI (infra)
+
+- **Task:** Post-push CI fix
+- **What failed:** CI `actions/setup-node` step: "Some specified paths were not resolved, unable to cache dependencies."
+- **Root cause:** ci.yml was written for a NESTED layout (`working-directory: boulder-coach`, `cache-dependency-path: boulder-coach/pnpm-lock.yaml`), but `boulder-coach` was pushed AS the repo root, so those paths don't exist.
+- **Fix:** Removed `defaults.run.working-directory` and the nested `cache-dependency-path`; setup-node auto-detects the root `pnpm-lock.yaml`.
+- **Prevention:** When a project dir becomes the repo root, CI paths must be repo-root-relative. Verified locally; pushing re-triggers CI.
+- **Attempts to green:** 1
