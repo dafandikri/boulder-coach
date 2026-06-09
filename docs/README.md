@@ -22,6 +22,10 @@ All project documentation lives **inside the repo** so it's discoverable when re
 - [`WORKFLOW.md`](WORKFLOW.md) — how to do high-quality dev/agent work here: the Spec→Plan→Execute→
   Verify loop, TDD, the gate-as-contract, working with AI agents, safety discipline, and the learning
   loop. **Start here if you're new.**
+- [`AGENT-SKILLS.md`](AGENT-SKILLS.md) — the capabilities AI agents need (spec, plan, TDD, debug,
+  review, verify) and how to get them in **Claude Code, OpenCode, Codex, Cursor, Aider, or any
+  model/provider**. Answers "do I need the superpowers skill?" (no) and why the harness keeps output
+  best regardless of model.
 
 ## Learnings
 

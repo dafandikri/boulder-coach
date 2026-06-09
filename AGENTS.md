@@ -20,7 +20,9 @@ change is acceptable no matter how it was written. See [`CONTRIBUTING.md`](CONTR
 **optional Claude Code convenience**. Everything it encodes also lives here and in `docs/specs/`, so no
 other tool or human is at a disadvantage. The canonical injury-safety rule table is in
 `docs/specs/2026-06-09-bouldering-coach-app-design.md`. The full development workflow and best
-practices are in `docs/WORKFLOW.md`.
+practices are in `docs/WORKFLOW.md`. Which agent capabilities you need and how to get them in any tool
+(Claude Code / OpenCode / Codex / Cursor / Aider / raw models) are in `docs/AGENT-SKILLS.md` — no
+specific tool or plugin is required.
 
 # Working in this repo (AI harness)
 
