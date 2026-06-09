@@ -2,21 +2,13 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/app/**/{page,layout}.tsx",
-    "src/app/**/route.ts",
     "tests/**/*.test.ts",
-    "src/domain/types.ts"
+    "src/domain/types.ts",
+    "src/domain/insights.ts",
+    "src/domain/drills.ts"
   ],
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": ["e2e/**"],
   "ignoreBinaries": ["uvx"],
-  "ignoreDependencies": [
-    "tailwindcss",
-    "dependency-cruiser",
-    "type-coverage",
-    "knip",
-    "prettier",
-    "eslint-config-prettier",
-    "typescript-eslint",
-    "@tailwindcss/postcss"
-  ]
+  "ignoreDependencies": ["tailwindcss"]
 }
