@@ -20,6 +20,11 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/no-explicit-any': 'error',
       // Numbers in template literals are a legitimate, common idiom (indexed IDs).
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      // Allow `const { id: _id, ...rest } = row` to omit fields, and _-prefixed intentional unused.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
     },
   },
   {

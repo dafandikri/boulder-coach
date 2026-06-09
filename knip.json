@@ -11,8 +11,6 @@
   "ignoreDependencies": [
     "@vitest/coverage-v8",
     "vitest",
-    "dexie",
-    "fake-indexeddb",
     "tailwindcss",
     "dependency-cruiser",
     "type-coverage",
