@@ -12,6 +12,7 @@ export interface IClimbRepo {
   saveProgram(program: Program): Promise<void>;
 
   getCheckIn(dateIso: string): Promise<CheckIn | undefined>;
+  getCheckIns(): Promise<CheckIn[]>;
   saveCheckIn(checkIn: CheckIn): Promise<void>;
 
   getLogs(): Promise<SessionLog[]>;

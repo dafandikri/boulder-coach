@@ -67,6 +67,12 @@ export class DexieClimbRepo implements IClimbRepo {
     return row?.checkIn;
   }
 
+  async getCheckIns(): Promise<CheckIn[]> {
+    return (await this.db.checkIns.toArray())
+      .map((r) => r.checkIn)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   async saveCheckIn(checkIn: CheckIn): Promise<void> {
     await this.db.checkIns.put({ date: checkIn.date, checkIn });
   }

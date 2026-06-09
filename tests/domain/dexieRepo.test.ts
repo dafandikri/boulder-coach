@@ -45,6 +45,29 @@ describe('DexieClimbRepo', () => {
     expect((await repo.getActiveProgram())?.id).toBe('prog-test-2');
   });
 
+  it('returns all check-ins sorted by date', async () => {
+    await repo.saveCheckIn({
+      date: '2026-06-11',
+      sleepQuality: 3,
+      overallFatigue: 3,
+      soreness: {},
+      pain: {},
+      motivation: 3,
+    });
+    await repo.saveCheckIn({
+      date: '2026-06-09',
+      sleepQuality: 4,
+      overallFatigue: 2,
+      soreness: {},
+      pain: {},
+      motivation: 4,
+    });
+    const all = await repo.getCheckIns();
+    expect(all).toHaveLength(2);
+    expect(all[0]!.date).toBe('2026-06-09');
+    expect(all[1]!.date).toBe('2026-06-11');
+  });
+
   it('round-trips a check-in by date', async () => {
     const checkIn: CheckIn = {
       date: '2026-06-09',
