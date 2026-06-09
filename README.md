@@ -4,10 +4,10 @@ An adaptive bouldering training app (Next.js PWA) **plus** the AI-first developm
 builds and maintains it. The app tells an intermediate (V4–V6) gym climber exactly what to train
 today, adapts to performance and how they feel, and keeps them out of injury.
 
-- **App design spec:** `../docs/superpowers/specs/2026-06-09-bouldering-coach-app-design.md`
-- **Harness design spec:** `../docs/superpowers/specs/2026-06-09-ai-harness-design.md`
-- **Plans:** `../docs/superpowers/plans/`
-- **Learnings ledger:** `../docs/superpowers/LEARNINGS.md`
+- **App design spec:** `docs/specs/2026-06-09-bouldering-coach-app-design.md`
+- **Harness design spec:** `docs/specs/2026-06-09-ai-harness-design.md`
+- **Plans:** `docs/plans/`
+- **Learnings ledger:** `docs/LEARNINGS.md`
 
 ---
 
@@ -45,6 +45,11 @@ The layering is **enforced automatically** by `dependency-cruiser`: `src/domain`
 Production-grade, automated quality enforcement so AI agents (and humans) can only commit correct
 work. One deterministic gate, four enforcement tiers, a safety reviewer, and a learning ledger.
 
+**Tool-agnostic by design.** The enforcement is plain shell + git + GitHub — it works the same whether
+you use Claude Code, OpenCode, Codex, Cursor, Aider, or hand-code. `AGENTS.md` is the cross-tool
+instruction file every agent reads; `.claude/` is optional Claude Code convenience. **The gate is the
+contract.** See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ### The gate (`scripts/gate.sh`) — single source of truth
 
 Runs fast-to-slow; exit code is law:
@@ -78,7 +83,7 @@ Runs fast-to-slow; exit code is law:
 
 ### Learning ledger + autonomous loop
 
-- **Ledger** (`../docs/superpowers/LEARNINGS.md`): every gate failure → root cause → fix → prevention.
+- **Ledger** (`docs/LEARNINGS.md`): every gate failure → root cause → fix → prevention.
   Recurring failures (≥2×) get **promoted** into automated checks.
 - **Loop** (`.claude/LOOP.md`): plan-agnostic protocol — fresh subagent per task → gate → safety
   review on domain files → ledger on failure → feedback retry ≤3 → local commit. Never pushes.
@@ -86,7 +91,7 @@ Runs fast-to-slow; exit code is law:
 ## Documentation discipline
 
 On any **substantial** change to infra, design, or system behavior, update the relevant docs **in the
-same commit**: this `README.md`, `AGENTS.md`, `CLAUDE.md`, and the specs in `../docs/superpowers/`.
+same commit**: this `README.md`, `AGENTS.md`, `CLAUDE.md`, and the specs in `docs/`.
 Docs are part of "done" — see `AGENTS.md` → "Documentation discipline".
 
 ## Scripts

@@ -31,7 +31,7 @@ Any edit to `src/domain/adaptation.ts` or `src/domain/loadMetrics.ts` MUST be re
 
 ## Learning ledger
 
-Before starting a task, grep `../docs/superpowers/LEARNINGS.md` for the file/module you're touching.
+Before starting a task, grep `docs/LEARNINGS.md` for the file/module you're touching.
 On any gate failure, append an entry (see ledger header for format). Fix from the lesson, not blind retry.
 
 ## Knip ignores
@@ -44,7 +44,7 @@ keep this list to genuine CLI tooling only.
 ## Documentation discipline (keep docs current)
 
 On any **substantial** change to infra, design, or system behavior, update the affected docs in the
-SAME commit: `README.md`, `AGENTS.md`, this `CLAUDE.md`, the specs under `../docs/superpowers/`, and
+SAME commit: `README.md`, `AGENTS.md`, this `CLAUDE.md`, the specs under `docs/`, and
 `.claude/LOOP.md` if the loop/gate changed. Docs are part of "done". See `AGENTS.md` →
 "Documentation discipline" for the full rule. Trivial behavior-preserving tweaks don't require doc updates.
 

@@ -6,6 +6,21 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
+# Any tool, any agent, or by hand
+
+This file (`AGENTS.md`) is the **canonical, tool-neutral instruction set** for this repo — the
+cross-tool standard read by Codex, OpenCode, Cursor, Aider, Continue, and Claude Code alike. You do
+not need any specific AI tool to contribute; a human hand-coding follows the same rules.
+
+The enforcement is tool-independent: `scripts/gate.sh`, the git hooks, and CI are plain shell/git/
+GitHub and run identically for everyone. **The gate is the contract** — if `pnpm gate` is green, your
+change is acceptable no matter how it was written. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+`.claude/` (a safety-review subagent, a rule-authoring skill, a Stop-gate hook, the loop runbook) is
+**optional Claude Code convenience**. Everything it encodes also lives here and in `docs/specs/`, so no
+other tool or human is at a disadvantage. The canonical injury-safety rule table is in
+`docs/specs/2026-06-09-bouldering-coach-app-design.md`.
+
 # Working in this repo (AI harness)
 
 This project is built and maintained under an AI-first quality harness. Before claiming any task done:
@@ -18,7 +33,7 @@ This project is built and maintained under an AI-first quality harness. Before c
 - **Safety files** `src/domain/adaptation.ts` and `src/domain/loadMetrics.ts`: use the
   `domain-rule-authoring` skill and get the `safety-rule-reviewer` agent to approve before commit.
 - **Git:** local commits only (conventional commits). NEVER `git push` / open PRs — denied by config.
-- **Learning ledger:** before a task, grep `../docs/superpowers/LEARNINGS.md` for files you touch; on
+- **Learning ledger:** before a task, grep `docs/LEARNINGS.md` for files you touch; on
   any gate failure, append an entry (root cause → fix → prevention).
 
 # Documentation discipline (keep docs current)
@@ -29,7 +44,7 @@ itself — update the affected docs **in the same commit**:
 
 - `README.md` — system architecture, harness infra, scripts, tech stack.
 - `AGENTS.md` / `CLAUDE.md` — rules and conventions agents must follow.
-- `../docs/superpowers/specs/` — design specs when the design changes.
+- `docs/specs/` — design specs when the design changes.
 - `.claude/LOOP.md` — when the loop/gate protocol changes.
 
 Rule of thumb for "substantial": if a teammate or a fresh agent would be misled by the current docs

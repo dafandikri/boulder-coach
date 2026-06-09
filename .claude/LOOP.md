@@ -1,11 +1,11 @@
 # Orchestration Loop Runbook (plan-agnostic)
 
-Drives ANY plan in `../docs/superpowers/plans/` task-by-task. Currently targets Plan 1
+Drives ANY plan in `docs/plans/` task-by-task. Currently targets Plan 1
 (`2026-06-09-bouldering-coach-core-engine.md`).
 
 ## Per-task protocol
 
-1. Read the next `- [ ]` task. Grep `../docs/superpowers/LEARNINGS.md` for the files it touches; include hits in the brief.
+1. Read the next `- [ ]` task. Grep `docs/LEARNINGS.md` for the files it touches; include hits in the brief.
 2. Dispatch a FRESH subagent (TDD: failing test → minimal impl → refactor).
 3. Run `pnpm gate`. Exit code is law.
 4. If a domain safety file changed (`src/domain/adaptation.ts` or `src/domain/loadMetrics.ts`) → invoke the `safety-rule-reviewer` agent. On FAIL: max 1 retry, then STOP + escalate.

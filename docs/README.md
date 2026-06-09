@@ -1,0 +1,29 @@
+# Docs
+
+All project documentation lives **inside the repo** so it's discoverable when reading the codebase
+(and version-controlled alongside the code it describes).
+
+## Specs (the "what" and "why")
+
+- [`specs/2026-06-09-bouldering-coach-app-design.md`](specs/2026-06-09-bouldering-coach-app-design.md)
+  — the app: problem, architecture, data model, and the **canonical injury-safety rule table**.
+- [`specs/2026-06-09-ai-harness-design.md`](specs/2026-06-09-ai-harness-design.md)
+  — the AI development harness: gate, enforcement tiers, safety review, learning loop, scalability.
+
+## Plans (the "how", task-by-task)
+
+- [`plans/2026-06-09-bouldering-coach-core-engine.md`](plans/2026-06-09-bouldering-coach-core-engine.md)
+  — Plan 1: the domain engine + Today screen (built).
+- [`plans/2026-06-09-ai-harness-setup.md`](plans/2026-06-09-ai-harness-setup.md)
+  — building the harness itself (built).
+
+## Learnings
+
+- [`LEARNINGS.md`](LEARNINGS.md) — append-only ledger: every gate failure → root cause → fix →
+  prevention. Recurring failures get promoted into automated checks. **Read before starting a task**;
+  grep it for the files you're about to touch.
+
+## How docs stay current
+
+Documentation is part of "done". Any substantial change to infra/design/system updates the relevant
+doc in the same commit — see [`../AGENTS.md`](../AGENTS.md) → "Documentation discipline".
