@@ -50,7 +50,7 @@ boulder-coach/
 
 - [ ] **Step 1: Scaffold Next.js app (non-interactive)**
 
-Run from `/Users/dafandikri/Documents/Personal/Climbing App`:
+Run from `/Users/dafandikri/Documents/Personal/Climbing-App`:
 
 ```bash
 pnpm create next-app@latest boulder-coach --typescript --tailwind --app --src-dir --eslint --import-alias "@/*" --use-pnpm --yes

@@ -16,7 +16,7 @@
 ## File Structure
 
 ```
-Climbing App/
+Climbing-App/
   docs/superpowers/
     LEARNINGS.md                     # NEW — append-only failure/learning ledger
   boulder-coach/                     # NEW — scaffolded app + control plane
@@ -61,7 +61,7 @@ Climbing App/
 
 - [ ] **Step 1: Scaffold Next.js app (non-interactive)**
 
-Run from `/Users/dafandikri/Documents/Personal/Climbing App`:
+Run from `/Users/dafandikri/Documents/Personal/Climbing-App`:
 
 ```bash
 pnpm create next-app@latest boulder-coach --typescript --tailwind --app --src-dir --eslint --import-alias "@/*" --use-pnpm --yes
