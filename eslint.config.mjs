@@ -18,6 +18,16 @@ const eslintConfig = defineConfig([
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      // Numbers in template literals are a legitimate, common idiom (indexed IDs).
+      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+    },
+  },
+  {
+    // Tests legitimately assert known shape; non-null assertions are ergonomic here.
+    // Domain code keeps noUncheckedIndexedAccess strictness.
+    files: ['tests/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
   eslintConfigPrettier,

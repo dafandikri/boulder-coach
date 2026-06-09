@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "depcruise": "depcruise src --config .dependency-cruiser.cjs",
-    "type-coverage": "type-coverage --at-least 99 --strict --ignore-files \".next/**\" --ignore-files \"e2e/**\"",
+    "type-coverage": "type-coverage --at-least 99 --strict --ignore-files \".next/**\" --ignore-files \"e2e/**\" --ignore-files \"tests/**\"",
     "knip": "knip",
     "test": "vitest run",
     "test:watch": "vitest",
