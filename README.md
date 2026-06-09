@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Boulder Coach
 
-## Getting Started
+An adaptive bouldering training app (Next.js PWA) **plus** the AI-first development harness that
+builds and maintains it. The app tells an intermediate (V4–V6) gym climber exactly what to train
+today, adapts to performance and how they feel, and keeps them out of injury.
 
-First, run the development server:
+- **App design spec:** `../docs/superpowers/specs/2026-06-09-bouldering-coach-app-design.md`
+- **Harness design spec:** `../docs/superpowers/specs/2026-06-09-ai-harness-design.md`
+- **Plans:** `../docs/superpowers/plans/`
+- **Learnings ledger:** `../docs/superpowers/LEARNINGS.md`
+
+---
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev        # http://localhost:3000
+pnpm gate       # run the full quality gate (must be green before any commit)
+pnpm test       # vitest (domain) ;  pnpm e2e  for Playwright smoke
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## System architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Layered, with pure domain logic decoupled from storage and UI:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+UI        — Next.js App Router (PWA): Today screen, check-in, session player
+─────────────────────────────────────────────────────────────────────────
+Domain    — pure TypeScript, NO I/O (testable in isolation)
+  • loadMetrics   sRPE, acute/chronic, ACWR
+  • warmup        RAMP warm-up generator
+  • periodization 6-week waved program
+  • adaptation    safety-first rules engine (adjusts today's session)
+─────────────────────────────────────────────────────────────────────────
+Repository — IClimbRepo interface (the only storage seam)
+  └ DexieClimbRepo (IndexedDB) now → cloud impl later, domain untouched
+```
 
-## Learn More
+The layering is **enforced automatically** by `dependency-cruiser`: `src/domain` may not import from
+`src/data` or `src/app`. A wrong import fails the gate.
 
-To learn more about Next.js, take a look at the following resources:
+## The AI harness (infra)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Production-grade, automated quality enforcement so AI agents (and humans) can only commit correct
+work. One deterministic gate, four enforcement tiers, a safety reviewer, and a learning ledger.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### The gate (`scripts/gate.sh`) — single source of truth
 
-## Deploy on Vercel
+Runs fast-to-slow; exit code is law:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| #   | Step             | Tool                                                           |
+| --- | ---------------- | -------------------------------------------------------------- |
+| 1   | format           | Prettier `--check`                                             |
+| 2   | lint             | ESLint (typescript-eslint **strict-type-checked**, bans `any`) |
+| 3   | typecheck        | `tsc --noEmit` (strict)                                        |
+| 4   | architecture     | dependency-cruiser (layering: domain ↛ data ↛ app)             |
+| 5   | type-coverage    | `type-coverage --at-least 99`                                  |
+| 6   | tests + coverage | Vitest v8 (safety files = 100% branch)                         |
+| 7   | dead-code        | Knip                                                           |
+| 8   | build            | `next build`                                                   |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Four enforcement tiers (defense in depth)
+
+1. **In-loop** — orchestrator runs `pnpm gate` per task before commit.
+2. **Pre-commit** (`.husky/pre-commit`) — lint-staged (format + lint) + `tsc` on staged files.
+3. **Pre-push** (`.husky/pre-push`) — full `pnpm gate`.
+4. **CI** (`.github/workflows/ci.yml`) — full gate + Semgrep + Playwright on push/PR.
+
+### Safety net
+
+- **`safety-rule-reviewer`** agent (`.claude/agents/`) reviews every change to `adaptation.ts` /
+  `loadMetrics.ts` against the canonical injury-safety rule table. On deviation the loop **stops**.
+- **`domain-rule-authoring`** skill (`.claude/skills/`) injects the canonical ACWR math + rule table
+  so safety logic is implemented from source, not paraphrase.
+- **Git guardrails** (`.claude/settings.json`): `git push` / `gh pr create` are denied to agents;
+  a Stop-gate hook blocks "done" claims while the gate is red. Nothing leaves the machine without a human.
+
+### Learning ledger + autonomous loop
+
+- **Ledger** (`../docs/superpowers/LEARNINGS.md`): every gate failure → root cause → fix → prevention.
+  Recurring failures (≥2×) get **promoted** into automated checks.
+- **Loop** (`.claude/LOOP.md`): plan-agnostic protocol — fresh subagent per task → gate → safety
+  review on domain files → ledger on failure → feedback retry ≤3 → local commit. Never pushes.
+
+## Documentation discipline
+
+On any **substantial** change to infra, design, or system behavior, update the relevant docs **in the
+same commit**: this `README.md`, `AGENTS.md`, `CLAUDE.md`, and the specs in `../docs/superpowers/`.
+Docs are part of "done" — see `AGENTS.md` → "Documentation discipline".
+
+## Scripts
+
+| Script                                      | Purpose                                 |
+| ------------------------------------------- | --------------------------------------- |
+| `pnpm gate`                                 | Full quality gate (the source of truth) |
+| `pnpm dev` / `build` / `start`              | Next.js                                 |
+| `pnpm test` / `test:watch`                  | Vitest domain tests                     |
+| `pnpm e2e`                                  | Playwright smoke                        |
+| `pnpm lint` / `format` / `format:check`     | ESLint / Prettier                       |
+| `pnpm depcruise` / `type-coverage` / `knip` | Static analysis                         |
+
+## Tech stack
+
+Next.js 16 (App Router) · TypeScript (strict) · Tailwind v4 · Dexie (IndexedDB) · Vitest · Playwright
+· ESLint strict-type-checked · Prettier · dependency-cruiser · type-coverage · Knip · Semgrep ·
+Husky + lint-staged · GitHub Actions · pnpm.

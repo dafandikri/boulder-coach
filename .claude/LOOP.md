@@ -10,8 +10,10 @@ Drives ANY plan in `../docs/superpowers/plans/` task-by-task. Currently targets 
 3. Run `pnpm gate`. Exit code is law.
 4. If a domain safety file changed (`src/domain/adaptation.ts` or `src/domain/loadMetrics.ts`) → invoke the `safety-rule-reviewer` agent. On FAIL: max 1 retry, then STOP + escalate.
 5. On gate failure: append a LEARNINGS.md entry, re-dispatch a fresh subagent with the EXACT failure output and "fix ONLY this, do not weaken tests". Retry up to N=3. Persistent → STOP + escalate.
-6. `git add -A && git commit` (conventional message). NEVER push.
-7. Next task.
+6. If the task made a SUBSTANTIAL change to infra/design/system/scripts/loop, update the affected docs
+   (`README.md`, `AGENTS.md`, `CLAUDE.md`, specs, this `LOOP.md`) in the SAME commit. Docs are part of "done".
+7. `git add -A && git commit` (conventional message). NEVER push.
+8. Next task.
 
 ## Parallelization map (Plan 1)
 

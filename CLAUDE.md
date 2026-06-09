@@ -40,6 +40,13 @@ On any gate failure, append an entry (see ledger header for format). Fix from th
 `vitest`, `@vitest/coverage-v8`. Remove them from `ignoreDependencies` once the domain/test code imports
 them, so dead-dependency detection is restored.
 
+## Documentation discipline (keep docs current)
+
+On any **substantial** change to infra, design, or system behavior, update the affected docs in the
+SAME commit: `README.md`, `AGENTS.md`, this `CLAUDE.md`, the specs under `../docs/superpowers/`, and
+`.claude/LOOP.md` if the loop/gate changed. Docs are part of "done". See `AGENTS.md` →
+"Documentation discipline" for the full rule. Trivial behavior-preserving tweaks don't require doc updates.
+
 ## YAGNI
 
 Simplest solution that satisfies the spec + tests. No speculative abstraction.
