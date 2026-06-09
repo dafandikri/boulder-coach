@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": ["Bash(git push:*)", "Bash(git push)", "Bash(gh pr create:*)", "Bash(gh pr merge:*)"]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && pnpm gate >/tmp/gate.log 2>&1 || { echo 'BLOCKED: gate failing. See /tmp/gate.log. Fix before claiming done.'; exit 2; }"
+          }
+        ]
+      }
+    ]
+  }
+}
