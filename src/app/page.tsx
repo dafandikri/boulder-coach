@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 
@@ -32,6 +33,18 @@ export default function TodayPage() {
         <h1 className="text-2xl font-bold">Today</h1>
         <p className="text-sm capitalize text-gray-500">{session.type.replace('-', ' ')}</p>
       </header>
+
+      <div className="flex gap-3">
+        <Link href="/checkin" className="rounded-lg border px-4 py-2 text-sm font-medium">
+          Check-in
+        </Link>
+        <Link
+          href="/session"
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+        >
+          Start session
+        </Link>
+      </div>
 
       {changes.length > 0 && (
         <section className="space-y-1 rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
