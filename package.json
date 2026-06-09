@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gate": "bash scripts/gate.sh",
-    "prepare": "husky"
+    "prepare": "husky",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "dexie": "^4.4.3",
@@ -24,6 +25,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
