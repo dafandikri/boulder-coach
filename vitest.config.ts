@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    // vitest v4 exits 1 on "no test files"; keep the gate green until real tests exist.
+    passWithNoTests: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],
