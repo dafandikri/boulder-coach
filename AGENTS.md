@@ -24,6 +24,13 @@ practices are in `docs/WORKFLOW.md`. Which agent capabilities you need and how t
 (Claude Code / OpenCode / Codex / Cursor / Aider / raw models) are in `docs/AGENT-SKILLS.md` — no
 specific tool or plugin is required.
 
+**Portable skills:** the [`skills/`](skills/) directory holds tool-neutral, reusable procedures —
+**read the matching one before the matching task** to clear the gate on the first pass (fewest
+iterations). Start with [`skills/passing-the-gate.md`](skills/passing-the-gate.md) before writing any
+code, [`skills/test-driven-development.md`](skills/test-driven-development.md) before tests, and
+[`skills/safety-critical-change.md`](skills/safety-critical-change.md) before touching `adaptation.ts`
+or `loadMetrics.ts`. Index: [`skills/README.md`](skills/README.md).
+
 # Working in this repo (AI harness)
 
 This project is built and maintained under an AI-first quality harness. Before claiming any task done:

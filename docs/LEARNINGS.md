@@ -125,3 +125,11 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 - **Fix:** CI installs `uv` (astral-sh/setup-uv) and runs `pnpm semgrep` = `uvx semgrep --config=p/default --config=p/typescript --error --metrics=off src`. Validated locally: 211 rules, 14 files, 0 findings. Added as a reproducible pnpm script.
 - **Prevention:** Pin concrete rulesets (no telemetry, deterministic); use uv for Python tooling per project preference. Local `pnpm semgrep` mirrors CI exactly.
 - **Attempts to green:** 2
+
+## 2026-06-09 — skills/ — universal agent skills
+
+- **Task:** Add portable skills for minimal-iteration, highest-quality output
+- **What changed:** Best practices lived only as prose (WORKFLOW/AGENT-SKILLS) and Claude-only `.claude/` packaging.
+- **Fix:** Added tool-neutral `skills/` (plan-a-change, passing-the-gate, test-driven-development, safety-critical-change, debug-systematically, verify-before-done) readable by ANY agent/model; referenced from AGENTS.md. `passing-the-gate` distills this ledger into first-pass-green rules.
+- **Prevention:** Future agents read the matching skill BEFORE the task → clear the gate first try instead of repeating our iterations. This ledger feeds the skills; the skills prevent the ledger from growing for the same reasons.
+- **Attempts to green:** 1

@@ -41,6 +41,14 @@ show how to get the **same capability** elsewhere. The workflow is what matters 
 None of the right-hand approaches are worse — they produce the **same gate-passing output**. The skill
 just front-loads the workflow so the agent doesn't have to be told each time.
 
+### This repo ships these as portable skill files
+
+You don't have to reinvent the prompts: [`../skills/`](../skills/) contains tool-neutral markdown
+versions any agent or model can read directly — `plan-a-change`, `passing-the-gate`,
+`test-driven-development`, `safety-critical-change`, `debug-systematically`, `verify-before-done`. They
+are distilled from `LEARNINGS.md`, so using them means you skip the iterations we already paid for.
+Read the matching skill **before** the matching task. Index: [`../skills/README.md`](../skills/README.md).
+
 ---
 
 ## How to set up each tool to follow this repo
