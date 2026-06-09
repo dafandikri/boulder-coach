@@ -76,6 +76,21 @@ export default function TodayPage() {
           </li>
         ))}
       </ol>
+
+      <nav className="grid grid-cols-2 gap-2 border-t pt-4 text-center text-sm">
+        <Link href="/history" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
+          History
+        </Link>
+        <Link href="/insights" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
+          Insights
+        </Link>
+        <Link href="/program" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
+          Program
+        </Link>
+        <Link href="/drills" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
+          Drills
+        </Link>
+      </nav>
     </main>
   );
 }

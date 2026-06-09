@@ -142,3 +142,24 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 - **Fix:** e2e now serves the PRODUCTION build (`pnpm build && pnpm start`) — no on-demand compile, no races, and it tests what ships. Kill stale :3000 + clear `.next` if it recurs locally.
 - **Prevention:** Smoke e2e against production serve, not dev. Documented in passing-the-gate (e2e section could note this).
 - **Attempts to green:** 2
+
+## 2026-06-09 — knip.json — self-healing config (various)
+
+- **What happened:** Knip got smarter over time and detected dependencies that were
+  listed in `ignoreDependencies` as actually used (eslint-config-prettier,
+  typescript-eslint, @tailwindcss/postcss, etc.). Also: `src/app/**/route.ts` pattern
+  matched zero files.
+- **Root cause:** ignore list grew during bootstrap to suppress warnings; never cleaned up.
+- **Fix:** Removed all resolved entries; kept only `tailwindcss` (CLI binary, not imported).
+- **Prevention:** Check `knip.json` after each major dep add. Knip's own warnings about
+  "Remove from ignoreDependencies" are actionable — act on them.
+
+## 2026-06-09 — drills/page.tsx — lint: no-confusing-void-expression
+
+- **What happened:** Arrow function event handlers `onClick={() => setTab('technique')}`
+  were flagged by strict-type-checked ESLint. The arrow returns `void` (from `setTab`),
+  which the rule considers confusing.
+- **Root cause:** shorthand arrow `() => expr` returns the value of expr. When expr is
+  `setTab(...)` which returns `void`, the rule flags the implicit void return.
+- **Fix:** Use block body `() => { setTab('technique'); }`.
+- **Prevention:** All UI event handlers that call setState must use block-body arrows.
