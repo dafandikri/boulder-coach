@@ -116,3 +116,12 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 - **Fix:** Removed `defaults.run.working-directory` and the nested `cache-dependency-path`; setup-node auto-detects the root `pnpm-lock.yaml`.
 - **Prevention:** When a project dir becomes the repo root, CI paths must be repo-root-relative. Verified locally; pushing re-triggers CI.
 - **Attempts to green:** 1
+
+## 2026-06-09 — ci.yml semgrep — CI (infra)
+
+- **Task:** Post-push CI fix #2
+- **What failed:** `pnpm dlx semgrep` → `ERR_PNPM_DLX_NO_BIN` (npm `semgrep` package has no bin; semgrep is a Python tool). Also `--config=auto` requires telemetry on (`--metrics=off` rejected).
+- **Root cause:** Wrong installer (npm) for a Python tool; `auto` config needs metrics.
+- **Fix:** CI installs `uv` (astral-sh/setup-uv) and runs `pnpm semgrep` = `uvx semgrep --config=p/default --config=p/typescript --error --metrics=off src`. Validated locally: 211 rules, 14 files, 0 findings. Added as a reproducible pnpm script.
+- **Prevention:** Pin concrete rulesets (no telemetry, deterministic); use uv for Python tooling per project preference. Local `pnpm semgrep` mirrors CI exactly.
+- **Attempts to green:** 2

@@ -104,6 +104,7 @@ Docs are part of "done" — see `AGENTS.md` → "Documentation discipline".
 | `pnpm e2e`                                  | Playwright smoke                        |
 | `pnpm lint` / `format` / `format:check`     | ESLint / Prettier                       |
 | `pnpm depcruise` / `type-coverage` / `knip` | Static analysis                         |
+| `pnpm semgrep`                              | Security/static scan (needs `uv`)       |
 
 ## Tech stack
 

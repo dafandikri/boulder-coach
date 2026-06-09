@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "gate": "bash scripts/gate.sh",
     "prepare": "husky",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "semgrep": "uvx semgrep --config=p/default --config=p/typescript --error --metrics=off src"
   },
   "dependencies": {
     "dexie": "^4.4.3",
