@@ -4,9 +4,11 @@ export default defineConfig({
   testDir: './e2e',
   use: { baseURL: 'http://localhost:3000' },
   webServer: {
-    command: 'pnpm dev',
+    // Serve the production build: no on-demand dev compilation → no Turbopack
+    // "React Client Manifest" races, and we test what actually ships.
+    command: 'pnpm build && pnpm start',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

@@ -133,3 +133,12 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 - **Fix:** Added tool-neutral `skills/` (plan-a-change, passing-the-gate, test-driven-development, safety-critical-change, debug-systematically, verify-before-done) readable by ANY agent/model; referenced from AGENTS.md. `passing-the-gate` distills this ledger into first-pass-green rules.
 - **Prevention:** Future agents read the matching skill BEFORE the task → clear the gate first try instead of repeating our iterations. This ledger feeds the skills; the skills prevent the ledger from growing for the same reasons.
 - **Attempts to green:** 1
+
+## 2026-06-09 — playwright.config.ts — e2e (dynamic)
+
+- **Task:** Plan 2 — e2e
+- **What failed:** Playwright hit `net::ERR_EMPTY_RESPONSE` (a stale `pnpm dev` squatting :3000) and then Next 16 Turbopack "Could not find the module … in the React Client Manifest" on parallel first-compile in dev mode.
+- **Root cause:** (1) `reuseExistingServer` reused a dead dev server; (2) dev-mode on-demand compilation races under concurrent route requests.
+- **Fix:** e2e now serves the PRODUCTION build (`pnpm build && pnpm start`) — no on-demand compile, no races, and it tests what ships. Kill stale :3000 + clear `.next` if it recurs locally.
+- **Prevention:** Smoke e2e against production serve, not dev. Documented in passing-the-gate (e2e section could note this).
+- **Attempts to green:** 2
