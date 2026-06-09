@@ -17,6 +17,12 @@ All project documentation lives **inside the repo** so it's discoverable when re
 - [`plans/2026-06-09-ai-harness-setup.md`](plans/2026-06-09-ai-harness-setup.md)
   — building the harness itself (built).
 
+## Workflow & best practices
+
+- [`WORKFLOW.md`](WORKFLOW.md) — how to do high-quality dev/agent work here: the Spec→Plan→Execute→
+  Verify loop, TDD, the gate-as-contract, working with AI agents, safety discipline, and the learning
+  loop. **Start here if you're new.**
+
 ## Learnings
 
 - [`LEARNINGS.md`](LEARNINGS.md) — append-only ledger: every gate failure → root cause → fix →

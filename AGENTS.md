@@ -19,7 +19,8 @@ change is acceptable no matter how it was written. See [`CONTRIBUTING.md`](CONTR
 `.claude/` (a safety-review subagent, a rule-authoring skill, a Stop-gate hook, the loop runbook) is
 **optional Claude Code convenience**. Everything it encodes also lives here and in `docs/specs/`, so no
 other tool or human is at a disadvantage. The canonical injury-safety rule table is in
-`docs/specs/2026-06-09-bouldering-coach-app-design.md`.
+`docs/specs/2026-06-09-bouldering-coach-app-design.md`. The full development workflow and best
+practices are in `docs/WORKFLOW.md`.
 
 # Working in this repo (AI harness)
 

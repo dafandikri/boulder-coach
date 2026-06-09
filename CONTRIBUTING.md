@@ -33,6 +33,9 @@ enforced automatically at three more layers so nothing red slips through:
 
 If `pnpm gate` is green locally, your change will pass CI.
 
+For the full reasoning behind this workflow — TDD, working with AI agents, safety discipline, the
+learning loop — read [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
+
 ## Workflow (same for agents and humans)
 
 1. **TDD** — write a failing test first, watch it fail, then the minimal code to pass.
