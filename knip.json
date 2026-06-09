@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/app/**/{page,layout}.tsx", "src/app/**/route.ts"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["e2e/**", "tests/**"],
+  "ignoreDependencies": [
+    "@vitest/coverage-v8",
+    "vitest",
+    "dexie",
+    "fake-indexeddb",
+    "tailwindcss",
+    "dependency-cruiser",
+    "type-coverage",
+    "knip",
+    "prettier",
+    "eslint-config-prettier",
+    "typescript-eslint",
+    "@tailwindcss/postcss"
+  ]
+}
