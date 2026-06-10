@@ -37,13 +37,20 @@ its worktree. `pnpm crew pause` freezes everything; every auto-merge is a revert
 
 ## Worker autonomy & permissions
 
-Workers must run the gate and commit unattended, so the adapters run their agent non-interactively:
-`claude --permission-mode bypassPermissions`, `codex exec --full-auto`, `aider --yes-always`
-(`scripts/crew/adapters/*.sh`). Autonomy is bounded by **isolation** (each worker is in its own git
-worktree) and the **gate** (nothing merges unless `pnpm gate` is green after rebase). Crucially,
-`deny` rules in `.claude/settings.json` (e.g. `git push`) **still apply** even in bypass mode — workers
-can edit and commit locally but cannot push. Non-`claude` adapter flags may need per-tool tuning for
-your CLI version.
+Workers must run the gate and commit unattended, but **not** at the cost of blanket host access. The
+Claude adapter runs `--permission-mode acceptEdits` (auto-applies file edits) plus an **allowlist** of
+exactly the commands a worker needs — `pnpm gate`/`test`/`install`, `git add`/`commit` — in
+`.claude/settings.json` `permissions.allow`. Everything else **fails closed**, and `permissions.deny`
+(e.g. `git push`) always wins. This is deliberately an allowlist, not a deny-list with a bypass: a
+blanket `bypassPermissions` would hand an autonomous agent full host Bash (network exfiltration,
+credential reads, `rm`).
+
+**A git worktree is NOT a security boundary** — same user, filesystem, `~/.ssh`/cloud creds, and
+network. The allowlist is the real containment. If you run Crew on **untrusted PBIs or a shared
+machine**, run the conductor inside a real isolation boundary (container/VM/firejail with no host
+credentials and a restricted network). The `codex` (`exec --full-auto`, a workspace-write sandbox) and
+`aider` (`--yes-always`) adapters have their own autonomy models; tune per tool/CLI version, and apply
+the same allowlist-or-sandbox principle.
 
 ## How conflicts are avoided (three independent layers)
 

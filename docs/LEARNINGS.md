@@ -28,6 +28,22 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-11 — scripts/crew/adapters/claude.sh — security (review)
+
+- **Task:** Make Crew workers run unattended.
+- **What failed:** First cut used `claude --permission-mode bypassPermissions` so workers could run the
+  gate without prompts. Automated security review flagged it HIGH (Agent/Subprocess Permission Bypass).
+- **Root cause:** blanket bypass grants an autonomous agent full **host** Bash (network exfiltration,
+  credential reads, `rm`). A git worktree is NOT a security boundary — same user/FS/creds/network — and
+  the `deny` list only blocked `git push`, leaving everything else open. Deny-list-as-only-gate.
+- **Fix:** `acceptEdits` + an **allowlist** in `.claude/settings.json` `permissions.allow` of exactly
+  the commands a worker needs (`pnpm gate/test/install`, `git add/commit`). Everything else fails
+  closed; `deny` still wins. Documented that real isolation (container/VM) is required for untrusted
+  PBIs / shared machines (a worktree isn't isolation).
+- **Prevention:** never grant blanket Bash to an autonomous subprocess; allowlist the needed commands
+  (default-deny). Treat a worktree as a workspace, not a sandbox.
+- **Attempts to green:** 1
+
 ## 2026-06-11 — tests/crew/conductor.test.ts — tests (test)
 
 - **Task:** Crew conductor DI tests (limitation fix #2).

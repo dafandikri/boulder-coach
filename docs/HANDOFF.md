@@ -30,9 +30,10 @@ file is the live position** — update it as the LAST step of any session (see "
 - **Crew multi-agent orchestrator — MERGED to `main`** (PR #1): a git-native, tool-neutral system to
   run agents in parallel worktrees on file-disjoint PBIs, with reviewer-gated tiered auto-merge and
   human override. `pnpm crew start|status|approve|reject|pause|resume`. See `docs/crew/README.md` +
-  the spec/plan under `docs/superpowers/`. Worker adapters now run autonomously (bypass/full-auto/
-  yes-always) so workers can run the gate unattended; `.crew/config.json` ships `maxWorkers: 1` for a
-  first smoke run (bump to 3 after it proves out).
+  the spec/plan under `docs/superpowers/`. Workers run autonomously but **safely**: Claude adapter uses
+  `acceptEdits` + a command **allowlist** in `.claude/settings.json` (not blanket `bypassPermissions`),
+  so a worker can run the gate/commit but nothing else (security review of the first cut flagged the
+  bypass — fixed). `.crew/config.json` ships `maxWorkers: 1` for a first smoke run (bump to 3 after).
 - **Domain (pure):** loadMetrics, warmup, periodization, programClock, schedule, adaptation (safety),
   sessionLog, insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
 
