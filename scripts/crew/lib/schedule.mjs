@@ -33,7 +33,10 @@ export function nextAssignable(pbis, active) {
       p.dependsOn.every((d) => doneIds.has(d)) &&
       !filesOverlap(p.files, lockedFiles),
   );
+  // Sort by priority (P0 highest). A PBI whose Priority failed to parse ('') must
+  // sort LAST, not first — otherwise a malformed entry would pre-empt P0 work.
   // Array.prototype.sort is stable in V8 → ties keep backlog order.
-  candidates.sort((a, b) => a.priority.localeCompare(b.priority));
+  const rank = (/** @type {Pbi} */ p) => p.priority || 'P9';
+  candidates.sort((a, b) => rank(a).localeCompare(rank(b)));
   return candidates[0] ?? null;
 }
