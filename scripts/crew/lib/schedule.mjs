@@ -1,3 +1,4 @@
+// @ts-check
 // scripts/crew/lib/schedule.mjs
 /** @typedef {import('./backlog.mjs').Pbi} Pbi */
 /** @typedef {{ pbiId: string, files: string[] }} ActiveClaim */

@@ -1,3 +1,4 @@
+// @ts-check
 // scripts/crew/lib/risk.mjs
 import { globToRegExp } from './glob.mjs';
 

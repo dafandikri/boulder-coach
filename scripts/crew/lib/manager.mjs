@@ -1,3 +1,4 @@
+// @ts-check
 // scripts/crew/lib/manager.mjs
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';

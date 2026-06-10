@@ -1,5 +1,10 @@
+// @ts-check
 // scripts/crew/lib/glob.mjs
-/** Convert a restricted glob (supports * and **) to an anchored RegExp. */
+/**
+ * Convert a restricted glob (supports * and **) to an anchored RegExp.
+ * @param {string} glob
+ * @returns {RegExp}
+ */
 export function globToRegExp(glob) {
   const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&');
   const body = escaped
