@@ -15,10 +15,15 @@ today, adapts to performance and how they feel, and keeps them out of injury.
 
 ```bash
 pnpm install
+pnpm onboard    # STEP 0 — load context: live cursor + latest learnings + gate/git state
 pnpm dev        # http://localhost:3000
 pnpm gate       # run the full quality gate (must be green before any commit)
 pnpm test       # vitest (domain) ;  pnpm e2e  for Playwright smoke
 ```
+
+**Continuing someone else's work (or a different model/tool)?** Run `pnpm onboard`, then read
+[`docs/HANDOFF.md`](docs/HANDOFF.md) (the live cursor) and [`AGENTS.md`](AGENTS.md) → "START HERE".
+Context lives in the repo and is enforced, so a memoryless agent picks up exactly where the last left off.
 
 ## System architecture
 

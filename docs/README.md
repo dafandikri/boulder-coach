@@ -3,6 +3,13 @@
 All project documentation lives **inside the repo** so it's discoverable when reading the codebase
 (and version-controlled alongside the code it describes).
 
+## Start here (every session, any agent or human)
+
+- Run **`pnpm onboard`** — surfaces the live cursor, latest learnings, and gate/git state in one shot.
+- [`HANDOFF.md`](HANDOFF.md) — the **live cursor**: where we are, what's next, and the gate-blind risks
+  to watch. A memoryless agent reads this first and updates it last. The cross-tool handoff protocol is
+  in [`../AGENTS.md`](../AGENTS.md) → "START HERE" and "Definition of done".
+
 ## Specs (the "what" and "why")
 
 - [`specs/2026-06-09-bouldering-coach-app-design.md`](specs/2026-06-09-bouldering-coach-app-design.md)
@@ -14,6 +21,10 @@ All project documentation lives **inside the repo** so it's discoverable when re
 
 - [`plans/2026-06-09-bouldering-coach-core-engine.md`](plans/2026-06-09-bouldering-coach-core-engine.md)
   — Plan 1: the domain engine + Today screen (built).
+- [`plans/2026-06-09-checkin-and-session-player.md`](plans/2026-06-09-checkin-and-session-player.md)
+  — Plan 2: check-in flow + session player + logging (built).
+- [`plans/2026-06-09-insights-and-pwa.md`](plans/2026-06-09-insights-and-pwa.md)
+  — Plan 3: insights, history, program calendar, drills library, offline PWA (built).
 - [`plans/2026-06-09-ai-harness-setup.md`](plans/2026-06-09-ai-harness-setup.md)
   — building the harness itself (built).
 

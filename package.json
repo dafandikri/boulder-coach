@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gate": "bash scripts/gate.sh",
+    "onboard": "bash scripts/onboard.sh",
     "prepare": "husky",
     "e2e": "playwright test",
     "semgrep": "uvx semgrep --config=p/default --config=p/typescript --error --metrics=off src"

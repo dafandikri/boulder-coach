@@ -6,6 +6,34 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
+# START HERE — handoff protocol (read before any work)
+
+This repo is built by **memoryless agents** (new session, or a different model/provider/tool each
+time). Nobody carries context between sessions — so context lives in the repo and is **surfaced and
+enforced**, not remembered. Knowledge has three durability tiers; the goal is always to push a lesson
+UP a tier:
+
+1. **Tier 1 — Executable (strongest):** the lesson is a gate check (lint/depcruise/type-coverage/test).
+   A repeat is impossible — the gate blocks it. No reading required. See `tests/pwa/manifest.test.ts`.
+2. **Tier 2 — Surfaced:** `AGENTS.md` (this file), `docs/HANDOFF.md` (live cursor), `docs/LEARNINGS.md`
+   (mistake log). Forced into view by `pnpm onboard` and the session-start hook.
+3. **Tier 3 — Procedural:** `skills/`, `docs/WORKFLOW.md` — reduce iterations once engaged.
+
+**Every session, step 0:** run **`pnpm onboard`** (tool-neutral — works in Codex, OpenCode, Cursor,
+Aider, Claude Code, or by hand). It prints the required reading, the live cursor, the latest learnings,
+and the gate/git state. Then read `docs/HANDOFF.md` and grep `docs/LEARNINGS.md` for files you'll edit.
+
+# Definition of done (enforces the WRITE side of the handoff)
+
+A task is not done until the next memoryless agent could continue without you. Before you stop:
+
+- [ ] `pnpm gate` is green (also enforced on Stop, pre-push, and CI — you cannot ship red).
+- [ ] **`docs/HANDOFF.md` updated** — current state, next actions, any new gate-blind risk. (LAST step.)
+- [ ] **`docs/LEARNINGS.md` appended** for any gate failure or non-obvious gotcha (root cause → fix →
+      prevention). If a failure category hit **≥ 2 times, promote it to a Tier-1 gate check** instead of
+      writing prose again.
+- [ ] Docs synced in the **same commit** if behavior/infra changed (see "Documentation discipline").
+
 # Any tool, any agent, or by hand
 
 This file (`AGENTS.md`) is the **canonical, tool-neutral instruction set** for this repo — the
