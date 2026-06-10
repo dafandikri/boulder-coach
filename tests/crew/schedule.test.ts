@@ -54,4 +54,11 @@ describe('nextAssignable (mock)', () => {
     const pbis = [pbi('BC-2', { files: [] }), pbi('BC-3', { files: ['c.ts'] })];
     expect(nextAssignable(pbis, [{ pbiId: 'BC-3', files: ['c.ts'] }])).toBeNull();
   });
+  it('sorts a PBI with a missing/unparsed priority LAST, not ahead of P0', () => {
+    const pbis = [
+      pbi('BC-2', { priority: '', files: ['a.ts'] }), // malformed: no priority
+      pbi('BC-3', { priority: 'P0', files: ['b.ts'] }),
+    ];
+    expect(nextAssignable(pbis, [])?.id).toBe('BC-3');
+  });
 });
