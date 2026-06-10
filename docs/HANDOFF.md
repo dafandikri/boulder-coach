@@ -37,7 +37,18 @@ pause|resume`. See `docs/crew/README.md` + the spec/plan under `docs/superpowers
 ## Pending (uncommitted) — none
 
 All Crew work is committed on `feat/crew-orchestration` (planning docs → Phases 1–8 → the three
-limitation fixes below). Final `pnpm gate` green (**31 test files, 130 tests**, type-coverage 99.82%).
+limitation fixes → a `/code-review high` hardening pass). Final `pnpm gate` green
+(**32 test files, 137 tests**, type-coverage 99.83%). PR **#1** is open.
+
+## Code-review hardening (7 findings fixed, each tested)
+
+A `/code-review high` of the branch found 7 issues, all in the I/O wiring (the faked-in-tests layer);
+all fixed: (1) reviewer is now fail-safe — agent failure → FLAG → human queue, never a throw that
+strands a claim; (2) reviewer + manager are tool-neutral via injected `config.aiAgent` (no hardcoded
+`claude`); (3) `landBranch` never throws past its re-queue guard; (4) it refuses to merge unless the
+primary tree is on `main`; (5) a PBI with unparsed priority sorts last, not ahead of P0; (6) the
+conductor owns "done" via a `.crew/completed/` ledger (no redo loop if a worker forgets to mark
+BACKLOG); (7) a split that can't fit free slots falls back to the whole PBI (no stranded sub-task).
 
 ## Crew — what shipped (branch `feat/crew-orchestration`)
 
