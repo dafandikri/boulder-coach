@@ -186,6 +186,10 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
   delta: service worker fetch strategy (navigations must be network-first), manifest icons
   present, and README/CLAUDE.md/AGENTS.md reflect new routes+modules. A green gate is
   necessary, not sufficient — gate-blind surfaces (PWA assets, manifests, docs) need a human/
-  second-model pass. Candidate automated checks: a manifest-has-icons test and a Lighthouse-PWA
-  e2e assertion.
+  second-model pass.
+- **PROMOTED → Tier 1:** the manifest-icons + SW-network-first lessons are now executable in
+  `tests/pwa/manifest.test.ts` (runs inside the gate). This bug class can no longer recur via a
+  memoryless agent — it's blocked by the gate, not by remembering. Next promotion candidate:
+  Lighthouse-PWA e2e assertion. Handoff system that carries this forward: `pnpm onboard` +
+  `docs/HANDOFF.md` + `AGENTS.md` → "START HERE / Definition of done".
 - **Attempts to green:** 1 (only formatting: prettier reflowed sw.js).
