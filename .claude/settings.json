@@ -13,9 +13,12 @@
       "Bash(git commit:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
-      "Bash(git log:*)"
-    ],
-    "deny": ["Bash(git push:*)", "Bash(git push)", "Bash(gh pr create:*)", "Bash(gh pr merge:*)"]
+      "Bash(git log:*)",
+      "Bash(git push:*)",
+      "Bash(git push)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)"
+    ]
   },
   "hooks": {
     "SessionStart": [
