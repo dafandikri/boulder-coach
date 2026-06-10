@@ -1,16 +1,11 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+// Self-hosted Geist fonts (Vercel's `geist` pkg) — bundled .woff2, NO build-time
+// network fetch. `next/font/google` downloaded from fonts.gstatic.com at build
+// time, making `next build` (gate step 8/8) flaky on any network blip. See
+// docs/LEARNINGS.md 2026-06-10. Sets --font-geist-sans / --font-geist-mono.
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import './globals.css';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 
 export const metadata: Metadata = {
   title: 'Boulder Coach',
@@ -24,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         {children}
         <script

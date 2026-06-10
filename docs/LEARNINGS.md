@@ -28,6 +28,15 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-10 — src/app/layout.tsx — build (test)
+
+- **Task:** Unblock `git push` (gate step 8/8 failing).
+- **What failed:** `next build` failed with `Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'` + "Error while requesting resource … fonts.gstatic.com". FLAKY: failed on push, yet a standalone `pnpm build` moments later passed (exit 0) — same code, same machine.
+- **Root cause:** `next/font/google` (`Geist`, `Geist_Mono`) downloads `.woff2` from `fonts.gstatic.com` **at build time**. Any network blip fails the build, so the gate — which runs `next build` on every push — is non-deterministic. A flaky gate violates the harness contract ("exit code is law").
+- **Fix:** Swapped to Vercel's `geist` package (`geist/font/sans`, `geist/font/mono`) — fonts are **bundled** in the package, zero build-time fetch. Sets the same `--font-geist-sans` / `--font-geist-mono` vars `globals.css` already used, so it was a drop-in. Verified deterministic: two consecutive green gates.
+- **Prevention:** 2nd occurrence (failed twice in one session) → **promoted to a Tier-1 gate check**: `tests/build/deterministic-fonts.test.ts` asserts no `src` file imports `next/font/google` (the build-time-CDN-fetch API and the Next.js scaffold default). A regression now fails the gate by filename, not by memory.
+- **Attempts to green:** 2
+
 ## 2026-06-09 — vitest.config.ts — tests (test)
 
 - **Task:** Harness Task 2

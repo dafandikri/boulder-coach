@@ -31,32 +31,26 @@ file is the live position** — update it as the LAST step of any session (see "
 - **Domain (pure):** loadMetrics, warmup, periodization, **programClock** (BC-01), **schedule**
   (BC-03), adaptation (safety — now with progression/regression rules 6–7, BC-05), sessionLog,
   insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
-- **Last work (two layers):**
-  1. P0s committed as **`9f009bd`** by a cross-agent handoff (DeepSeek V4 Flash via OpenCode);
-     Opus 4.8 then scrutinized + hardened them in **`a06e7ba`** (BC-04 grade capture rewritten from a
-     buggy append-model to a `{grade: count}` tally; `schedule.ts` 75%→100% branch; BC-05 safety
-     review ran → PASS). **`a06e7ba` is committed but NOT pushed** — run `! git push` to publish.
-  2. Then built the **universal quality-enforcement package** (uncommitted, gate-green) — see below.
+- **Last work:** P0s (`9f009bd`) → Opus hardening (`a06e7ba`) → universal quality-enforcement package
+  (`5914e8e`, per-file coverage + adaptation invariants + safety-change guard) — all **committed**.
 
-## Pending (uncommitted) — the universal quality bar
+## Pending (uncommitted) — deterministic build (font flake fix)
 
-Promotes the three bug classes that let the DeepSeek commit ship green into **executable gate checks**,
-so any provider/model is held to the same bar (no git ops performed — per "never auto-commit"):
+A `git push` failed at gate step 8/8 (`next build`) TWICE in one session, yet a standalone build
+passed in between — classic non-determinism. Root cause: `next/font/google` fetched the Geist `.woff2`
+from `fonts.gstatic.com` **at build time**, so any network blip failed the gate. Fix (uncommitted,
+gate-green):
 
-- **Per-file coverage** — `vitest.config.ts` `thresholds.perFile: true`. No file hides below the bar
-  behind 100% siblings; an uncovered branch fails by filename. Brought `insights.ts` 75→100% branch.
-- **Executable safety invariants** — `tests/domain/adaptation.invariants.test.ts` fuzzes `adapt()`
-  over ≈3.9k input combos and asserts the rule-table guarantees. The tool-neutral replacement for the
-  Claude-only `safety-rule-reviewer` (proven: weakening the ACWR cap fails the gate).
-- **Safety-change guard** — `scripts/check-safety-change.sh` in `.husky/pre-commit` + `pnpm
-test:safety`: touching a safety file surfaces the rule table and runs the safety suites.
-- **Docs** — new `skills/universal-quality-bar.md` (read-first, any tool), wired into `pnpm onboard`;
-  AGENTS.md / CLAUDE.md / README / passing-the-gate.md synced.
+- **Self-hosted fonts** — `src/app/layout.tsx` now uses Vercel's `geist` pkg (`geist/font/sans`,
+  `geist/font/mono`); fonts are bundled, zero build-time fetch. Same `--font-geist-*` vars, drop-in.
+  Added dep `geist@1.7.2`. Verified deterministic (two consecutive green gates).
+- **Tier-1 guard** — `tests/build/deterministic-fonts.test.ts` fails the gate if any `src` file
+  re-imports `next/font/google` (2nd-occurrence promotion; see `docs/LEARNINGS.md` 2026-06-10).
 
 ## Next actions (prioritized)
 
-1. **Push `a06e7ba`** (`! git push`) and **commit the enforcement package** (suggested:
-   `chore(gate): universal quality enforcement — per-file coverage + safety invariants + guard`).
+1. **Commit the font fix** (suggested: `fix(build): self-host Geist fonts to make next build
+deterministic`) then `! git push`. No git ops were performed for you (per "never auto-commit").
 2. **Then work `docs/BACKLOG.md` from P1** — next unblocked item is **BC-06** (onboarding & profile
    screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
 
