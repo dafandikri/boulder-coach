@@ -27,7 +27,7 @@ file is the live position** — update it as the LAST step of any session (see "
 
 - **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** + the font-flake build fix (`fd0b4be`)
   are committed on `main`. PWA: Today, check-in, session player, history, insights, program, drills, SW.
-- **NEW — Crew multi-agent orchestrator** (branch **`feat/crew-orchestration`**, gate-green, pushed):
+- **NEW — Crew multi-agent orchestrator** (branch **`feat/crew-orchestration`**, gate-green, committed; push blocked by repo config — human pushes):
   a git-native, tool-neutral system to run up to 3 agents in parallel worktrees on file-disjoint PBIs,
   with reviewer-gated tiered auto-merge and human override. `pnpm crew start|status|approve|reject|
 pause|resume`. See `docs/crew/README.md` + the spec/plan under `docs/superpowers/`.
@@ -73,8 +73,9 @@ review}.mjs`, adapters, prompts, `.crew/config.json`.
 
 ## Next actions (prioritized)
 
-1. **`feat/crew-orchestration` is pushed** — open a PR / merge when ready. Optionally `pnpm crew start`
-   to dogfood Crew on the P1 backlog.
+1. **Push `feat/crew-orchestration`** (`git push -u origin feat/crew-orchestration` — agents are denied
+   `git push` by `.claude/settings.json`, so the human does it), then open a PR / merge when ready.
+   Optionally `pnpm crew start` to dogfood Crew on the P1 backlog.
 2. **Then work `docs/BACKLOG.md` from P1** — next unblocked item is **BC-06** (onboarding & profile
    screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
 
