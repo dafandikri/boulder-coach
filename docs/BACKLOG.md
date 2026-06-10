@@ -279,6 +279,33 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   on hit; CI stays green.
 - **Files:** `.github/workflows/ci.yml`
 
+### BC-22 · Off-the-wall exercises (antagonist / core / mobility) — `open`
+
+- **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** —
+- **Problem:** training is wall-only. Injury-resilient, well-rounded bouldering needs supplementary
+  off-wall work — antagonist push (the app already tracks pull-heavy load), core, and shoulder/hip
+  mobility. The engine prescribes climbing but nothing to balance it, which undercuts the "keep you
+  out of injury" promise.
+- **Acceptance criteria:** a pure domain module holds a small library of off-wall exercises tagged by
+  purpose (`antagonist` | `core` | `mobility`) and picks a short, appropriate set for the day's
+  session type (e.g. antagonist+core after a limit/strength day; mobility on rest/deload). Surfaced as
+  a card on Today or the session player. Prescription logic lives in `src/domain` (pure, `asOf`-driven,
+  tested); the page only renders. No new injury risk: additive only, never raises climbing load.
+- **Files:** `src/domain/offWallExercises.ts`, `src/app/exercises/page.tsx`
+
+### BC-23 · Visual redesign + branding (bright & playful, dark mode, climbing-hold motif) — `open`
+
+- **Type:** ux/design · **Priority:** P2 · **Complexity:** L · **Depends on:** —
+- **Problem:** the UI is functional but generic; the product wants a distinctive identity — bright,
+  slightly playful/childlike, with climbing-hold motifs (in the spirit of a Bali bouldering-gym logo)
+  and a real dark mode. Identity + dark mode also matter for an "installable PWA you open at the gym."
+- **Acceptance criteria:** a cohesive token-based theme (light **and** dark) via CSS variables; a
+  dark-mode toggle persisted locally (respects `prefers-color-scheme` on first load); a playful accent
+  palette and hold-shaped motif on key surfaces (Today header, app icon/logo); applied consistently
+  across pages with **no gate regression**. Theme tokens/toggle logic live in a covered
+  `src/app/lib/theme.ts`, not scattered across components (per the gate-blind-UI rule).
+- **Files:** `src/app/globals.css`, `src/app/layout.tsx`, `src/app/lib/theme.ts`
+
 ---
 
 ## P3 — Future bets (design-first; do not start while a P0 is open)
@@ -314,6 +341,18 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   provider) gives one Dexie connection and one seam to swap when BC-18 lands. Pure
   leave-it-better refactor; fold into another PBI's commit if convenient.
 - **Files:** `src/data/repoInstance.ts`
+
+### BC-24 · CV/ML technique coach — `open` (FUTURE; design only, do not start now)
+
+- **Type:** system-design/ml · **Priority:** P3 · **Complexity:** XL · **Depends on:** —
+- **Vision (explicitly future — PO said focus on current P1/P2 first):** analyze a climbing video with
+  pose-estimation / computer vision to coach technique — hip positioning, silent feet, over-gripping,
+  straight-arm efficiency — and feed observations into the existing adaptation/insights loop.
+- **Acceptance criteria:** deliverable is a **design spec only** (`docs/specs/`). It should explore:
+  on-device vs cloud inference (privacy default: video never leaves the device), a pose-estimation
+  approach (e.g. MediaPipe/TF.js), how a "technique score" maps onto the current `feel`/insights model,
+  and the UX of capturing/reviewing a clip. **No app code** until a future milestone schedules it.
+- **Files:** `docs/specs/cv-technique-coach-design.md`
 
 ---
 
