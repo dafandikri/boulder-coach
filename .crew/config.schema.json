@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["maxWorkers", "workerTool", "leaseSeconds", "launchAdapters", "autoMerge"],
+  "additionalProperties": true,
+  "properties": {
+    "maxWorkers": { "type": "integer", "minimum": 1, "maximum": 8 },
+    "workerTool": { "type": "string" },
+    "leaseSeconds": { "type": "integer", "minimum": 60 },
+    "maxGateAttempts": { "type": "integer", "minimum": 1 },
+    "launchAdapters": { "type": "object", "additionalProperties": { "type": "string" } },
+    "autoMerge": {
+      "type": "object",
+      "required": ["eligiblePaths", "alwaysReview"],
+      "properties": {
+        "eligiblePaths": { "type": "array", "items": { "type": "string" } },
+        "requireBranchCoverage": { "type": "number" },
+        "alwaysReview": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

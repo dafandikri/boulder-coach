@@ -1,0 +1,25 @@
+{
+  "$schema": "./config.schema.json",
+  "maxWorkers": 3,
+  "workerTool": "claude",
+  "leaseSeconds": 1800,
+  "maxGateAttempts": 3,
+  "launchAdapters": {
+    "claude": "scripts/crew/adapters/claude.sh",
+    "codex": "scripts/crew/adapters/codex.sh",
+    "aider": "scripts/crew/adapters/aider.sh"
+  },
+  "autoMerge": {
+    "eligiblePaths": ["src/domain/**", "src/app/lib/**", "docs/**"],
+    "requireBranchCoverage": 100,
+    "alwaysReview": [
+      "src/domain/adaptation.ts",
+      "src/domain/loadMetrics.ts",
+      "src/app/**/page.tsx",
+      "src/app/**/*.tsx",
+      "scripts/**",
+      "*.config.*",
+      "package.json"
+    ]
+  }
+}
