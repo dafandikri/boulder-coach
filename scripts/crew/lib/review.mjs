@@ -14,7 +14,11 @@ export function runReviewer(branch, pbiId) {
     .replace(/{{PBI_ID}}/g, pbiId)
     .replace(/{{BRANCH}}/g, branch);
   const out = execFileSync('claude', ['--print', prompt], { encoding: 'utf8' });
-  const line = out.split('\n').reverse().find((l) => l.includes('VERDICT:')) ?? '';
+  const line =
+    out
+      .split('\n')
+      .reverse()
+      .find((l) => l.includes('VERDICT:')) ?? '';
   if (/VERDICT:\s*APPROVE/i.test(line)) return { verdict: 'approve' };
   const m = line.match(/VERDICT:\s*FLAG\s*(.*)/i);
   return { verdict: 'flag', reason: m?.[1]?.trim() || 'reviewer flagged' };

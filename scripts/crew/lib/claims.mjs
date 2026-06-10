@@ -1,3 +1,4 @@
+// @ts-check
 // scripts/crew/lib/claims.mjs
 import { readdirSync, readFileSync, writeFileSync, rmSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';

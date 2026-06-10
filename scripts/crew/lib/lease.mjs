@@ -1,3 +1,4 @@
+// @ts-check
 // scripts/crew/lib/lease.mjs
 /**
  * Has a claim's lease expired (no heartbeat within the window)?
