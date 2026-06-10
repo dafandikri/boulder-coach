@@ -17,6 +17,7 @@
     "test:safety": "vitest run tests/domain/adaptation.test.ts tests/domain/adaptation.invariants.test.ts tests/domain/loadMetrics.test.ts",
     "gate": "bash scripts/gate.sh",
     "onboard": "bash scripts/onboard.sh",
+    "crew": "node scripts/crew/crew.mjs",
     "prepare": "husky",
     "e2e": "playwright test",
     "semgrep": "uvx semgrep --config=p/default --config=p/typescript --error --metrics=off src"
