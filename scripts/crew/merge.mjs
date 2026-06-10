@@ -1,3 +1,4 @@
+// @ts-check
 // scripts/crew/merge.mjs
 import { execFileSync } from 'node:child_process';
 import { rebaseOnto, mergeFastForwardOnly, removeWorktree } from './lib/git.mjs';

@@ -1,13 +1,14 @@
+// @ts-check
 // scripts/crew/crew.mjs
-// Crew CLI: human override surface. status / approve / reject / pause / resume / start.
+// Crew CLI: the human override surface. status / approve / reject / pause / resume / start.
 import { existsSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { readClaims, releaseClaim } from './lib/claims.mjs';
 import { landBranch } from './merge.mjs';
 
 const CREW = join(process.cwd(), '.crew');
-const [cmd, arg] = process.argv.slice(2);
 /** @param {string} name */
 const flag = (name) => join(CREW, name);
 
@@ -42,27 +43,45 @@ function reject(pbiId) {
   console.log(`rejected ${pbiId} (worktree + claim removed)`);
 }
 
-switch (cmd) {
-  case 'status':
-    status();
-    break;
-  case 'approve':
-    approve(arg);
-    break;
-  case 'reject':
-    reject(arg);
-    break;
-  case 'pause':
-    writeFileSync(flag('PAUSED'), '');
-    console.log('paused');
-    break;
-  case 'resume':
-    rmSync(flag('PAUSED'), { force: true });
-    console.log('resumed');
-    break;
-  case 'start':
-    execFileSync('node', ['scripts/crew/conduct.mjs'], { stdio: 'inherit' });
-    break;
-  default:
-    console.log('usage: crew <status|approve PBI|reject PBI|pause|resume|start>');
+const USAGE = 'usage: crew <status|approve PBI|reject PBI|pause|resume|start>';
+
+/**
+ * Run one CLI command. Returns true if the command was recognized.
+ * @param {string[]} argv argv after the node + script (i.e. process.argv.slice(2))
+ * @returns {boolean}
+ */
+export function run(argv) {
+  const [cmd, arg] = argv;
+  switch (cmd) {
+    case 'status':
+      status();
+      return true;
+    case 'approve':
+      if (!arg) throw new Error('approve requires a PBI id');
+      approve(arg);
+      return true;
+    case 'reject':
+      if (!arg) throw new Error('reject requires a PBI id');
+      reject(arg);
+      return true;
+    case 'pause':
+      writeFileSync(flag('PAUSED'), '');
+      console.log('paused');
+      return true;
+    case 'resume':
+      rmSync(flag('PAUSED'), { force: true });
+      console.log('resumed');
+      return true;
+    case 'start':
+      execFileSync('node', ['scripts/crew/conduct.mjs'], { stdio: 'inherit' });
+      return true;
+    default:
+      console.log(USAGE);
+      return false;
+  }
 }
+
+const invokedDirectly =
+  typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) run(process.argv.slice(2));
