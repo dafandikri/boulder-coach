@@ -27,10 +27,12 @@ file is the live position** — update it as the LAST step of any session (see "
 
 - **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** + the font-flake build fix (`fd0b4be`)
   are committed on `main`. PWA: Today, check-in, session player, history, insights, program, drills, SW.
-- **NEW — Crew multi-agent orchestrator** (branch **`feat/crew-orchestration`**, gate-green, committed; push blocked by repo config — human pushes):
-  a git-native, tool-neutral system to run up to 3 agents in parallel worktrees on file-disjoint PBIs,
-  with reviewer-gated tiered auto-merge and human override. `pnpm crew start|status|approve|reject|
-pause|resume`. See `docs/crew/README.md` + the spec/plan under `docs/superpowers/`.
+- **Crew multi-agent orchestrator — MERGED to `main`** (PR #1): a git-native, tool-neutral system to
+  run agents in parallel worktrees on file-disjoint PBIs, with reviewer-gated tiered auto-merge and
+  human override. `pnpm crew start|status|approve|reject|pause|resume`. See `docs/crew/README.md` +
+  the spec/plan under `docs/superpowers/`. Worker adapters now run autonomously (bypass/full-auto/
+  yes-always) so workers can run the gate unattended; `.crew/config.json` ships `maxWorkers: 1` for a
+  first smoke run (bump to 3 after it proves out).
 - **Domain (pure):** loadMetrics, warmup, periodization, programClock, schedule, adaptation (safety),
   sessionLog, insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
 
@@ -84,11 +86,13 @@ review}.mjs`, adapters, prompts, `.crew/config.json`.
 
 ## Next actions (prioritized)
 
-1. **Push `feat/crew-orchestration`** (`git push -u origin feat/crew-orchestration` — agents are denied
-   `git push` by `.claude/settings.json`, so the human does it), then open a PR / merge when ready.
-   Optionally `pnpm crew start` to dogfood Crew on the P1 backlog.
-2. **Then work `docs/BACKLOG.md` from P1** — next unblocked item is **BC-06** (onboarding & profile
-   screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
+1. **Smoke-test Crew** (`maxWorkers: 1`): on `main`, `pnpm crew start` + `pnpm crew status`, watch one
+   PBI go worktree → worker → reviewer → merge. The smallest pure-domain candidate is **BC-08**
+   (`src/domain/periodization.ts`). See `docs/crew/README.md` → "First run".
+2. **Scale to parallel:** once the smoke run lands a PBI cleanly, set `.crew/config.json`
+   `maxWorkers: 3` and restart — file-disjoint P1s (BC-06, BC-08, BC-10) run together.
+3. **Or work `docs/BACKLOG.md` from P1 by hand** — top unblocked item is **BC-06** (onboarding &
+   profile screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
 
 ## Open threads / known gate-blind risks
 
