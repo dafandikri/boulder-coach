@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Boulder Coach">
+  <rect width="512" height="512" rx="96" fill="#0f172a" />
+  <!-- stylized boulder -->
+  <path d="M120 360 L196 212 L268 300 L330 188 L412 360 Z" fill="#e2e8f0" />
+  <path d="M196 212 L268 300 L240 360 L150 360 Z" fill="#94a3b8" />
+  <!-- climber chalk dot -->
+  <circle cx="330" cy="150" r="26" fill="#f59e0b" />
+</svg>
