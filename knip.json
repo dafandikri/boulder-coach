@@ -8,7 +8,6 @@
     "src/domain/drills.ts"
   ],
   "project": ["src/**/*.{ts,tsx}"],
-  "ignore": ["e2e/**"],
   "ignoreBinaries": ["uvx"],
   "ignoreDependencies": ["tailwindcss"]
 }
