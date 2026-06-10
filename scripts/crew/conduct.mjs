@@ -16,7 +16,14 @@ import { decideAction } from './lib/route.mjs';
 import { classify } from './lib/risk.mjs';
 import { isExpired } from './lib/lease.mjs';
 import { shouldConsultBrain, consultBrain } from './lib/manager.mjs';
-import { readClaims, tryClaim, writeClaim, releaseClaim } from './lib/claims.mjs';
+import {
+  readClaims,
+  tryClaim,
+  writeClaim,
+  releaseClaim,
+  readCompleted,
+  recordCompleted,
+} from './lib/claims.mjs';
 import { addWorktree, changedFiles } from './lib/git.mjs';
 import { launchWorker } from './lib/launch.mjs';
 import { runReviewer } from './lib/review.mjs';
@@ -30,6 +37,7 @@ import { landBranch } from './merge.mjs';
  * @property {string} workerTool
  * @property {number} leaseSeconds
  * @property {Record<string, string>} launchAdapters
+ * @property {string[]} [aiAgent] one-shot agent argv for reviewer/manager (default: claude --print)
  * @property {{eligiblePaths: string[], alwaysReview: string[]}} autoMerge
  */
 /**
@@ -37,6 +45,8 @@ import { landBranch } from './merge.mjs';
  * @property {string} root
  * @property {CrewConfig} config
  * @property {() => string} readBacklog
+ * @property {() => string[]} readCompleted ids the conductor has already merged
+ * @property {(pbiId: string) => void} recordCompleted
  * @property {() => Claim[]} readClaims
  * @property {(claim: Claim) => boolean} tryClaim
  * @property {(claim: Claim) => void} writeClaim
@@ -86,11 +96,21 @@ export function createConductor(deps) {
     const active = activeClaims();
     const slots = config.maxWorkers - active.length;
     if (slots <= 0) return false;
-    const pbi = nextAssignable(parseBacklog(deps.readBacklog()), active);
+    // Exclude PBIs the conductor already merged (its own record of done), so a
+    // worker that forgot to mark BACKLOG status can't cause a re-assignment loop.
+    const completed = new Set(deps.readCompleted());
+    const pbis = parseBacklog(deps.readBacklog()).filter((p) => !completed.has(p.id));
+    const pbi = nextAssignable(pbis, active);
     if (!pbi) return false;
 
     const split = shouldConsultBrain(pbi) ? deps.consultBrain(pbi).split : [];
-    const units = planAssignments(pbi, split, active);
+    let units = planAssignments(pbi, split, active);
+    // If a split can't fit the free slots, assigning a subset would strand the
+    // rest (their files stay locked under the parent). Take the whole PBI instead.
+    if (split.length > 0 && units.length > slots) {
+      const whole = planAssignments(pbi, [], active);
+      if (whole.length > 0) units = whole;
+    }
     if (units.length === 0) return false;
     if (units.length > 1) deps.log(`split ${pbi.id} → ${units.map((u) => u.id).join(', ')}`);
 
@@ -144,6 +164,7 @@ export function createConductor(deps) {
       const res = deps.landBranch({ branch, worktree });
       if (res.merged) {
         deps.log(`merged ${pbiId}`);
+        deps.recordCompleted(pbiId);
         deps.releaseClaim(pbiId);
       } else {
         deps.log(`merge-blocked ${pbiId}: ${res.reason ?? ''}`);
@@ -209,6 +230,10 @@ function realDeps() {
     root,
     config,
     readBacklog: () => readFileSync(join(root, 'docs/BACKLOG.md'), 'utf8'),
+    readCompleted: () => readCompleted(crew),
+    recordCompleted: (id) => {
+      recordCompleted(crew, id);
+    },
     readClaims: () => readClaims(crew),
     tryClaim: (c) => tryClaim(crew, c),
     writeClaim: (c) => {
@@ -227,9 +252,9 @@ function realDeps() {
     launchWorker: (wt, id, onExit) => {
       launchWorker(config, wt, id, onExit);
     },
-    runReviewer: (br, id) => runReviewer(br, id),
+    runReviewer: (br, id) => runReviewer(br, id, config.aiAgent),
     landBranch: (o) => landBranch(o),
-    consultBrain: (pbi) => consultBrain(pbi),
+    consultBrain: (pbi) => consultBrain(pbi, config.aiAgent),
     queueForHuman: (id, br, reason) => {
       writeReviewQueue(crew, id, br, reason);
     },

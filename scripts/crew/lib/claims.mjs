@@ -63,3 +63,30 @@ export function tryClaim(root, claim) {
 export function releaseClaim(root, pbiId) {
   rmSync(claimPath(root, pbiId), { force: true });
 }
+
+/** @param {string} root @returns {string} */
+const completedDir = (root) => {
+  const d = join(root, 'completed');
+  if (!existsSync(d)) mkdirSync(d, { recursive: true });
+  return d;
+};
+
+/**
+ * Ids the conductor has merged. This is the conductor's OWN record of done — it
+ * does not depend on a worker having edited BACKLOG.md, so a merged PBI is never
+ * re-assigned even if its backlog status was left 'open'.
+ * @param {string} root
+ * @returns {string[]}
+ */
+export function readCompleted(root) {
+  return readdirSync(completedDir(root))
+    .filter((f) => f.endsWith('.done'))
+    .map((f) => f.replace(/\.done$/, ''));
+}
+
+/**
+ * @param {string} root @param {string} pbiId
+ */
+export function recordCompleted(root, pbiId) {
+  writeFileSync(join(completedDir(root), `${pbiId}.done`), '');
+}
