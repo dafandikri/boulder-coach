@@ -142,7 +142,6 @@ export function generateProgram(profile: UserProfile, startDate: string): Progra
     id: programId,
     startDate,
     lengthWeeks: 6,
-    currentWeekIndex: 0,
     weeks,
   };
 }

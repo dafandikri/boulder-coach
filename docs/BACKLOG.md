@@ -36,7 +36,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 > halves are broken in the five ways below. A green gate catches none of them — they are
 > product-correctness defects, which is exactly what this backlog exists to track.
 
-### BC-01 · Program week never advances — `open`
+### BC-01 · Program week never advances — `implemented (Claude Opus 4.8, 2026-06-10) — gate green, awaiting commit`
 
 - **Type:** bug · **Priority:** P0 · **Complexity:** M · **Depends on:** —
 - **Problem:** `generateProgram` sets `currentWeekIndex: 0` (`src/domain/periodization.ts:145`)
@@ -54,7 +54,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   - `bootstrap.getTodaySession` and `/program` both reflect the derived week.
 - **Files:** `src/domain/periodization.ts` (or a new pure `programClock.ts`), `src/app/lib/bootstrap.ts`, `src/app/program/page.tsx`, tests.
 
-### BC-02 · Dates are keyed to UTC, not the user's timezone — `open`
+### BC-02 · Dates are keyed to UTC, not the user's timezone — `implemented (Claude Opus 4.8, 2026-06-10) — gate green, awaiting commit`
 
 - **Type:** bug · **Priority:** P0 · **Complexity:** S · **Depends on:** —
 - **Problem:** every date stamp is `new Date().toISOString().slice(0, 10)` (bootstrap, check-in
@@ -69,8 +69,14 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   - Load-metrics windows (`loadMetrics.ts` date math) reviewed for the same assumption — if it
     needs changes it's a safety file (reviewer + 100% branch).
 - **Files:** `src/app/lib/bootstrap.ts`, `src/app/checkin/page.tsx`, `src/app/session/page.tsx`, possibly `src/domain/loadMetrics.ts` (safety).
+- **loadMetrics review (BC-02):** left unchanged. Its windows are a coarse 7/28-day floor over
+  `daysBetween(asOf, dateIso)`; a sub-day TZ skew only matters at an exact window boundary. The one
+  place a same-day local date could be dropped is the `age < 0` guard in the early-WIB-morning hour,
+  but the engine computes the session _before_ that day's log exists, so the adaptation path is
+  unaffected. Changing it would be unnecessary safety-file churn (YAGNI). Shared helper lives in
+  `src/app/lib/date.ts` (app layer — keeps `src/domain` pure of locale/timezone concerns).
 
-### BC-03 · Rest days don't exist; `availableWeekdays` is ignored — `open`
+### BC-03 · Rest days don't exist; `availableWeekdays` is ignored — `implemented (Claude Opus 4.8, 2026-06-10) — gate green, awaiting commit`
 
 - **Type:** bug · **Priority:** P0 · **Complexity:** M · **Depends on:** BC-02 (date helper)
 - **Problem:** `pickPlannedSession` is `asOf.getDay() % sessions.length`
@@ -89,7 +95,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
     pattern matches `availableWeekdays`.
 - **Files:** `src/app/lib/bootstrap.ts` (or promote scheduling into `src/domain/`), `src/app/page.tsx`, tests.
 
-### BC-04 · Session player captures no climbing data; warm-up auto-completes — `open`
+### BC-04 · Session player captures no climbing data; warm-up auto-completes — `implemented (Claude Opus 4.8 test + DeepSeek V4 Flash Free implementation, 2026-06-10) — gate green, awaiting commit`
 
 - **Type:** bug/feature · **Priority:** P0 · **Complexity:** M · **Depends on:** —
 - **Problem:** the session player (`src/app/session/page.tsx`) only collects per-block RPE.
@@ -107,7 +113,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
     fake-indexeddb).
 - **Files:** `src/app/session/page.tsx`, `src/domain/sessionLog.ts`, tests.
 
-### BC-05 · Progression/regression rules (spec rules 6–7) were never implemented — `open`
+### BC-05 · Progression/regression rules (spec rules 6–7) were never implemented — `implemented (DeepSeek V4 Flash Free, 2026-06-10) — gate green, awaiting commit`
 
 - **Type:** feature · **Priority:** P0 · **Complexity:** M · **Depends on:** BC-04 (real data; testable earlier with synthetic logs)
 - **Problem:** `adapt()` takes `_recentLogs` and ignores it (`src/domain/adaptation.ts:55`). Spec

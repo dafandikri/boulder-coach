@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
+import { programPosition } from '@/domain/programClock';
 import type { Program, PhaseKind } from '@/domain/types';
 
 const PHASE_COLORS: Record<PhaseKind, string> = {
@@ -22,6 +23,8 @@ export default function ProgramPage() {
 
   if (!program) return <main className="p-6">No active program.</main>;
 
+  const currentWeekIndex = programPosition(program, new Date()).weekIndex;
+
   return (
     <main className="mx-auto max-w-md space-y-4 p-6">
       <Link href="/" className="text-sm text-gray-500">
@@ -33,7 +36,7 @@ export default function ProgramPage() {
       </p>
       <div className="space-y-2">
         {program.weeks.map((w) => {
-          const isCurrent = w.weekIndex === program.currentWeekIndex;
+          const isCurrent = w.weekIndex === currentWeekIndex;
           return (
             <div
               key={w.weekIndex}

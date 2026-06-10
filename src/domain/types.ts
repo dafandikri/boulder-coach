@@ -45,10 +45,11 @@ export interface ProgramWeek {
 
 export interface Program {
   id: string;
-  startDate: string; // ISO date
+  startDate: string; // ISO date (local calendar date, see localDateIso)
   lengthWeeks: number;
-  currentWeekIndex: number;
   weeks: ProgramWeek[];
+  // The current week is DERIVED from startDate + asOf (see domain/programClock),
+  // never stored — a stored index froze the program at week 0 forever (BC-01).
 }
 
 export interface UserProfile {

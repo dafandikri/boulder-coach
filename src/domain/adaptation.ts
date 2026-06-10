@@ -9,7 +9,6 @@ import type {
   SessionLog,
 } from './types';
 
-/** Deep-ish clone so rules never mutate the planned template. */
 function cloneSession(s: PlannedSession): PlannedSession {
   return { ...s, blocks: s.blocks.map((b) => ({ ...b })) };
 }
@@ -49,10 +48,17 @@ function firstFlagged(map: Partial<Record<BodyPart, number>>): BodyPart | undefi
   return (Object.keys(map) as BodyPart[]).find((k) => (map[k] ?? 0) > 0);
 }
 
+function recentBlockLogs(blockId: string, logs: SessionLog[], n: number): SessionLog[] {
+  return logs
+    .filter((l) => l.blocks.some((b) => b.blockId === blockId))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, n);
+}
+
 export function adapt(
   planned: PlannedSession,
   checkIn: CheckIn,
-  _recentLogs: SessionLog[],
+  recentLogs: SessionLog[],
   metrics: LoadMetrics,
 ): AdaptationResult {
   const session = cloneSession(planned);
@@ -64,7 +70,6 @@ export function adapt(
   if (painPart) {
     warmupMandatory = true;
     scaleMainVolume(session, 0.5);
-    // Remove crimp/loaded grip from main work; force open-hand.
     for (const b of session.blocks) {
       if (b.category === 'main' && b.grip !== 'open-hand') b.grip = 'open-hand';
     }
@@ -118,6 +123,45 @@ export function adapt(
       ruleId: 'fatigue',
       reason: 'Rough sleep / high fatigue — trimmed volume ~20% and lowered the RPE target.',
     });
+  }
+
+  // Progression rules 6-7: only fire when no safety rule (1-5) made a change.
+  if (changes.length === 0) {
+    for (const b of mainBlocks(session)) {
+      const target = b.targetGrade;
+      if (target === undefined) continue;
+
+      const blockLogs = recentBlockLogs(b.id, recentLogs, 2);
+      if (blockLogs.length < 2) continue;
+
+      const allCrushing = blockLogs.every((l) =>
+        l.blocks.some(
+          (lb) =>
+            lb.blockId === b.id &&
+            lb.gradesSent.some((g) => g >= target) &&
+            lb.rpe <= b.targetRPE - 1,
+        ),
+      );
+
+      const allMissing = blockLogs.every(
+        (l) =>
+          !l.blocks.some((lb) => lb.blockId === b.id && lb.gradesSent.some((g) => g >= target)),
+      );
+
+      if (allCrushing) {
+        b.targetGrade = Math.min(17, target + 1);
+        changes.push({
+          ruleId: 'progression',
+          reason: `Crushing your targets — bumped grade from V${target} to V${b.targetGrade}. Keep it up!`,
+        });
+      } else if (allMissing) {
+        b.targetGrade = Math.max(1, target - 1);
+        changes.push({
+          ruleId: 'regression',
+          reason: `Missed targets on the last 2 sessions — eased grade from V${target} to V${b.targetGrade} to build confidence.`,
+        });
+      }
+    }
   }
 
   return { adjustedSession: session, changes, warmupMandatory };

@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { adapt } from '../../src/domain/adaptation';
-import type { CheckIn, LoadMetrics, PlannedSession } from '../../src/domain/types';
+import type {
+  CheckIn,
+  LoadMetrics,
+  LoggedBlock,
+  PlannedSession,
+  SessionLog,
+} from '../../src/domain/types';
 
 function neutralCheckIn(): CheckIn {
   return {
@@ -162,5 +168,112 @@ describe('adapt — fatigue & default', () => {
     expect(totalMainSets(r.adjustedSession)).toBe(totalMainSets(session()));
     expect(r.changes).toHaveLength(0);
     expect(r.warmupMandatory).toBe(false);
+  });
+});
+
+function logBlock(blockId: string, overrides: Partial<LoggedBlock> = {}): LoggedBlock {
+  return {
+    blockId,
+    setsCompleted: 6,
+    gradesAttempted: [],
+    gradesSent: [],
+    rpe: 7,
+    ...overrides,
+  };
+}
+
+function sessionLog(id: string, date: string, blocks: LoggedBlock[]): SessionLog {
+  return {
+    id,
+    date,
+    warmupCompleted: true,
+    blocks,
+    sessionRPE: blocks.reduce((m, b) => Math.max(m, b.rpe), 0),
+    durationMin: 60,
+  };
+}
+
+describe('adapt — progression (rules 6-7)', () => {
+  it('progresses targetGrade when last 2 matching logs show sends at or above target at low RPE (rule 6)', () => {
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [
+        logBlock('m', { gradesAttempted: [5, 6], gradesSent: [5, 6], rpe: 7 }),
+      ]),
+      sessionLog('log-2', '2026-06-05', [
+        logBlock('m', { gradesAttempted: [5, 6], gradesSent: [5], rpe: 8 }),
+      ]),
+    ];
+    const r = adapt(session(), neutralCheckIn(), logs, okMetrics);
+    const main = r.adjustedSession.blocks.find((b) => b.category === 'main');
+    expect(main?.targetGrade).toBe(6);
+    expect(r.changes.some((c) => c.ruleId === 'progression')).toBe(true);
+  });
+
+  it('does NOT progress when only 1 matching log exists (not enough data)', () => {
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [logBlock('m', { gradesSent: [5, 6], rpe: 7 })]),
+    ];
+    const r = adapt(session(), neutralCheckIn(), logs, okMetrics);
+    const main = r.adjustedSession.blocks.find((b) => b.category === 'main');
+    expect(main?.targetGrade).toBe(5);
+    expect(r.changes.some((c) => c.ruleId === 'progression')).toBe(false);
+    expect(r.changes.some((c) => c.ruleId === 'regression')).toBe(false);
+  });
+
+  it('regresses targetGrade when last 2 matching logs show no sends at or above target (rule 7)', () => {
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [
+        logBlock('m', { gradesAttempted: [4, 5], gradesSent: [4], rpe: 9 }),
+      ]),
+      sessionLog('log-2', '2026-06-05', [
+        logBlock('m', { gradesAttempted: [4], gradesSent: [], rpe: 9 }),
+      ]),
+    ];
+    const r = adapt(session(), neutralCheckIn(), logs, okMetrics);
+    const main = r.adjustedSession.blocks.find((b) => b.category === 'main');
+    expect(main?.targetGrade).toBe(4);
+    expect(r.changes.some((c) => c.ruleId === 'regression')).toBe(true);
+  });
+
+  it('pain (rule 1) takes priority over crushing progression rule 6', () => {
+    const ci = neutralCheckIn();
+    ci.pain = { shoulder: 2 };
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [logBlock('m', { gradesSent: [5, 6], rpe: 7 })]),
+      sessionLog('log-2', '2026-06-05', [logBlock('m', { gradesSent: [5], rpe: 8 })]),
+    ];
+    const r = adapt(session(), ci, logs, okMetrics);
+    const main = r.adjustedSession.blocks.find((b) => b.category === 'main');
+    // volume cut, not increased — safety wins
+    expect(main?.sets).toBeLessThanOrEqual(
+      session().blocks.find((b) => b.category === 'main')!.sets,
+    );
+    expect(r.changes[0]?.ruleId).toBe('pain');
+  });
+
+  it('is a no-op on a block that has no targetGrade (e.g. warmup)', () => {
+    const s = session();
+    s.blocks[1]!.targetGrade = undefined; // main block has no target
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [logBlock('m', { gradesSent: [5], rpe: 7 })]),
+      sessionLog('log-2', '2026-06-05', [logBlock('m', { gradesSent: [5], rpe: 8 })]),
+    ];
+    const r = adapt(s, neutralCheckIn(), logs, okMetrics);
+    expect(r.changes.some((c) => c.ruleId === 'progression')).toBe(false);
+    expect(r.changes.some((c) => c.ruleId === 'regression')).toBe(false);
+  });
+
+  it('neither progresses nor regresses when logs show mixed results', () => {
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [logBlock('m', { gradesSent: [5, 6], rpe: 7 })]),
+      sessionLog('log-2', '2026-06-05', [
+        logBlock('m', { gradesSent: [3], rpe: 9 }), // below target
+      ]),
+    ];
+    const r = adapt(session(), neutralCheckIn(), logs, okMetrics);
+    const main = r.adjustedSession.blocks.find((b) => b.category === 'main');
+    expect(main?.targetGrade).toBe(5); // unchanged
+    expect(r.changes.some((c) => c.ruleId === 'progression')).toBe(false);
+    expect(r.changes.some((c) => c.ruleId === 'regression')).toBe(false);
   });
 });

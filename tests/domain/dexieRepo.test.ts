@@ -35,7 +35,6 @@ describe('DexieClimbRepo', () => {
       id: 'prog-test-1',
       startDate: '2026-06-09',
       lengthWeeks: 6,
-      currentWeekIndex: 0,
       weeks: [],
     };
     await repo.saveProgram(program);

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
+import { localDateIso } from '@/app/lib/date';
 import type { BodyPart, CheckIn } from '@/domain/types';
 
 const PARTS: { key: BodyPart; label: string }[] = [
@@ -13,10 +14,6 @@ const PARTS: { key: BodyPart; label: string }[] = [
 ];
 
 type Flags = Partial<Record<BodyPart, number>>;
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function toggleFlag(map: Flags, key: BodyPart): Flags {
   if (map[key]) {
@@ -38,7 +35,7 @@ export default function CheckInPage() {
   async function save(): Promise<void> {
     setSaving(true);
     const checkIn: CheckIn = {
-      date: todayIso(),
+      date: localDateIso(new Date()),
       sleepQuality,
       overallFatigue,
       motivation,

@@ -55,15 +55,15 @@ Repository interface (IClimbRepo) — swap point
 
 ## Data Model
 
-| Entity                   | Fields (core)                                                                                                                 |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `UserProfile`            | currentGrade (V-scale), goalGrade, availableWeekdays, sessionsPerWeek, injuryHistory[], startDate                             |
-| `Program`                | id, startDate, lengthWeeks (6), periodizationModel, currentWeekIndex, status                                                  |
-| `PlannedSession`         | programId, weekIndex, dayIndex, type, targetMetrics, blocks[]                                                                 |
-| `CheckIn`                | date, sleepQuality, overallFatigue, soreness map (PIP/wrist-TFCC/shoulder/elbow), painFlags (location + severity), motivation |
-| `SessionLog`             | date, plannedSessionId?, warmupCompleted, blocks[] (sets, grades attempted/sent, RPE), sessionRPE, durationMin, notes         |
-| `LoadMetrics` (derived)  | dailyLoad = sRPE × durationMin, acute7d, chronic28d, **ACWR**                                                                 |
-| `Drill` (seeded library) | name, skillCategory (technique / prehab), description, cues                                                                   |
+| Entity                   | Fields (core)                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `UserProfile`            | currentGrade (V-scale), goalGrade, availableWeekdays, sessionsPerWeek, injuryHistory[], startDate                                    |
+| `Program`                | id, startDate, lengthWeeks (6), periodizationModel, weeks[] — current week is **derived** from startDate + today (BC-01), not stored |
+| `PlannedSession`         | programId, weekIndex, dayIndex, type, targetMetrics, blocks[]                                                                        |
+| `CheckIn`                | date, sleepQuality, overallFatigue, soreness map (PIP/wrist-TFCC/shoulder/elbow), painFlags (location + severity), motivation        |
+| `SessionLog`             | date, plannedSessionId?, warmupCompleted, blocks[] (sets, grades attempted/sent, RPE), sessionRPE, durationMin, notes                |
+| `LoadMetrics` (derived)  | dailyLoad = sRPE × durationMin, acute7d, chronic28d, **ACWR**                                                                        |
+| `Drill` (seeded library) | name, skillCategory (technique / prehab), description, cues                                                                          |
 
 Session types: `limit-boulder` (max strength/power), `power-endurance` (4×4), `volume-technique`, `antagonist-prehab`.
 
@@ -72,6 +72,12 @@ Session types: `limit-boulder` (max strength/power), `power-endurance` (4×4), `
 Tuned for V4–V6, gym-only, no equipment.
 
 - **6-week mesocycle, concurrent + waved:** `hard · hard · deload · hard · peak · deload`.
+- **Week progression (BC-01):** the current week is derived from `startDate + today`
+  (`domain/programClock.programPosition`), not a stored index. When the 6-week cycle completes the
+  app **auto-rolls into a fresh mesocycle** (regenerated from the current profile, start date advanced
+  by the elapsed cycles) rather than dead-ending on a "cycle complete" screen — this preserves the
+  core promise that today's session is _always_ defined. Once progression rules 6–7 (BC-05) land, the
+  regenerated cycle reflects any grade the climber earned.
 - **Session types scale to weekly count (2→4):**
   - 2/week: Limit bouldering + Power-endurance(4×4)/technique.
   - 3/week: add Volume/technique day.
