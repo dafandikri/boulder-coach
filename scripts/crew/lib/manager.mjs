@@ -26,17 +26,22 @@ export function shouldConsultBrain(pbi) {
 /**
  * Ask the manager brain whether to split a large PBI into file-disjoint sub-tasks.
  * Falls back to no-split on any error, so correctness never depends on the LLM.
+ * TOOL-NEUTRAL: the one-shot agent argv is injected (`config.aiAgent`), so a
+ * Codex/Aider shop isn't forced to have `claude`.
  * @param {{id: string, complexity: string, files: string[]}} pbi
+ * @param {string[]} [aiAgent] argv for a one-shot prompt agent; the prompt is appended
  * @returns {SplitPlan}
  */
-export function consultBrain(pbi) {
+export function consultBrain(pbi, aiAgent = ['claude', '--print']) {
   if (!shouldConsultBrain(pbi)) return { split: [] };
   try {
+    const [cmd, ...args] = aiAgent;
+    if (!cmd) return { split: [] };
     const prompt = readFileSync(join(process.cwd(), 'scripts/crew/prompts/manager.md'), 'utf8')
       .replace(/{{PBI_ID}}/g, pbi.id)
       .replace(/{{COMPLEXITY}}/g, pbi.complexity)
       .replace(/{{FILES}}/g, pbi.files.join(', '));
-    const out = execFileSync('claude', ['--print', prompt], { encoding: 'utf8' });
+    const out = execFileSync(cmd, [...args, prompt], { encoding: 'utf8' });
     const json = out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1);
     const parsed = /** @type {SplitPlan} */ (JSON.parse(json));
     return Array.isArray(parsed.split) ? parsed : { split: [] };

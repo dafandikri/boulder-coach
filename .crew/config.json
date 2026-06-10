@@ -4,6 +4,7 @@
   "workerTool": "claude",
   "leaseSeconds": 1800,
   "maxGateAttempts": 3,
+  "aiAgent": ["claude", "--print"],
   "launchAdapters": {
     "claude": "scripts/crew/adapters/claude.sh",
     "codex": "scripts/crew/adapters/codex.sh",
