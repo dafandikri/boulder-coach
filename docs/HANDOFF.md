@@ -27,7 +27,7 @@ file is the live position** — update it as the LAST step of any session (see "
 
 - **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** + the font-flake build fix (`fd0b4be`)
   are committed on `main`. PWA: Today, check-in, session player, history, insights, program, drills, SW.
-- **NEW — Crew multi-agent orchestrator** (branch **`feat/crew-orchestration`**, gate-green, NOT pushed):
+- **NEW — Crew multi-agent orchestrator** (branch **`feat/crew-orchestration`**, gate-green, pushed):
   a git-native, tool-neutral system to run up to 3 agents in parallel worktrees on file-disjoint PBIs,
   with reviewer-gated tiered auto-merge and human override. `pnpm crew start|status|approve|reject|
 pause|resume`. See `docs/crew/README.md` + the spec/plan under `docs/superpowers/`.
