@@ -87,6 +87,17 @@ This project is built and maintained under an AI-first quality harness. Before c
 - **Learning ledger:** before a task, grep `docs/LEARNINGS.md` for files you touch; on
   any gate failure, append an entry (root cause → fix → prevention).
 
+# Parallel work with Crew (optional)
+
+`pnpm crew start` runs several agents in parallel git worktrees, each on a backlog PBI whose `Files:`
+set is disjoint from every other active worker — so merge conflicts are structurally avoided. It is
+tool-neutral (adapters for claude/codex/aider) and built on plain git + Node. Low-risk, reviewer-
+approved branches auto-merge to local `main`; safety/UI/infra (or any reviewer flag) wait in a human
+review queue (`pnpm crew status` / `approve` / `reject`). Single-agent work is unchanged — Crew is an
+accelerator, not a requirement, and the gate is still the contract for every branch. Because the lock
+is the PBI's `Files:` field, every open PBI must declare accurate files (enforced by
+`tests/crew/backlog-hygiene.test.ts`). Runbook: `docs/crew/README.md`.
+
 # Documentation discipline (keep docs current)
 
 Documentation is part of "done", not an afterthought. Whenever you make a **substantial** change —

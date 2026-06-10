@@ -28,6 +28,26 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-11 — scripts/crew/lib/\*.mjs — type-coverage (type)
+
+- **Task:** Crew multi-agent orchestrator (Phases 1–8).
+- **What failed:** `pnpm gate` step 5 (type-coverage) dropped below 99% — every identifier in the new
+  `.mjs` lib files counted as uncovered (`markdown`, `pbis`, `cur`, …). Also one `/** @type {any} */`
+  had slipped into `backlog.mjs` (violates the no-`any` rule and is itself uncovered).
+- **Root cause:** `tsconfig` has `allowJs: true` but NOT `checkJs`, so plain `.mjs` files are pulled
+  into the program (via the `.ts` test imports) yet their JSDoc is **not applied** — TS treats their
+  internals as untyped. type-coverage (which scans `scripts/**`; only `tests/**`/`e2e/**` are ignored)
+  then counts them all as uncovered.
+- **Fix:** added `// @ts-check` to every in-program lib module (`glob/backlog/schedule/risk/lease/
+claims/manager.mjs`) so JSDoc is enforced and identifiers get real types; rewrote `backlog.mjs` to
+  drop the `any` and guard `noUncheckedIndexedAccess` index access (`header[1] ?? ''`, a `toStatus()`
+  narrowing helper). Result: tsc clean, type-coverage 99.90%.
+- **Prevention:** any new `.mjs` that ends up in the tsconfig program (i.e. imported by a `.ts` test)
+  MUST start with `// @ts-check` and carry full JSDoc param/return types. Pure wiring `.mjs` not
+  imported by tests (conduct/crew/merge/git/launch/review) aren't in the program, so they're not
+  type-coverage-scanned — keep their logic thin.
+- **Attempts to green:** 2
+
 ## 2026-06-10 — src/app/layout.tsx — build (test)
 
 - **Task:** Unblock `git push` (gate step 8/8 failing).
