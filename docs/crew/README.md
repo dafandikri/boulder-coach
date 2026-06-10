@@ -18,6 +18,33 @@ pnpm crew reject <PBI>     # discard a branch + its worktree
 pnpm crew pause | resume   # freeze / unfreeze the conductor (merges + assignment)
 ```
 
+> Run `pnpm crew start` from the **primary working tree on `main`** — the conductor merges there and
+> refuses (re-queues) if you're on another branch.
+
+## First run — smoke test before going parallel
+
+The conductor + scheduling logic is fully tested, but the **live agent + git path** only proves out
+by running it. Validate on one cheap PBI first:
+
+1. `.crew/config.json` ships with **`maxWorkers: 1`** — leave it for the smoke run.
+2. `pnpm crew start`; in another terminal `pnpm crew status`. Watch one PBI go worktree → worker →
+   reviewer → auto-merge (or land in the review queue).
+3. When that works, bump `maxWorkers` to `3` and restart — now file-disjoint PBIs run in parallel.
+
+**Costs & safety:** each worker is a real agent invocation (tokens), runs **autonomously** (it executes
+Bash — tests, gate, local commits — without prompts; see "Worker autonomy" below), and edits code in
+its worktree. `pnpm crew pause` freezes everything; every auto-merge is a revertible commit.
+
+## Worker autonomy & permissions
+
+Workers must run the gate and commit unattended, so the adapters run their agent non-interactively:
+`claude --permission-mode bypassPermissions`, `codex exec --full-auto`, `aider --yes-always`
+(`scripts/crew/adapters/*.sh`). Autonomy is bounded by **isolation** (each worker is in its own git
+worktree) and the **gate** (nothing merges unless `pnpm gate` is green after rebase). Crucially,
+`deny` rules in `.claude/settings.json` (e.g. `git push`) **still apply** even in bypass mode — workers
+can edit and commit locally but cannot push. Non-`claude` adapter flags may need per-tool tuning for
+your CLI version.
+
 ## How conflicts are avoided (three independent layers)
 
 1. **Disjoint file-set locking** — each PBI's `Files:` set is a mutex; a PBI is only assigned when
