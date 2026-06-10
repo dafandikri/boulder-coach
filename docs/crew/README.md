@@ -40,10 +40,16 @@ its worktree. `pnpm crew pause` freezes everything; every auto-merge is a revert
 Workers must run the gate and commit unattended, but **not** at the cost of blanket host access. The
 Claude adapter runs `--permission-mode acceptEdits` (auto-applies file edits) plus an **allowlist** of
 exactly the commands a worker needs — `pnpm gate`/`test`/`install`, `git add`/`commit` — in
-`.claude/settings.json` `permissions.allow`. Everything else **fails closed**, and `permissions.deny`
-(e.g. `git push`) always wins. This is deliberately an allowlist, not a deny-list with a bypass: a
-blanket `bypassPermissions` would hand an autonomous agent full host Bash (network exfiltration,
-credential reads, `rm`).
+`.claude/settings.json` `permissions.allow`. Everything else **fails closed**. This is deliberately an
+allowlist, not a deny-list with a bypass: a blanket `bypassPermissions` would hand an autonomous agent
+full host Bash (network exfiltration, credential reads, `rm`).
+
+**Push is scoped, not global.** `permissions.allow` lets a _supervised_ session (you, or the agent you
+drive) `git push` / `gh pr create|merge`. Autonomous **workers cannot push**: the adapter passes
+`--disallowed-tools "Bash(git push:*)" "Bash(gh pr …)"`, which is per-worker and wins over the shared
+`allow`. Workers commit locally; the conductor merges to **local** `main`; publishing to the remote is
+a human/supervised action. Recommended defense-in-depth: enable **GitHub branch protection on `main`**
+(require PR + green CI) so merge authority never bypasses review.
 
 **A git worktree is NOT a security boundary** — same user, filesystem, `~/.ssh`/cloud creds, and
 network. The allowlist is the real containment. If you run Crew on **untrusted PBIs or a shared

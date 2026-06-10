@@ -38,10 +38,16 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
   the `deny` list only blocked `git push`, leaving everything else open. Deny-list-as-only-gate.
 - **Fix:** `acceptEdits` + an **allowlist** in `.claude/settings.json` `permissions.allow` of exactly
   the commands a worker needs (`pnpm gate/test/install`, `git add/commit`). Everything else fails
-  closed; `deny` still wins. Documented that real isolation (container/VM) is required for untrusted
-  PBIs / shared machines (a worktree isn't isolation).
+  closed. Documented that real isolation (container/VM) is required for untrusted PBIs / shared
+  machines (a worktree isn't isolation).
+- **Follow-up (scoped push):** the owner later authorized supervised agent push/PR/merge. Rather than
+  removing a deny that also guarded workers, `allow` now grants push/`gh` to the _main_ session, and
+  the worker adapter passes **`--disallowed-tools "Bash(git push:*)" …`** (per-invocation, wins over
+  `allow`) so autonomous workers still cannot push. Recommend GitHub branch protection on `main`.
 - **Prevention:** never grant blanket Bash to an autonomous subprocess; allowlist the needed commands
-  (default-deny). Treat a worktree as a workspace, not a sandbox.
+  (default-deny). Scope dangerous capabilities per session (`--disallowed-tools`) instead of one shared
+  deny that can't tell a supervised session from an autonomous worker. A worktree is a workspace, not a
+  sandbox.
 - **Attempts to green:** 1
 
 ## 2026-06-11 — tests/crew/conductor.test.ts — tests (test)
