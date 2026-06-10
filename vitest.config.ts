@@ -16,6 +16,11 @@ export default defineConfig({
       reporter: ['text', 'json-summary'],
       include: ['src/domain/**', 'src/data/**', 'src/app/lib/**'],
       thresholds: {
+        // perFile: every individual file must clear the bar — a 100%-covered
+        // sibling can no longer mask a weak file on the aggregate (e.g. schedule.ts
+        // once sat at 75% branch behind 100% neighbours). See docs/LEARNINGS.md
+        // 2026-06-10 (unreachable branch) and skills/universal-quality-bar.md.
+        perFile: true,
         'src/domain/adaptation.ts': { lines: 100, branches: 100, functions: 100, statements: 100 },
         'src/domain/loadMetrics.ts': { lines: 100, branches: 100, functions: 100, statements: 100 },
         'src/domain/**': { lines: 95, branches: 90, functions: 95, statements: 95 },

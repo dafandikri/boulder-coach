@@ -29,6 +29,21 @@ describe('computeInsights', () => {
     expect(i.averageSessionRPE).toBe(7.5);
   });
 
+  it('skips soreness/pain entries whose severity is falsy (0 or undefined)', () => {
+    const checkIns: CheckIn[] = [
+      {
+        date: '2026-06-09',
+        sleepQuality: 4,
+        overallFatigue: 2,
+        motivation: 4,
+        soreness: { pip: 0, elbow: undefined }, // present keys, no real severity
+        pain: { shoulder: 0 },
+      },
+    ];
+    const i = computeInsights([], checkIns);
+    expect(i.sorenessTrends).toEqual([]); // nothing recorded for falsy severities
+  });
+
   it('aggregates soreness and pain trends from check-ins', () => {
     const logs: SessionLog[] = [mockLog('2026-06-09', 5, [])];
     const checkIns: CheckIn[] = [

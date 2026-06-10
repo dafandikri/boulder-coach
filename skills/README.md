@@ -25,6 +25,7 @@ already paid for.
 
 | Skill                                                      | Use before…                               | Saves iterations on…                     |
 | ---------------------------------------------------------- | ----------------------------------------- | ---------------------------------------- |
+| [`universal-quality-bar.md`](universal-quality-bar.md)     | **anything, on any tool/model**           | the 3 bug classes that ship green        |
 | [`plan-a-change.md`](plan-a-change.md)                     | starting any non-trivial work             | building the wrong thing                 |
 | [`passing-the-gate.md`](passing-the-gate.md)               | writing/editing code                      | strict-TS, coverage, knip, alias gotchas |
 | [`test-driven-development.md`](test-driven-development.md) | writing tests/logic                       | weak or after-the-fact tests             |

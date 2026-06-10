@@ -14,15 +14,29 @@
 `pnpm gate` runs: format:check → lint → tsc --noEmit → depcruise → type-coverage → vitest+coverage → knip → build.
 
 - NEVER use `any` (ESLint + type-coverage enforce this).
-- Coverage: `adaptation.ts` & `loadMetrics.ts` = 100% branch; rest of domain ≥ 90% branch.
+- Coverage is **per-file** (`thresholds.perFile: true`): `adaptation.ts` & `loadMetrics.ts` = 100%
+  branch; rest of domain ≥ 90% branch; everything else ≥ 80%. No file hides below the bar behind a
+  100%-covered sibling — an uncovered branch fails the gate by filename. Don't leave unreachable
+  defensive branches; restructure so the meaningful case is tested.
+- **Logic belongs in covered layers** (`src/domain/**`, `src/app/lib/**`), never in gate-blind
+  `page.tsx` (no React test harness). An unused tested helper is a smell — use it, don't re-implement.
 - TDD mandatory: write the failing test FIRST, watch it fail, then minimal impl, then refactor.
 - Integration over unit tests where they catch more (drive the engine end-to-end).
 - Test data must include a test/mock/dummy/example marker.
 
+Read [`skills/universal-quality-bar.md`](skills/universal-quality-bar.md) first — it explains the
+three bug classes the gate now blocks (aggregate-coverage hiding, logic in gate-blind components,
+prose-only safety review) and why each is a build failure, not a review note.
+
 ## Safety-critical files
 
-Any edit to `src/domain/adaptation.ts` or `src/domain/loadMetrics.ts` MUST be reviewed by the
-`safety-rule-reviewer` agent before commit. Use the `domain-rule-authoring` skill when writing them.
+`src/domain/adaptation.ts` and `src/domain/loadMetrics.ts` are guarded **tool-neutrally** so any
+model/provider is held to the rule table: `tests/domain/adaptation.invariants.test.ts` fuzzes the
+guarantees (a weakened rule fails the gate), and `.husky/pre-commit` → `scripts/check-safety-change.sh`
+surfaces the canonical rule table + runs `pnpm test:safety` whenever you touch them. Use the
+`domain-rule-authoring` skill; read `skills/safety-critical-change.md`. On Claude, also run the
+`safety-rule-reviewer` agent before commit — it's an additional human-judgment eye on top of the
+executable invariants, not a substitute the gate depends on.
 
 ## Git policy
 

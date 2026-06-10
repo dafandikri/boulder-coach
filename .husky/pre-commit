@@ -1,2 +1,5 @@
 pnpm exec lint-staged
 pnpm exec tsc --noEmit
+# Safety-critical core: surface the rule table + run the fuzzed invariants when
+# adaptation.ts / loadMetrics.ts change. Tool-neutral (any agent that commits).
+bash scripts/check-safety-change.sh

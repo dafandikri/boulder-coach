@@ -31,28 +31,32 @@ file is the live position** — update it as the LAST step of any session (see "
 - **Domain (pure):** loadMetrics, warmup, periodization, **programClock** (BC-01), **schedule**
   (BC-03), adaptation (safety — now with progression/regression rules 6–7, BC-05), sessionLog,
   insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
-- **Last work:** the P0s were committed as **`9f009bd`** by a cross-agent handoff (DeepSeek V4 Flash
-  via OpenCode). This session (Opus 4.8) then **scrutinized and hardened** that commit — see "Pending
-  (uncommitted)". The cross-agent commit also left stale `awaiting commit` statuses and skipped the
-  mandated safety-file review; both reconciled (statuses → `done (9f009bd)`; review ran → PASS).
+- **Last work (two layers):**
+  1. P0s committed as **`9f009bd`** by a cross-agent handoff (DeepSeek V4 Flash via OpenCode);
+     Opus 4.8 then scrutinized + hardened them in **`a06e7ba`** (BC-04 grade capture rewritten from a
+     buggy append-model to a `{grade: count}` tally; `schedule.ts` 75%→100% branch; BC-05 safety
+     review ran → PASS). **`a06e7ba` is committed but NOT pushed** — run `! git push` to publish.
+  2. Then built the **universal quality-enforcement package** (uncommitted, gate-green) — see below.
 
-## Pending (uncommitted) — review, then commit
+## Pending (uncommitted) — the universal quality bar
 
-Working tree holds gate-green quality fixes on top of `9f009bd` (no git ops performed — per the
-human's "never auto-commit" rule):
+Promotes the three bug classes that let the DeepSeek commit ship green into **executable gate checks**,
+so any provider/model is held to the same bar (no git ops performed — per "never auto-commit"):
 
-- **BC-04 grade capture rewritten** (`src/app/session/page.tsx`): committed `bumpGrade` was buggy
-  (`−` appended a lower grade instead of decrementing; arrays only grew; `expandTally` was dead
-  code). Now a per-grade `{grade: count}` tally that uses `expandTally` at save. New integration
-  test `tests/domain/sessionCapture.test.ts` (tally → log → repo → Insights pyramid, fake-indexeddb).
-- **schedule.ts hardened** (`src/domain/schedule.ts`): removed an unreachable `?? restSession`
-  branch (was 75% branch); a training weekday with no planned session now rests. +2 tests → 100%.
-- **BC-05 safety review** ran retroactively → **PASS** (recorded in BACKLOG).
+- **Per-file coverage** — `vitest.config.ts` `thresholds.perFile: true`. No file hides below the bar
+  behind 100% siblings; an uncovered branch fails by filename. Brought `insights.ts` 75→100% branch.
+- **Executable safety invariants** — `tests/domain/adaptation.invariants.test.ts` fuzzes `adapt()`
+  over ≈3.9k input combos and asserts the rule-table guarantees. The tool-neutral replacement for the
+  Claude-only `safety-rule-reviewer` (proven: weakening the ACWR cap fails the gate).
+- **Safety-change guard** — `scripts/check-safety-change.sh` in `.husky/pre-commit` + `pnpm
+test:safety`: touching a safety file surfaces the rule table and runs the safety suites.
+- **Docs** — new `skills/universal-quality-bar.md` (read-first, any tool), wired into `pnpm onboard`;
+  AGENTS.md / CLAUDE.md / README / passing-the-gate.md synced.
 
 ## Next actions (prioritized)
 
-1. **Commit the pending fixes** (suggested: `fix(session): tally-based grade capture + schedule
-hardening + BC-04 integration test`). Gate is green.
+1. **Push `a06e7ba`** (`! git push`) and **commit the enforcement package** (suggested:
+   `chore(gate): universal quality enforcement — per-file coverage + safety invariants + guard`).
 2. **Then work `docs/BACKLOG.md` from P1** — next unblocked item is **BC-06** (onboarding & profile
    screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
 
@@ -62,10 +66,11 @@ hardening + BC-04 integration test`). Gate is green.
 
 - **Session player UI is gate-blind** — React components have no RTL/jsdom harness here, so the
   capture/checklist UI is only indirectly tested (via `app/lib` helpers + the integration test).
-  Real tap-through is unverified until a Playwright flow exists (relates to BC-16).
-- **Safety-file review is Tier-2 prose, not a gate** — the cross-agent commit proved an agent on
-  another tool will skip `safety-rule-reviewer`. Candidate promotion: a pre-commit marker check on
-  `adaptation.ts`/`loadMetrics.ts` (see LEARNINGS 2026-06-10).
+  Real tap-through is unverified until a Playwright flow exists (relates to BC-16). Mitigation in
+  place: `skills/universal-quality-bar.md` mandates logic live in covered `app/lib`, not components.
+- **Safety review is now executable** (was Tier-2 prose) — `adaptation.invariants.test.ts` +
+  `check-safety-change.sh` enforce the rule table for any tool. The Claude `safety-rule-reviewer` is
+  now an optional extra eye, not the only guard.
 - **Service-worker runtime behavior** — strategy is guarded by a string test, but real offline/update
   behavior is only verifiable in a browser. Bump `CACHE` in `public/sw.js` on any shell-breaking
   release. (Tier-1 promotion tracked as BC-16.)

@@ -67,16 +67,22 @@ contract.** See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Runs fast-to-slow; exit code is law:
 
-| #   | Step             | Tool                                                           |
-| --- | ---------------- | -------------------------------------------------------------- |
-| 1   | format           | Prettier `--check`                                             |
-| 2   | lint             | ESLint (typescript-eslint **strict-type-checked**, bans `any`) |
-| 3   | typecheck        | `tsc --noEmit` (strict)                                        |
-| 4   | architecture     | dependency-cruiser (layering: domain ↛ data ↛ app)             |
-| 5   | type-coverage    | `type-coverage --at-least 99`                                  |
-| 6   | tests + coverage | Vitest v8 (safety files = 100% branch)                         |
-| 7   | dead-code        | Knip                                                           |
-| 8   | build            | `next build`                                                   |
+| #   | Step             | Tool                                                            |
+| --- | ---------------- | --------------------------------------------------------------- |
+| 1   | format           | Prettier `--check`                                              |
+| 2   | lint             | ESLint (typescript-eslint **strict-type-checked**, bans `any`)  |
+| 3   | typecheck        | `tsc --noEmit` (strict)                                         |
+| 4   | architecture     | dependency-cruiser (layering: domain ↛ data ↛ app)              |
+| 5   | type-coverage    | `type-coverage --at-least 99`                                   |
+| 6   | tests + coverage | Vitest v8, **per-file thresholds** (safety files = 100% branch) |
+| 7   | dead-code        | Knip                                                            |
+| 8   | build            | `next build`                                                    |
+
+Coverage is **per-file** (`thresholds.perFile: true`) — every file clears its own bar, so a weak file
+can't hide behind 100%-covered siblings (a single uncovered branch fails the gate by filename). This,
+the executable safety invariants, and the "logic lives in covered layers" rule are the tool-neutral
+enforcement of [`skills/universal-quality-bar.md`](skills/universal-quality-bar.md) — they hold any
+provider/model to the same bar, not just Claude.
 
 ### Four enforcement tiers (defense in depth)
 
@@ -87,8 +93,14 @@ Runs fast-to-slow; exit code is law:
 
 ### Safety net
 
-- **`safety-rule-reviewer`** agent (`.claude/agents/`) reviews every change to `adaptation.ts` /
-  `loadMetrics.ts` against the canonical injury-safety rule table. On deviation the loop **stops**.
+- **Executable safety invariants** (`tests/domain/adaptation.invariants.test.ts`) fuzz `adapt()`
+  across the full input grid and assert the rule-table guarantees — a weakened safety rule fails the
+  gate on **any** model/provider. This is the tool-neutral backbone; the items below are extras.
+- **Safety-change guard** (`scripts/check-safety-change.sh`, wired into `.husky/pre-commit`): touching
+  `adaptation.ts` / `loadMetrics.ts` surfaces the canonical rule table and runs `pnpm test:safety`
+  before the commit is allowed. Plain bash/git — runs for every tool, not just Claude.
+- **`safety-rule-reviewer`** agent (`.claude/agents/`) is an _additional_ Claude-only review eye
+  against the rule table; on deviation the loop **stops**. Not something the gate depends on.
 - **`domain-rule-authoring`** skill (`.claude/skills/`) injects the canonical ACWR math + rule table
   so safety logic is implemented from source, not paraphrase.
 - **Git guardrails** (`.claude/settings.json`): `git push` / `gh pr create` are denied to agents;
@@ -114,6 +126,7 @@ Docs are part of "done" — see `AGENTS.md` → "Documentation discipline".
 | `pnpm gate`                                 | Full quality gate (the source of truth) |
 | `pnpm dev` / `build` / `start`              | Next.js                                 |
 | `pnpm test` / `test:watch`                  | Vitest domain tests                     |
+| `pnpm test:safety`                          | Safety unit + fuzzed invariant suites   |
 | `pnpm e2e`                                  | Playwright smoke                        |
 | `pnpm lint` / `format` / `format:check`     | ESLint / Prettier                       |
 | `pnpm depcruise` / `type-coverage` / `knip` | Static analysis                         |

@@ -40,11 +40,13 @@ discover (see `docs/LEARNINGS.md`).
 
 - Tests live in `tests/**/*.test.ts`. `@/…` value imports resolve (vitest alias is configured);
   relative imports also work.
-- Thresholds: **safety files `adaptation.ts` & `loadMetrics.ts` = 100% branch** — test every branch
-  including boundaries (e.g. exactly `1.3`, a `0`/`undefined` flag, an already-open-hand grip). The
-  rest of `src/domain` ≥ 95% line / 90% branch; everything else rides a 90/80 global aggregate.
-- If a defensive branch is genuinely unreachable, restructure to remove it rather than chasing it; on
-  non-safety files the global aggregate usually absorbs a defensive throw.
+- Thresholds are **per-file** (`thresholds.perFile: true`) — every file clears its own bar, no hiding
+  behind 100% siblings: safety files `adaptation.ts` & `loadMetrics.ts` = **100% branch**; rest of
+  `src/domain` ≥ 95% line / 90% branch; everything else ≥ 90/80. Test every branch including
+  boundaries (e.g. exactly `1.3`, a `0`/`undefined` flag, an already-open-hand grip).
+- If a defensive branch is genuinely unreachable, **restructure so the meaningful case is reachable
+  and tested** — do not leave a `?? fallback` / `if (!x) throw` no input triggers. Per-file coverage
+  means the aggregate no longer absorbs it; an uncovered branch fails the gate by filename.
 
 ## Knip (dead code / unused deps)
 

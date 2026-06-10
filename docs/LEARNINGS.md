@@ -244,3 +244,25 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
   `% length` that hides it behind an unreachable `??`. Per-file branch gaps under the domain bar
   can hide on the aggregate — spot-check new domain files individually.
 - **Attempts to green:** 1.
+
+## 2026-06-10 — gate (universal quality enforcement) — promotion
+
+- **Task:** make ANY provider/model produce highest-quality code (the DeepSeek green-but-buggy commit).
+- **What failed (root):** the gate had three holes a careless/cheap model fell through — (1) coverage
+  thresholds checked on the **aggregate**, so a 75%-branch file hid behind 100% siblings; (2) logic in
+  **gate-blind** `page.tsx` components (no React harness) was untested (the `bumpGrade` bug); (3) the
+  safety review was **Tier-2 prose + a Claude-only agent**, which a different tool simply skips.
+- **Fix (each hole → an executable check, tool-neutral):**
+  - **Per-file coverage** — `vitest.config.ts` `thresholds.perFile: true`. Proven: injecting one
+    uncovered branch into a domain file now fails the gate _by filename_. Brought `insights.ts` 75→100.
+  - **Executable safety invariants** — `tests/domain/adaptation.invariants.test.ts` fuzzes `adapt()`
+    over the full safety input grid (≈3.9k cases) and asserts the rule-table guarantees. Proven:
+    weakening the ACWR-high RPE cap 6→8 fails with the offending input. This is the Tier-1 promotion of
+    the `safety-rule-reviewer` step — no Claude-specific agent required.
+  - **Safety-change guard** — `scripts/check-safety-change.sh` (in `.husky/pre-commit`) surfaces the
+    canonical rule table + runs `pnpm test:safety` whenever a safety file is staged. Plain bash/git.
+  - **Docs** — `skills/universal-quality-bar.md` (read-first on any tool), wired into `pnpm onboard`;
+    AGENTS.md/CLAUDE.md/README synced; "logic belongs in covered layers, not components" made explicit.
+- **Prevention:** the three bug classes are now build failures, not review notes. The gate is the
+  contract for every tool/model equally.
+- **Attempts to green:** 2 (prettier reflow; one `no-unnecessary-condition` on `v ?? 0`).

@@ -54,8 +54,10 @@ specific tool or plugin is required.
 
 **Portable skills:** the [`skills/`](skills/) directory holds tool-neutral, reusable procedures —
 **read the matching one before the matching task** to clear the gate on the first pass (fewest
-iterations). Start with [`skills/passing-the-gate.md`](skills/passing-the-gate.md) before writing any
-code, [`skills/test-driven-development.md`](skills/test-driven-development.md) before tests, and
+iterations). Start with [`skills/universal-quality-bar.md`](skills/universal-quality-bar.md) **first,
+on any tool/model** (it explains the three bug classes the gate now blocks), then
+[`skills/passing-the-gate.md`](skills/passing-the-gate.md) before writing any code,
+[`skills/test-driven-development.md`](skills/test-driven-development.md) before tests, and
 [`skills/safety-critical-change.md`](skills/safety-critical-change.md) before touching `adaptation.ts`
 or `loadMetrics.ts`. Index: [`skills/README.md`](skills/README.md).
 
@@ -65,11 +67,22 @@ This project is built and maintained under an AI-first quality harness. Before c
 
 - **`pnpm gate` must be green.** It runs format → lint → typecheck → architecture → type-coverage →
   tests+coverage → dead-code → build. Exit code is law. (Details: `README.md`.)
+- **Coverage is per-file** (`thresholds.perFile: true`): every file clears its own bar — no hiding a
+  weak file behind 100% siblings. An uncovered branch fails the gate by filename. Don't leave
+  unreachable defensive branches; restructure so the real case is tested. See
+  [`skills/universal-quality-bar.md`](skills/universal-quality-bar.md).
 - **Architecture is enforced:** `src/domain` is pure (no I/O) and must not import from `src/data` or
   `src/app`; `src/data` must not import from `src/app`. dependency-cruiser fails the gate otherwise.
 - **No `any`** (ESLint strict-type-checked + type-coverage). **TDD**: failing test first.
-- **Safety files** `src/domain/adaptation.ts` and `src/domain/loadMetrics.ts`: use the
-  `domain-rule-authoring` skill and get the `safety-rule-reviewer` agent to approve before commit.
+- **Logic belongs in covered layers** (`src/domain/**`, `src/app/lib/**`), never in gate-blind
+  `page.tsx` components (no React test harness here). A tested helper that's unused is a smell — the
+  component probably re-implemented it (that's how the `bumpGrade` bug shipped).
+- **Safety files** `src/domain/adaptation.ts` and `src/domain/loadMetrics.ts` are guarded
+  tool-neutrally: `tests/domain/adaptation.invariants.test.ts` fuzzes the rule-table guarantees (a
+  broken safety rule fails the gate on any model), and `.husky/pre-commit` →
+  `scripts/check-safety-change.sh` surfaces the canonical rule table + runs `pnpm test:safety` when
+  you touch them. Read [`skills/safety-critical-change.md`](skills/safety-critical-change.md) and use
+  `domain-rule-authoring`; on Claude, the `safety-rule-reviewer` agent is an additional optional eye.
 - **Git:** local commits only (conventional commits). NEVER `git push` / open PRs — denied by config.
 - **Learning ledger:** before a task, grep `docs/LEARNINGS.md` for files you touch; on
   any gate failure, append an entry (root cause → fix → prevention).

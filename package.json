@@ -14,6 +14,7 @@
     "knip": "knip",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:safety": "vitest run tests/domain/adaptation.test.ts tests/domain/adaptation.invariants.test.ts tests/domain/loadMetrics.test.ts",
     "gate": "bash scripts/gate.sh",
     "onboard": "bash scripts/onboard.sh",
     "prepare": "husky",
