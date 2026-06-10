@@ -23,36 +23,45 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
-## Current state — 2026-06-10 (last touched by: Claude Opus 4.8)
+## Current state — 2026-06-11 (last touched by: Claude Opus 4.8)
 
-- **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** shipped. PWA: Today (now with a
-  rest-day recovery card), check-in, session player (now captures attempted/sent grade tallies +
-  warm-up checklist gating), history, insights, program calendar, drills, offline SW.
-- **Domain (pure):** loadMetrics, warmup, periodization, **programClock** (BC-01), **schedule**
-  (BC-03), adaptation (safety — now with progression/regression rules 6–7, BC-05), sessionLog,
-  insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
-- **Last work:** P0s (`9f009bd`) → Opus hardening (`a06e7ba`) → universal quality-enforcement package
-  (`5914e8e`, per-file coverage + adaptation invariants + safety-change guard) — all **committed**.
+- **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** + the font-flake build fix (`fd0b4be`)
+  are committed on `main`. PWA: Today, check-in, session player, history, insights, program, drills, SW.
+- **NEW — Crew multi-agent orchestrator** (branch **`feat/crew-orchestration`**, gate-green, NOT pushed):
+  a git-native, tool-neutral system to run up to 3 agents in parallel worktrees on file-disjoint PBIs,
+  with reviewer-gated tiered auto-merge and human override. `pnpm crew start|status|approve|reject|
+pause|resume`. See `docs/crew/README.md` + the spec/plan under `docs/superpowers/`.
+- **Domain (pure):** loadMetrics, warmup, periodization, programClock, schedule, adaptation (safety),
+  sessionLog, insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
 
-## Pending (uncommitted) — deterministic build (font flake fix)
+## Pending (uncommitted) — none
 
-A `git push` failed at gate step 8/8 (`next build`) TWICE in one session, yet a standalone build
-passed in between — classic non-determinism. Root cause: `next/font/google` fetched the Geist `.woff2`
-from `fonts.gstatic.com` **at build time**, so any network blip failed the gate. Fix (uncommitted,
-gate-green):
+All Crew work is committed on `feat/crew-orchestration` (16 commits: planning docs → Phases 1–8). The
+final `pnpm gate` is green (27 test files, 112 tests). Nothing is pushed (repo policy: human pushes).
 
-- **Self-hosted fonts** — `src/app/layout.tsx` now uses Vercel's `geist` pkg (`geist/font/sans`,
-  `geist/font/mono`); fonts are bundled, zero build-time fetch. Same `--font-geist-*` vars, drop-in.
-  Added dep `geist@1.7.2`. Verified deterministic (two consecutive green gates).
-- **Tier-1 guard** — `tests/build/deterministic-fonts.test.ts` fails the gate if any `src` file
-  re-imports `next/font/google` (2nd-occurrence promotion; see `docs/LEARNINGS.md` 2026-06-10).
+## Crew — what shipped (branch `feat/crew-orchestration`)
+
+- **Pure core (TDD, `// @ts-check`):** `scripts/crew/lib/{glob,backlog,schedule,risk,lease,claims,
+manager}.mjs` — backlog parsing, dependency-gated **file-disjoint** scheduling (the conflict lock),
+  tiered-merge risk classifier, lease expiry, atomic claims. Tested in `tests/crew/`.
+- **Wiring:** `conduct.mjs` (conductor loop), `merge.mjs` (rebase→gate→ff-merge), `crew.mjs` (CLI),
+  `lib/{git,launch,review}.mjs`, `adapters/{claude,codex,aider}.sh`, `prompts/*.md`, `.crew/config.json`.
+- **Backlog is now load-bearing:** every open PBI has a `Files:` set; `tests/crew/backlog-hygiene.test.ts`
+  fails the gate if one doesn't (the lock depends on it).
 
 ## Next actions (prioritized)
 
-1. **Commit the font fix** (suggested: `fix(build): self-host Geist fonts to make next build
-deterministic`) then `! git push`. No git ops were performed for you (per "never auto-commit").
+1. **Review + merge `feat/crew-orchestration`** (the human pushes). Optionally `pnpm crew start` to
+   dogfood Crew on the P1 backlog.
 2. **Then work `docs/BACKLOG.md` from P1** — next unblocked item is **BC-06** (onboarding & profile
    screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
+
+## Known limitations (Crew v1, honest)
+
+- Wiring `.mjs` (conduct/crew/merge/git/launch/review) aren't imported by tests, so they're outside
+  tsc/type-coverage — verified by reading, not by the gate. Real multi-worker runs are unexercised in
+  CI (the conductor loop + adapters need a live agent CLI). The manager brain currently **logs** split
+  suggestions but doesn't yet create sub-task claims (acting-on-split is a follow-up).
 
 ## Open threads / known gate-blind risks
 
