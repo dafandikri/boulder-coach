@@ -163,3 +163,29 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
   `setTab(...)` which returns `void`, the rule flags the implicit void return.
 - **Fix:** Use block body `() => { setTab('technique'); }`.
 - **Prevention:** All UI event handlers that call setState must use block-body arrows.
+
+## 2026-06-10 — public/sw.js, manifest, README, CLAUDE.md — cross-model handoff review (gate-blind)
+
+- **Task:** Post-handoff scrutiny of Plan 3 (built by a different model after a session-limit handoff).
+- **What failed:** Four defects the gate cannot see, all green on `pnpm gate`:
+  (1) `sw.js` was cache-first for HTML navigations + a static worker whose bytes never
+  change between deploys → users pinned to the v1 app shell forever (no update path);
+  (2) `manifest.webmanifest` had `"icons": []` → not installable as a PWA;
+  (3) `CLAUDE.md` "Knip ignores" + `README.md` architecture drifted from the new code
+  (5 routes, `insights.ts`/`drills.ts`, the service worker were undocumented);
+  (4) redundant `ignore: ["e2e/**"]` in knip.json (knip's own hint flagged it).
+- **Root cause:** The gate validates types/coverage/architecture/dead-code/build. It is
+  blind to (a) runtime behavior of untyped static assets (`sw.js`), (b) data-only files
+  (manifest), and (c) doc-vs-config semantic drift. Doc discipline was also skipped in the
+  handoff commits.
+- **Fix:** `sw.js` → network-first navigations (fresh app for online users) + cache-first
+  for immutable `/_next/static/*` + `clients.claim()` + per-URL precache (non-atomic) +
+  `CACHE = v2` bump; manifest gets an `icon.svg` (`sizes: any`, maskable); registration
+  defers to `load` and swallows rejection; README/CLAUDE.md synced; knip ignore removed.
+- **Prevention:** After ANY cross-tool/cross-model handoff, run this review checklist on the
+  delta: service worker fetch strategy (navigations must be network-first), manifest icons
+  present, and README/CLAUDE.md/AGENTS.md reflect new routes+modules. A green gate is
+  necessary, not sufficient — gate-blind surfaces (PWA assets, manifests, docs) need a human/
+  second-model pass. Candidate automated checks: a manifest-has-icons test and a Lighthouse-PWA
+  e2e assertion.
+- **Attempts to green:** 1 (only formatting: prettier reflowed sw.js).

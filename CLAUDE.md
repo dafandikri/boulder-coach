@@ -36,10 +36,13 @@ On any gate failure, append an entry (see ledger header for format). Fix from th
 
 ## Knip ignores
 
-`knip.json` `ignoreDependencies` now lists only permanent CLI/config-invoked tooling (prettier,
-dependency-cruiser, type-coverage, knip, tailwind, etc.) — never imported, so knip can't see usage.
-The Plan-1 temporary ignores (dexie, fake-indexeddb, vitest) were removed once the code imported them;
-keep this list to genuine CLI tooling only.
+`knip.json` `ignoreDependencies` lists only `tailwindcss` — the one dep knip can't trace to a
+config/script. The rest of the tooling (prettier, dependency-cruiser, type-coverage, knip, eslint
+config, etc.) is detected automatically because knip parses `package.json` scripts and config-file
+plugins (ESLint, Playwright, PostCSS), so it sees those binaries as used without an ignore entry.
+Add to `ignoreDependencies` only when knip false-flags a genuinely-used dep; never to silence a
+genuinely-unused one (delete the dep instead). Playwright e2e specs are covered by knip's Playwright
+plugin, so they need no `ignore` entry.
 
 ## Documentation discipline (keep docs current)
 

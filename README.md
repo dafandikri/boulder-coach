@@ -25,13 +25,21 @@ pnpm test       # vitest (domain) ;  pnpm e2e  for Playwright smoke
 Layered, with pure domain logic decoupled from storage and UI:
 
 ```
-UI        — Next.js App Router (PWA): Today screen, check-in, session player
+UI        — Next.js App Router (offline PWA). Routes:
+  /         Today screen (adapted session)      /history   logged sessions
+  /checkin  30-second readiness check-in        /insights  ACWR gauge, grade pyramid, soreness log
+  /session  session player (logs actuals)       /program   6-week cycle + current week
+                                                 /drills    technique + prehab library
+  Service worker (public/sw.js): network-first navigations, cache-first hashed assets.
 ─────────────────────────────────────────────────────────────────────────
 Domain    — pure TypeScript, NO I/O (testable in isolation)
   • loadMetrics   sRPE, acute/chronic, ACWR
   • warmup        RAMP warm-up generator
   • periodization 6-week waved program
   • adaptation    safety-first rules engine (adjusts today's session)
+  • sessionLog    session-log assembler + sRPE suggestion
+  • insights      grade pyramid, soreness/pain trends, session stats
+  • drills        seeded technique + prehab reference library
 ─────────────────────────────────────────────────────────────────────────
 Repository — IClimbRepo interface (the only storage seam)
   └ DexieClimbRepo (IndexedDB) now → cloud impl later, domain untouched
