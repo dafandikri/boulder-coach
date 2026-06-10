@@ -36,32 +36,47 @@ pause|resume`. See `docs/crew/README.md` + the spec/plan under `docs/superpowers
 
 ## Pending (uncommitted) — none
 
-All Crew work is committed on `feat/crew-orchestration` (16 commits: planning docs → Phases 1–8). The
-final `pnpm gate` is green (27 test files, 112 tests). Nothing is pushed (repo policy: human pushes).
+All Crew work is committed on `feat/crew-orchestration` (planning docs → Phases 1–8 → the three
+limitation fixes below). Final `pnpm gate` green (**31 test files, 130 tests**, type-coverage 99.82%).
 
 ## Crew — what shipped (branch `feat/crew-orchestration`)
 
 - **Pure core (TDD, `// @ts-check`):** `scripts/crew/lib/{glob,backlog,schedule,risk,lease,claims,
-manager}.mjs` — backlog parsing, dependency-gated **file-disjoint** scheduling (the conflict lock),
-  tiered-merge risk classifier, lease expiry, atomic claims. Tested in `tests/crew/`.
-- **Wiring:** `conduct.mjs` (conductor loop), `merge.mjs` (rebase→gate→ff-merge), `crew.mjs` (CLI),
-  `lib/{git,launch,review}.mjs`, `adapters/{claude,codex,aider}.sh`, `prompts/*.md`, `.crew/config.json`.
-- **Backlog is now load-bearing:** every open PBI has a `Files:` set; `tests/crew/backlog-hygiene.test.ts`
-  fails the gate if one doesn't (the lock depends on it).
+manager,split,route}.mjs` — backlog parsing, dependency-gated **file-disjoint** scheduling (the conflict
+  lock), safe split-planning, finish-routing, tiered-merge risk classifier, lease, atomic claims.
+- **Conductor (dependency-injected, testable):** `conduct.mjs` exports `createConductor(deps)`; the full
+  assign→launch→finish→(merge|queue) state machine is exercised in `tests/crew/conductor.test.ts` with
+  fakes (no live agent/git). `merge.mjs`, `crew.mjs` (CLI w/ `run()` + main-guard), `lib/{git,launch,
+review}.mjs`, adapters, prompts, `.crew/config.json`.
+- **All wiring is type-checked:** every `scripts/crew/**/*.mjs` carries `// @ts-check` and is in
+  `tsconfig` `include`, so tsc + type-coverage cover it (was a gate-blind gap).
+- **Backlog is load-bearing:** every open PBI has a `Files:` set; `tests/crew/backlog-hygiene.test.ts`
+  fails the gate otherwise (the lock depends on it).
+
+## Limitations from the first pass — now RESOLVED
+
+1. **Wiring `.mjs` were outside tsc/type-coverage** → added `// @ts-check` to all of them + put
+   `scripts/crew/**/*.mjs` in `tsconfig` `include`; tsc clean, type-coverage 99.82%.
+2. **Orchestration was unexercised** → refactored the conductor to dependency injection and added
+   `tests/crew/conductor.test.ts` (assignment, auto-merge, review-routing, flag, blocked-merge-requeue,
+   split, lease reclaim) + `tests/crew/cli.test.ts`. A blocked post-rebase merge now re-queues for a
+   human instead of stranding the claim.
+3. **Manager split was inert** → implemented `lib/split.mjs` `planAssignments()` (validates sub-tasks
+   are within the PBI lock, mutually disjoint, and a complete cover; else falls back to the whole PBI),
+   wired into the conductor and tested.
+
+## Remaining honest caveats (genuinely out of CI scope)
+
+- A true end-to-end run with **live agent CLIs + real worktrees** isn't in CI (you can't cheaply spawn
+  Claude/Codex in the gate); the orchestration logic is now fully faked-tested, the shell adapters and
+  real git calls are exercised only by running `pnpm crew start`.
 
 ## Next actions (prioritized)
 
-1. **Review + merge `feat/crew-orchestration`** (the human pushes). Optionally `pnpm crew start` to
-   dogfood Crew on the P1 backlog.
+1. **`feat/crew-orchestration` is pushed** — open a PR / merge when ready. Optionally `pnpm crew start`
+   to dogfood Crew on the P1 backlog.
 2. **Then work `docs/BACKLOG.md` from P1** — next unblocked item is **BC-06** (onboarding & profile
    screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
-
-## Known limitations (Crew v1, honest)
-
-- Wiring `.mjs` (conduct/crew/merge/git/launch/review) aren't imported by tests, so they're outside
-  tsc/type-coverage — verified by reading, not by the gate. Real multi-worker runs are unexercised in
-  CI (the conductor loop + adapters need a live agent CLI). The manager brain currently **logs** split
-  suggestions but doesn't yet create sub-task claims (acting-on-split is a follow-up).
 
 ## Open threads / known gate-blind risks
 

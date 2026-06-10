@@ -26,7 +26,10 @@ pnpm crew pause | resume   # freeze / unfreeze the conductor (merges + assignmen
    has none.
 2. **Serial integration** — branches land one at a time: rebase on `main` → full `pnpm gate` →
    fast-forward merge (`scripts/crew/merge.mjs`). No two merges race.
-3. **Small units** — the manager brain may split `L`/`XL` PBIs into file-disjoint sub-tasks.
+3. **Small units** — the manager brain may split `L`/`XL` PBIs into file-disjoint sub-tasks
+   (`scripts/crew/lib/split.mjs`). A split is only honored when it's **safe** — every sub-task file is
+   within the PBI's lock, sub-tasks are mutually disjoint, and they completely cover the PBI; otherwise
+   it falls back to assigning the whole PBI. So a bad LLM split can never widen or break the lock.
 
 ## Trust tiers (who can auto-merge)
 

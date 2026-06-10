@@ -28,6 +28,18 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-11 — tests/crew/conductor.test.ts — tests (test)
+
+- **Task:** Crew conductor DI tests (limitation fix #2).
+- **What failed:** 6 conductor tests asserted assignment but got empty claims — `parseBacklog` returned
+  `[]` for the mock backlog, so `nextAssignable` saw no PBIs.
+- **Root cause:** `backlog.mjs` header regex is `BC-\d+` (numeric ids); the fixtures used `BC-A`/`BC-L`
+  (letters), which don't match, so nothing parsed.
+- **Fix:** mock PBI ids must be numeric (`BC-90`, `BC-91`). Split sub-task ids (`BC-91a`) are fine
+  because they come from the manager, not the backlog parser.
+- **Prevention:** Crew test fixtures that go through `parseBacklog` MUST use `BC-<number>` headers.
+- **Attempts to green:** 1
+
 ## 2026-06-11 — scripts/crew/lib/\*.mjs — type-coverage (type)
 
 - **Task:** Crew multi-agent orchestrator (Phases 1–8).
