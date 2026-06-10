@@ -36,7 +36,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 > halves are broken in the five ways below. A green gate catches none of them — they are
 > product-correctness defects, which is exactly what this backlog exists to track.
 
-### BC-01 · Program week never advances — `implemented (Claude Opus 4.8, 2026-06-10) — gate green, awaiting commit`
+### BC-01 · Program week never advances — `done (9f009bd, 2026-06-10)`
 
 - **Type:** bug · **Priority:** P0 · **Complexity:** M · **Depends on:** —
 - **Problem:** `generateProgram` sets `currentWeekIndex: 0` (`src/domain/periodization.ts:145`)
@@ -54,7 +54,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   - `bootstrap.getTodaySession` and `/program` both reflect the derived week.
 - **Files:** `src/domain/periodization.ts` (or a new pure `programClock.ts`), `src/app/lib/bootstrap.ts`, `src/app/program/page.tsx`, tests.
 
-### BC-02 · Dates are keyed to UTC, not the user's timezone — `implemented (Claude Opus 4.8, 2026-06-10) — gate green, awaiting commit`
+### BC-02 · Dates are keyed to UTC, not the user's timezone — `done (9f009bd, 2026-06-10)`
 
 - **Type:** bug · **Priority:** P0 · **Complexity:** S · **Depends on:** —
 - **Problem:** every date stamp is `new Date().toISOString().slice(0, 10)` (bootstrap, check-in
@@ -76,7 +76,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   unaffected. Changing it would be unnecessary safety-file churn (YAGNI). Shared helper lives in
   `src/app/lib/date.ts` (app layer — keeps `src/domain` pure of locale/timezone concerns).
 
-### BC-03 · Rest days don't exist; `availableWeekdays` is ignored — `implemented (Claude Opus 4.8, 2026-06-10) — gate green, awaiting commit`
+### BC-03 · Rest days don't exist; `availableWeekdays` is ignored — `done (9f009bd, 2026-06-10) — schedule.ts hardened post-commit (awaiting commit)`
 
 - **Type:** bug · **Priority:** P0 · **Complexity:** M · **Depends on:** BC-02 (date helper)
 - **Problem:** `pickPlannedSession` is `asOf.getDay() % sessions.length`
@@ -95,7 +95,15 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
     pattern matches `availableWeekdays`.
 - **Files:** `src/app/lib/bootstrap.ts` (or promote scheduling into `src/domain/`), `src/app/page.tsx`, tests.
 
-### BC-04 · Session player captures no climbing data; warm-up auto-completes — `implemented (Claude Opus 4.8 test + DeepSeek V4 Flash Free implementation, 2026-06-10) — gate green, awaiting commit`
+### BC-04 · Session player captures no climbing data; warm-up auto-completes — `done (9f009bd, 2026-06-10) — grade capture rewritten to a tally model post-commit (awaiting commit)`
+
+> **Post-commit quality fix (Claude Opus 4.8, 2026-06-10):** the first-pass `bumpGrade` was buggy
+> — the `−` button _appended_ a decremented grade instead of decrementing a count, so the grade
+> arrays could only ever grow, and the tested `expandTally` helper was dead (used only by its test).
+> Rewrote the capture as a per-grade `{grade: count}` tally that uses `expandTally` on save, so `−`
+> truly decrements. Added the missing end-to-end integration test
+> (`tests/domain/sessionCapture.test.ts`): tally → `expandTally` → `createSessionLog` → repo →
+> Insights pyramid, via fake-indexeddb (the AC's required test, previously absent).
 
 - **Type:** bug/feature · **Priority:** P0 · **Complexity:** M · **Depends on:** —
 - **Problem:** the session player (`src/app/session/page.tsx`) only collects per-block RPE.
@@ -113,7 +121,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
     fake-indexeddb).
 - **Files:** `src/app/session/page.tsx`, `src/domain/sessionLog.ts`, tests.
 
-### BC-05 · Progression/regression rules (spec rules 6–7) were never implemented — `implemented (DeepSeek V4 Flash Free, 2026-06-10) — gate green, awaiting commit`
+### BC-05 · Progression/regression rules (spec rules 6–7) were never implemented — `done (9f009bd, 2026-06-10) — safety-rule-reviewer: PASS (post-commit)`
 
 - **Type:** feature · **Priority:** P0 · **Complexity:** M · **Depends on:** BC-04 (real data; testable earlier with synthetic logs)
 - **Problem:** `adapt()` takes `_recentLogs` and ignores it (`src/domain/adaptation.ts:55`). Spec
@@ -133,6 +141,14 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   - Spec table in `docs/specs/…app-design.md` stays the canonical source; update it if thresholds
     are refined.
 - **Files:** `src/domain/adaptation.ts` (safety), `tests/domain/adaptation.test.ts`.
+
+> **Post-commit safety review (Claude Opus 4.8, 2026-06-10):** the safety-file protocol requires
+> `safety-rule-reviewer` approval before committing `adaptation.ts`; the original commit skipped it.
+> Ran the review retroactively — **PASS**. Precedence is airtight (the `if (changes.length === 0)`
+> guard holds even though rules 4–5 push changes without early-returning); progression (the only
+> load-increasing direction) cannot fire on absent grade data; regression-on-missing-data fails
+> safe (eases the grade); grade bounds V1–V17 sane; function stays pure; adaptation.ts genuinely at
+> 100% branch. **Going forward, run the reviewer BEFORE committing any `adaptation.ts` change.**
 
 ---
 

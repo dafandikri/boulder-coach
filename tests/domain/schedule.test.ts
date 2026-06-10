@@ -46,4 +46,18 @@ describe('pickDaySession', () => {
     expect(rest.blocks.length).toBeGreaterThan(0); // a real recovery card
     expect(rest.blocks.some((b) => b.category === 'main')).toBe(false); // no climbing load
   });
+
+  it('rests on a training weekday that has no planned session (more weekdays than sessions)', () => {
+    // 3 session types, but 4 declared training days → the 4th day is rest, not a
+    // fabricated repeat. asOf = Thursday (the 4th day in [1,2,3,4]).
+    const thursday = new Date(2026, 5, 4);
+    expect(thursday.getDay()).toBe(4);
+    expect(pickDaySession(week, [1, 2, 3, 4], thursday).type).toBe('rest');
+  });
+
+  it('rests when the week has no sessions at all (malformed/empty week)', () => {
+    const emptyWeek = { weekIndex: 0, phase: 'hard' as const, sessions: [] };
+    const monday = new Date(2026, 5, 1);
+    expect(pickDaySession(emptyWeek, [1, 3, 5], monday).type).toBe('rest');
+  });
 });

@@ -41,10 +41,9 @@ export function pickDaySession(
   const trainingDays = [...availableWeekdays].sort((a, b) => a - b);
   const slot = trainingDays.indexOf(asOf.getDay());
 
-  if (slot === -1 || week.sessions.length === 0) {
-    return restSession(week, programId);
-  }
-
-  const picked = week.sessions[slot % week.sessions.length];
+  // Not a declared training day, or a training day with no planned session
+  // (more weekdays than session types) → an explicit rest day. No `% length`
+  // wrap: we never fabricate a repeat session the program didn't schedule.
+  const picked = slot === -1 ? undefined : week.sessions[slot];
   return picked ?? restSession(week, programId);
 }

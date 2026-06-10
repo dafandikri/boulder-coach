@@ -193,3 +193,54 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
   Lighthouse-PWA e2e assertion. Handoff system that carries this forward: `pnpm onboard` +
   `docs/HANDOFF.md` + `AGENTS.md` → "START HERE / Definition of done".
 - **Attempts to green:** 1 (only formatting: prettier reflowed sw.js).
+
+## 2026-06-10 — src/app/session/page.tsx — review (cross-agent quality)
+
+- **Task:** BC-04 — session player grade capture (reviewing a memoryless cross-agent handoff).
+- **What failed:** First-pass `bumpGrade(blockId, field, delta)` modelled grades as a `VGrade[]`
+  you append to: the `−` button appended `lastGrade − 1` instead of decrementing a count, so the
+  arrays only ever GREW and a tally could never go down. The clean, already-tested `expandTally`
+  helper sat unused in production (imported only by its own test, so knip stayed green). A green
+  gate did not catch any of it — React components here have no RTL/jsdom harness, so logic left
+  inside the component is gate-blind.
+- **Root cause:** wrong data structure (sequence instead of a tally) + logic placed in the
+  un-tested component layer instead of a covered `app/lib` helper.
+- **Fix:** rewrote capture as a per-grade `{grade: count}` tally that calls `expandTally` at save
+  time (so `−` is `Math.max(0, n−1)`); added the AC's missing end-to-end integration test
+  (`tests/domain/sessionCapture.test.ts`) covering tally → log → repo → Insights pyramid.
+- **Prevention:** keep regression-critical decisions in `src/app/lib/**` (coverage-measured), not
+  in the component. When a tested helper exists, the component MUST use it — an "unused" tested
+  helper is a smell that the component re-implemented (and likely mis-implemented) the logic.
+- **Attempts to green:** 1 (formatting only).
+
+## 2026-06-10 — src/domain/adaptation.ts — safety (process gap)
+
+- **Task:** BC-05 — progression rules 6–7 (reviewing a cross-agent commit).
+- **What failed:** `adaptation.ts` (a safety file) was committed WITHOUT the mandated
+  `safety-rule-reviewer` approval — the cross-tool agent had no equivalent step. The rules
+  themselves were sound (retroactive review: PASS), but the protocol was bypassed.
+- **Root cause:** the "review safety files before commit" rule lives in `CLAUDE.md`/`AGENTS.md`
+  (Tier-2 prose), not in an executable gate — a memoryless agent on another tool won't run it.
+- **Fix:** ran `safety-rule-reviewer` retroactively (PASS); recorded the result in `BACKLOG.md`.
+- **Prevention:** Tier-2 only. Candidate promotion if it recurs: a pre-commit hook that blocks a
+  commit touching `adaptation.ts`/`loadMetrics.ts` unless a review marker is present. Until then,
+  any agent editing a safety file MUST run the reviewer (or the spec-table self-check in
+  `skills/safety-critical-change.md`) before committing.
+- **Attempts to green:** n/a (review, not a gate failure).
+
+## 2026-06-10 — src/domain/schedule.ts — coverage (unreachable branch)
+
+- **Task:** BC-03 follow-up — schedule.ts was at 75% branch (below the 90% domain bar; passed only
+  on the domain _aggregate_).
+- **What failed:** `week.sessions[slot % length] ?? restSession(...)` — with the `% length` wrap the
+  index is always valid, so the `?? restSession` branch was unreachable dead code that could never
+  be covered. It existed only to satisfy `noUncheckedIndexedAccess`.
+- **Root cause:** a `% length` wrap masked the only sensible "no session for this slot" case and
+  left a defensive fallback that no test could reach.
+- **Fix:** dropped the wrap — a training weekday with no planned session (more `availableWeekdays`
+  than session types) now resolves to REST (never a fabricated repeat), which is both safer and a
+  reachable, tested branch. schedule.ts → 100% branch.
+- **Prevention:** prefer index forms whose undefined case is _meaningful and testable_ over a
+  `% length` that hides it behind an unreachable `??`. Per-file branch gaps under the domain bar
+  can hide on the aggregate — spot-check new domain files individually.
+- **Attempts to green:** 1.

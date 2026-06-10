@@ -1,96 +1,107 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { localDateIso } from '@/app/lib/date';
-import { canFinishSession, warmupDone } from '@/app/lib/sessionForm';
+import { canFinishSession, expandTally, warmupDone } from '@/app/lib/sessionForm';
 import { createSessionLog, type BlockActual } from '@/domain/sessionLog';
+import type { VGrade } from '@/domain/types';
+
+type Tally = Partial<Record<VGrade, number>>;
+
+/** Per-block UI state. Grades are tallied as {grade: count}; expanded to the
+ *  flat VGrade[] the log stores only at save time (see expandTally). */
+interface BlockEntry {
+  setsCompleted: number;
+  rpe: number;
+  attempts: Tally;
+  sends: Tally;
+}
+
+/** A compact, thumb-sized grade range centred on the block's target. */
+function gradeChoices(targetGrade: VGrade | undefined): VGrade[] {
+  const lo = Math.max(1, (targetGrade ?? 4) - 2);
+  return [lo, lo + 1, lo + 2, lo + 3];
+}
 
 export default function SessionPage() {
   const router = useRouter();
   const [today, setToday] = useState<TodayResult | null>(null);
-  const [actuals, setActuals] = useState<Record<string, BlockActual>>({});
+  const [entries, setEntries] = useState<Record<string, BlockEntry>>({});
   const [warmupChecked, setWarmupChecked] = useState<Set<string>>(new Set());
   const [durationMin, setDuration] = useState(60);
 
   useEffect(() => {
     void getTodaySession(new DexieClimbRepo()).then((t) => {
       setToday(t);
-      const seed: Record<string, BlockActual> = {};
+      const seed: Record<string, BlockEntry> = {};
       for (const b of t.session.blocks) {
-        seed[b.id] = {
-          blockId: b.id,
-          setsCompleted: b.sets,
-          gradesAttempted: [],
-          gradesSent: [],
-          rpe: b.targetRPE,
-        };
+        seed[b.id] = { setsCompleted: b.sets, rpe: b.targetRPE, attempts: {}, sends: {} };
       }
-      setActuals(seed);
+      setEntries(seed);
     });
   }, []);
 
   const setRpe = useCallback((blockId: string, rpe: number): void => {
-    setActuals((a) => {
-      const cur = a[blockId];
-      if (!cur) return a;
-      return { ...a, [blockId]: { ...cur, rpe } };
+    setEntries((prev) => {
+      const cur = prev[blockId];
+      if (!cur) return prev;
+      return { ...prev, [blockId]: { ...cur, rpe } };
     });
   }, []);
 
   const setSets = useCallback((blockId: string, sets: number): void => {
-    setActuals((a) => {
-      const cur = a[blockId];
-      if (!cur) return a;
-      return { ...a, [blockId]: { ...cur, setsCompleted: sets } };
+    setEntries((prev) => {
+      const cur = prev[blockId];
+      if (!cur) return prev;
+      return { ...prev, [blockId]: { ...cur, setsCompleted: sets } };
     });
   }, []);
 
-  function bumpGrade(
-    blockId: string,
-    field: 'gradesAttempted' | 'gradesSent',
-    delta: number,
-  ): void {
-    setActuals((a) => {
-      const cur = a[blockId];
-      if (!cur) return a;
-      const grades = field === 'gradesAttempted' ? cur.gradesAttempted : cur.gradesSent;
-      const last = grades[grades.length - 1] ?? 4;
-      const next = Math.max(1, last + delta);
-      const updated = [...grades, next];
-      return {
-        ...a,
-        [blockId]: {
-          ...cur,
-          [field]: field === 'gradesAttempted' ? updated : cur.gradesAttempted,
-          ...(field === 'gradesSent' ? { gradesSent: updated } : {}),
-        },
-      };
-    });
-  }
+  const adjustTally = useCallback(
+    (blockId: string, kind: 'attempts' | 'sends', grade: VGrade, delta: number): void => {
+      setEntries((prev) => {
+        const cur = prev[blockId];
+        if (!cur) return prev;
+        const next = Math.max(0, (cur[kind][grade] ?? 0) + delta);
+        return { ...prev, [blockId]: { ...cur, [kind]: { ...cur[kind], [grade]: next } } };
+      });
+    },
+    [],
+  );
 
-  if (!today) return <main className="p-6">Loading…</main>;
-  const session = today.session;
-  const warmupBlockIds = session.blocks.filter((b) => b.category === 'warmup').map((b) => b.id);
-  const finishBlocked = !canFinishSession(today.warmupMandatory, warmupBlockIds, warmupChecked);
-
-  function toggleWarmup(id: string): void {
+  const toggleWarmup = useCallback((id: string): void => {
     setWarmupChecked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
+  }, []);
+
+  if (!today) return <main className="p-6">Loading…</main>;
+  const session = today.session;
+  const warmupBlockIds = session.blocks.filter((b) => b.category === 'warmup').map((b) => b.id);
+  const finishBlocked = !canFinishSession(today.warmupMandatory, warmupBlockIds, warmupChecked);
 
   async function finish(): Promise<void> {
+    const blocks: BlockActual[] = session.blocks.map((b) => {
+      const e = entries[b.id];
+      return {
+        blockId: b.id,
+        setsCompleted: e?.setsCompleted ?? b.sets,
+        gradesAttempted: expandTally(e?.attempts ?? {}),
+        gradesSent: expandTally(e?.sends ?? {}),
+        rpe: e?.rpe ?? b.targetRPE,
+      };
+    });
     const log = createSessionLog({
       date: localDateIso(new Date()),
       plannedSessionId: session.id,
       warmupCompleted: warmupDone(warmupBlockIds, warmupChecked),
-      blocks: Object.values(actuals),
+      blocks,
       durationMin,
     });
     await new DexieClimbRepo().saveLog(log);
@@ -102,32 +113,29 @@ export default function SessionPage() {
       <h1 className="text-2xl font-bold">Session</h1>
       <ol className="space-y-3">
         {session.blocks.map((b) => {
-          const actual = actuals[b.id];
-          if (!actual) return null;
+          const entry = entries[b.id];
+          if (!entry) return null;
           const isWarmup = b.category === 'warmup';
-          const checked = warmupChecked.has(b.id);
+          const showGrades = b.category === 'main' && b.targetGrade !== undefined;
           return (
             <li key={b.id} className="rounded-lg border p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium">
-                    {isWarmup && (
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          toggleWarmup(b.id);
-                        }}
-                        className="mr-2"
-                      />
-                    )}
-                    {b.name}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    target: {b.sets} × {b.grip} · RPE {b.targetRPE}
-                  </p>
-                </div>
-              </div>
+              <p className="font-medium">
+                {isWarmup && (
+                  <input
+                    type="checkbox"
+                    checked={warmupChecked.has(b.id)}
+                    onChange={() => {
+                      toggleWarmup(b.id);
+                    }}
+                    className="mr-2 align-middle"
+                  />
+                )}
+                {b.name}
+              </p>
+              <p className="text-sm text-gray-600">
+                target: {b.sets} × {b.grip}
+                {b.targetGrade !== undefined ? ` · V${b.targetGrade}` : ''} · RPE {b.targetRPE}
+              </p>
 
               <label className="mt-2 block text-sm">
                 Sets completed:
@@ -135,7 +143,7 @@ export default function SessionPage() {
                   type="number"
                   min={0}
                   max={20}
-                  value={actual.setsCompleted}
+                  value={entry.setsCompleted}
                   onChange={(e) => {
                     setSets(b.id, Math.max(0, Number(e.target.value)));
                   }}
@@ -143,62 +151,49 @@ export default function SessionPage() {
                 />
               </label>
 
-              {!isWarmup && (
-                <div className="mt-2 flex gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Attempted: </span>
-                    <button
-                      onClick={() => {
-                        bumpGrade(b.id, 'gradesAttempted', -1);
-                      }}
-                      className="rounded bg-gray-100 px-1.5 hover:bg-gray-200"
-                    >
-                      −
-                    </button>{' '}
-                    <span className="font-medium">
-                      {actual.gradesAttempted.length > 0 ? actual.gradesAttempted.join(', ') : '—'}
-                    </span>{' '}
-                    <button
-                      onClick={() => {
-                        bumpGrade(b.id, 'gradesAttempted', 1);
-                      }}
-                      className="rounded bg-gray-100 px-1.5 hover:bg-gray-200"
-                    >
-                      +
-                    </button>
+              {showGrades && (
+                <div className="mt-3 space-y-1">
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2 text-xs text-gray-400">
+                    <span></span>
+                    <span className="text-center">attempts</span>
+                    <span className="text-center">sends</span>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Sent: </span>
-                    <button
-                      onClick={() => {
-                        bumpGrade(b.id, 'gradesSent', -1);
-                      }}
-                      className="rounded bg-gray-100 px-1.5 hover:bg-gray-200"
+                  {gradeChoices(b.targetGrade).map((g) => (
+                    <div
+                      key={g}
+                      className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2 text-sm"
                     >
-                      −
-                    </button>{' '}
-                    <span className="font-medium">
-                      {actual.gradesSent.length > 0 ? actual.gradesSent.join(', ') : '—'}
-                    </span>{' '}
-                    <button
-                      onClick={() => {
-                        bumpGrade(b.id, 'gradesSent', 1);
-                      }}
-                      className="rounded bg-gray-100 px-1.5 hover:bg-gray-200"
-                    >
-                      +
-                    </button>
-                  </div>
+                      <span className="font-medium">V{g}</span>
+                      <Stepper
+                        value={entry.attempts[g] ?? 0}
+                        onAdd={() => {
+                          adjustTally(b.id, 'attempts', g, 1);
+                        }}
+                        onSub={() => {
+                          adjustTally(b.id, 'attempts', g, -1);
+                        }}
+                      />
+                      <Stepper
+                        value={entry.sends[g] ?? 0}
+                        onAdd={() => {
+                          adjustTally(b.id, 'sends', g, 1);
+                        }}
+                        onSub={() => {
+                          adjustTally(b.id, 'sends', g, -1);
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
 
-              <label className="mt-2 block text-sm">
-                Your RPE: {actual.rpe}
+              <label className="mt-3 block text-sm">
+                Your RPE: {entry.rpe}
                 <input
                   type="range"
                   min={1}
                   max={10}
-                  value={actual.rpe}
+                  value={entry.rpe}
                   onChange={(e) => {
                     setRpe(b.id, Number(e.target.value));
                   }}
@@ -209,6 +204,7 @@ export default function SessionPage() {
           );
         })}
       </ol>
+
       <label className="block text-sm">
         Duration (min): {durationMin}
         <input
@@ -223,6 +219,7 @@ export default function SessionPage() {
           className="w-full"
         />
       </label>
+
       <button
         onClick={() => {
           void finish();
@@ -235,5 +232,30 @@ export default function SessionPage() {
         {finishBlocked ? 'Complete warm-up first' : 'Finish & log session'}
       </button>
     </main>
+  );
+}
+
+/** Thumb-sized −/count/+ control for a single grade tally. */
+function Stepper({ value, onAdd, onSub }: { value: number; onAdd: () => void; onSub: () => void }) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <button
+        type="button"
+        onClick={onSub}
+        aria-label="decrease"
+        className="h-7 w-7 rounded bg-gray-100 text-base leading-none hover:bg-gray-200"
+      >
+        −
+      </button>
+      <span className="w-4 text-center font-medium tabular-nums">{value}</span>
+      <button
+        type="button"
+        onClick={onAdd}
+        aria-label="increase"
+        className="h-7 w-7 rounded bg-gray-100 text-base leading-none hover:bg-gray-200"
+      >
+        +
+      </button>
+    </div>
   );
 }

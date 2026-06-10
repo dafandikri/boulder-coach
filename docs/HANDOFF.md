@@ -23,33 +23,49 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
-## Current state — 2026-06-10 (last touched by: DeepSeek V4 Flash Free)
+## Current state — 2026-06-10 (last touched by: Claude Opus 4.8)
 
-- **App:** Plans 1–3 shipped and on `origin/main`. Working PWA with Today, check-in, session player,
-  history, insights, program calendar, drills library, offline service worker.
-- **Domain (pure):** loadMetrics, warmup, periodization, adaptation (safety), sessionLog, insights,
-  drills, schedule, programClock. All tested; gate green (adaptation/loadMetrics 100%).
-- **Last work:** implemented all 5 P0 backlog items (BC-01 through BC-05) from the product-owner audit:
-  - BC-01: program week now derived from `startDate + asOf` via `programClock.ts` — no more frozen week 0
-  - BC-02: dates keyed to local timezone via `localDateIso()` — no more UTC date drift
-  - BC-03: rest days dispatched via `pickDaySession()` in `schedule.ts` — non-training days show recovery UI
-  - BC-04: session player captures grades (attempted/sent), warm-up checklist, editable sets
-  - BC-05: adaptation rules 6 (crushing → progression) and 7 (missing → regression) implemented with 100% branch coverage
-- **Uncommitted:** all 5 P0 implementations sitting in working tree — awaiting user signal to commit.
+- **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** shipped. PWA: Today (now with a
+  rest-day recovery card), check-in, session player (now captures attempted/sent grade tallies +
+  warm-up checklist gating), history, insights, program calendar, drills, offline SW.
+- **Domain (pure):** loadMetrics, warmup, periodization, **programClock** (BC-01), **schedule**
+  (BC-03), adaptation (safety — now with progression/regression rules 6–7, BC-05), sessionLog,
+  insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
+- **Last work:** the P0s were committed as **`9f009bd`** by a cross-agent handoff (DeepSeek V4 Flash
+  via OpenCode). This session (Opus 4.8) then **scrutinized and hardened** that commit — see "Pending
+  (uncommitted)". The cross-agent commit also left stale `awaiting commit` statuses and skipped the
+  mandated safety-file review; both reconciled (statuses → `done (9f009bd)`; review ran → PASS).
+
+## Pending (uncommitted) — review, then commit
+
+Working tree holds gate-green quality fixes on top of `9f009bd` (no git ops performed — per the
+human's "never auto-commit" rule):
+
+- **BC-04 grade capture rewritten** (`src/app/session/page.tsx`): committed `bumpGrade` was buggy
+  (`−` appended a lower grade instead of decrementing; arrays only grew; `expandTally` was dead
+  code). Now a per-grade `{grade: count}` tally that uses `expandTally` at save. New integration
+  test `tests/domain/sessionCapture.test.ts` (tally → log → repo → Insights pyramid, fake-indexeddb).
+- **schedule.ts hardened** (`src/domain/schedule.ts`): removed an unreachable `?? restSession`
+  branch (was 75% branch); a training weekday with no planned session now rests. +2 tests → 100%.
+- **BC-05 safety review** ran retroactively → **PASS** (recorded in BACKLOG).
 
 ## Next actions (prioritized)
 
-1. **Commit the P0 implementations** — 8 modified + 7 new files, all gate-green, ready for a single
-   "fix: resolve all five P0 product-correctness defects (BC-01…BC-05)" commit.
-2. **Pick next from BACKLOG.md** — P1 items (BC-06 profile screen, BC-07 adaptation paper trail, etc.)
-   are next after P0s are in.
+1. **Commit the pending fixes** (suggested: `fix(session): tally-based grade capture + schedule
+hardening + BC-04 integration test`). Gate is green.
+2. **Then work `docs/BACKLOG.md` from P1** — next unblocked item is **BC-06** (onboarding & profile
+   screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
 
 ## Open threads / known gate-blind risks
 
 > Gate-blind = a real defect a green `pnpm gate` will NOT catch. These need a human/second-model eye.
 
-- **The P0 backlog items themselves** — all five (BC-01…BC-05) are product-correctness defects the
-  gate cannot see; the backlog is now their tracking surface.
+- **Session player UI is gate-blind** — React components have no RTL/jsdom harness here, so the
+  capture/checklist UI is only indirectly tested (via `app/lib` helpers + the integration test).
+  Real tap-through is unverified until a Playwright flow exists (relates to BC-16).
+- **Safety-file review is Tier-2 prose, not a gate** — the cross-agent commit proved an agent on
+  another tool will skip `safety-rule-reviewer`. Candidate promotion: a pre-commit marker check on
+  `adaptation.ts`/`loadMetrics.ts` (see LEARNINGS 2026-06-10).
 - **Service-worker runtime behavior** — strategy is guarded by a string test, but real offline/update
   behavior is only verifiable in a browser. Bump `CACHE` in `public/sw.js` on any shell-breaking
   release. (Tier-1 promotion tracked as BC-16.)
