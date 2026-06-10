@@ -27,21 +27,25 @@ file is the live position** — update it as the LAST step of any session (see "
 
 - **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** + the font-flake build fix (`fd0b4be`)
   are committed on `main`. PWA: Today, check-in, session player, history, insights, program, drills, SW.
-- **Crew multi-agent orchestrator — MERGED to `main`** (PR #1): a git-native, tool-neutral system to
-  run agents in parallel worktrees on file-disjoint PBIs, with reviewer-gated tiered auto-merge and
+- **Crew multi-agent orchestrator — MERGED to `main`** (PRs #1–#4): a git-native, tool-neutral system
+  to run agents in parallel worktrees on file-disjoint PBIs, with reviewer-gated tiered auto-merge and
   human override. `pnpm crew start|status|approve|reject|pause|resume`. See `docs/crew/README.md` +
-  the spec/plan under `docs/superpowers/`. Workers run autonomously but **safely**: Claude adapter uses
-  `acceptEdits` + a command **allowlist** in `.claude/settings.json` (not blanket `bypassPermissions`),
-  so a worker can run the gate/commit but nothing else (security review of the first cut flagged the
-  bypass — fixed). `.crew/config.json` ships `maxWorkers: 1` for a first smoke run (bump to 3 after).
+  the spec/plan under `docs/superpowers/`. Includes the 7-finding `/code-review high` hardening pass.
+- **Permissions (final, secure):** Claude worker adapter uses `acceptEdits` + a command **allowlist**
+  in `.claude/settings.json` (a security review flagged the first cut's `bypassPermissions` — fixed).
+  **Scoped push:** `allow` grants push/`gh` to the _supervised_ session; the worker adapter passes
+  `--disallowed-tools "Bash(git push:*)" …` so autonomous **workers cannot push**. Recommend enabling
+  **GitHub branch protection on `main`**. `.crew/config.json` ships `maxWorkers: 1` for a first smoke run.
+- **Backlog groomed (PR #3):** added BC-22 (off-wall exercises, P2), BC-23 (visual redesign + dark
+  mode + branding, P2), BC-24 (CV technique coach — future, design-only, P3). "Timer" = existing BC-09.
 - **Domain (pure):** loadMetrics, warmup, periodization, programClock, schedule, adaptation (safety),
   sessionLog, insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
 
 ## Pending (uncommitted) — none
 
-All Crew work is committed on `feat/crew-orchestration` (planning docs → Phases 1–8 → the three
-limitation fixes → a `/code-review high` hardening pass). Final `pnpm gate` green
-(**32 test files, 137 tests**, type-coverage 99.83%). PR **#1** is open.
+Everything is on `main` (`pnpm gate` green: **32 test files, 137 tests**, type-coverage 99.83%). All
+feature branches merged + deleted. **Note:** a PR #2 merge race once dropped the security commits;
+they were recovered via cherry-pick in PR #4 — when merging, verify the PR head SHA equals local HEAD.
 
 ## Code-review hardening (7 findings fixed, each tested)
 
