@@ -1,3 +1,4 @@
+// @ts-check
 // scripts/crew/lib/git.mjs
 import { execFileSync } from 'node:child_process';
 

@@ -1,112 +1,195 @@
+// @ts-check
 // scripts/crew/conduct.mjs
-// The Crew conductor: a deterministic polling loop that owns all correctness
-// guarantees (atomic claims, file-disjoint locking, dependency gating, serial
-// rebase→gate→merge). The LLM roles it calls (manager brain, reviewer) are
-// fail-safe: if they error, the deterministic path still works.
+// The Crew conductor: a deterministic loop that owns all correctness guarantees
+// (atomic claims, file-disjoint locking, dependency gating, serial rebase→gate→
+// merge). LLM roles it calls (manager brain, reviewer) are fail-safe. The decision
+// logic lives in `createConductor`, which takes injected dependencies so the whole
+// state machine is unit-testable without launching a real agent or touching git.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { parseBacklog } from './lib/backlog.mjs';
 import { nextAssignable } from './lib/schedule.mjs';
-import { readClaims, tryClaim, writeClaim, releaseClaim } from './lib/claims.mjs';
+import { planAssignments } from './lib/split.mjs';
+import { decideAction } from './lib/route.mjs';
+import { classify } from './lib/risk.mjs';
 import { isExpired } from './lib/lease.mjs';
+import { shouldConsultBrain, consultBrain } from './lib/manager.mjs';
+import { readClaims, tryClaim, writeClaim, releaseClaim } from './lib/claims.mjs';
 import { addWorktree, changedFiles } from './lib/git.mjs';
 import { launchWorker } from './lib/launch.mjs';
-import { classify } from './lib/risk.mjs';
 import { runReviewer } from './lib/review.mjs';
-import { consultBrain, shouldConsultBrain } from './lib/manager.mjs';
 import { landBranch } from './merge.mjs';
 
-const ROOT = process.cwd();
-const CREW = join(ROOT, '.crew');
-const config = JSON.parse(readFileSync(join(CREW, 'config.json'), 'utf8'));
-const PAUSED = () => existsSync(join(CREW, 'PAUSED'));
+/** @typedef {import('./lib/claims.mjs').Claim} Claim */
+/** @typedef {import('./lib/route.mjs').Verdict} Verdict */
+/**
+ * @typedef {Object} CrewConfig
+ * @property {number} maxWorkers
+ * @property {string} workerTool
+ * @property {number} leaseSeconds
+ * @property {Record<string, string>} launchAdapters
+ * @property {{eligiblePaths: string[], alwaysReview: string[]}} autoMerge
+ */
+/**
+ * @typedef {Object} ConductorDeps
+ * @property {string} root
+ * @property {CrewConfig} config
+ * @property {() => string} readBacklog
+ * @property {() => Claim[]} readClaims
+ * @property {(claim: Claim) => boolean} tryClaim
+ * @property {(claim: Claim) => void} writeClaim
+ * @property {(pbiId: string) => void} releaseClaim
+ * @property {(worktree: string, branch: string, base: string) => void} addWorktree
+ * @property {(worktree: string) => void} installDeps
+ * @property {(branch: string) => string[]} changedFiles
+ * @property {(worktree: string, pbiId: string, onExit: () => void) => void} launchWorker
+ * @property {(branch: string, pbiId: string) => Verdict} runReviewer
+ * @property {(opts: {branch: string, worktree: string}) => {merged: boolean, reason?: string}} landBranch
+ * @property {(pbi: import('./lib/backlog.mjs').Pbi) => {split: {id: string, files: string[]}[]}} consultBrain
+ * @property {(pbiId: string, branch: string, reason: string) => void} queueForHuman
+ * @property {(msg: string) => void} log
+ * @property {() => number} now
+ */
 
-/** @param {string} msg */
-const log = (msg) => {
-  const line = `${new Date().toISOString()} ${msg}\n`;
-  if (!existsSync(CREW)) mkdirSync(CREW, { recursive: true });
-  writeFileSync(join(CREW, 'log.md'), line, { flag: 'a' });
-  process.stdout.write(line);
-};
+/**
+ * Build a conductor from injected dependencies. Returns the state-machine
+ * operations; the caller owns the polling cadence.
+ * @param {ConductorDeps} deps
+ */
+export function createConductor(deps) {
+  const { config } = deps;
 
-function reclaimExpired() {
-  const now = Date.now();
-  for (const c of readClaims(CREW)) {
-    if (c.status === 'working' && isExpired(c, now, config.leaseSeconds)) {
-      log(`reclaim ${c.pbiId} (lease expired)`);
-      releaseClaim(CREW, c.pbiId);
+  /** Release claims whose worker has gone silent past the lease window. */
+  function reclaimExpired() {
+    const now = deps.now();
+    for (const c of deps.readClaims()) {
+      if (c.status === 'working' && isExpired(c, now, config.leaseSeconds)) {
+        deps.log(`reclaim ${c.pbiId} (lease expired)`);
+        deps.releaseClaim(c.pbiId);
+      }
     }
   }
-}
 
-/** @returns {boolean} true if a PBI was assigned */
-function assignOne() {
-  const pbis = parseBacklog(readFileSync(join(ROOT, 'docs/BACKLOG.md'), 'utf8'));
-  const active = readClaims(CREW).map((c) => ({ pbiId: c.pbiId, files: c.files }));
-  if (active.length >= config.maxWorkers) return false;
-  const pbi = nextAssignable(pbis, active);
-  if (!pbi) return false;
-
-  // Adaptive manager brain (optional): surface a split recommendation for big PBIs.
-  // The deterministic path proceeds regardless — splitting-into-subtasks is a follow-up.
-  if (shouldConsultBrain(pbi)) {
-    const plan = consultBrain(pbi);
-    if (plan.split.length > 0) {
-      log(`manager suggests splitting ${pbi.id} into ${plan.split.map((s) => s.id).join(', ')}`);
-    }
+  /** @returns {import('./lib/schedule.mjs').ActiveClaim[]} */
+  function activeClaims() {
+    return deps.readClaims().map((c) => ({ pbiId: c.pbiId, files: c.files }));
   }
 
-  const branch = `agent/${pbi.id}`;
-  const worktree = join(ROOT, '..', `boulder-coach-${pbi.id}`);
-  const heartbeat = new Date().toISOString();
-  if (
-    !tryClaim(CREW, {
-      pbiId: pbi.id,
-      files: pbi.files,
+  /**
+   * Assign the next safely-schedulable PBI (possibly as manager-split sub-tasks)
+   * across the free worker slots. Returns true if at least one unit was assigned.
+   * @returns {boolean}
+   */
+  function assignOne() {
+    const active = activeClaims();
+    const slots = config.maxWorkers - active.length;
+    if (slots <= 0) return false;
+    const pbi = nextAssignable(parseBacklog(deps.readBacklog()), active);
+    if (!pbi) return false;
+
+    const split = shouldConsultBrain(pbi) ? deps.consultBrain(pbi).split : [];
+    const units = planAssignments(pbi, split, active);
+    if (units.length === 0) return false;
+    if (units.length > 1) deps.log(`split ${pbi.id} → ${units.map((u) => u.id).join(', ')}`);
+
+    let assigned = false;
+    for (const unit of units.slice(0, slots)) {
+      if (assignUnit(unit)) assigned = true;
+    }
+    return assigned;
+  }
+
+  /**
+   * @param {{id: string, files: string[]}} unit
+   * @returns {boolean}
+   */
+  function assignUnit(unit) {
+    const branch = `agent/${unit.id}`;
+    const worktree = join(deps.root, '..', `boulder-coach-${unit.id}`);
+    /** @type {Claim} */
+    const claim = {
+      pbiId: unit.id,
+      files: unit.files,
       worktree,
       branch,
       status: 'claimed',
-      heartbeat,
+      heartbeat: new Date(deps.now()).toISOString(),
       owner: branch,
-    })
-  ) {
-    return false;
+    };
+    if (!deps.tryClaim(claim)) return false;
+    deps.addWorktree(worktree, branch, 'main');
+    deps.installDeps(worktree); // guarantee a working env before the worker starts (spec §7)
+    deps.writeClaim({ ...claim, status: 'working', heartbeat: new Date(deps.now()).toISOString() });
+    deps.log(`assign ${unit.id} → ${worktree}`);
+    deps.launchWorker(worktree, unit.id, () => {
+      finishWorker(unit.id, branch, worktree);
+    });
+    return true;
   }
-  addWorktree(worktree, branch, 'main');
-  // Guarantee a working environment before the worker starts (spec §7).
-  execFileSync('pnpm', ['install', '--frozen-lockfile'], { cwd: worktree, stdio: 'inherit' });
-  log(`assign ${pbi.id} → ${worktree}`);
-  const claim = readClaims(CREW).find((c) => c.pbiId === pbi.id);
-  if (claim) writeClaim(CREW, { ...claim, status: 'working', heartbeat: new Date().toISOString() });
-  const child = launchWorker(config, worktree, pbi.id);
-  child.on('exit', () => {
-    finishWorker(pbi.id, branch, worktree);
-  });
-  return true;
-}
 
-/** @param {string} pbiId @param {string} branch @param {string} worktree */
-function finishWorker(pbiId, branch, worktree) {
-  const files = changedFiles(branch);
-  const tier = classify(files, config);
-  if (tier === 'auto') {
-    const verdict = runReviewer(branch, pbiId);
-    if (verdict.verdict === 'approve') {
-      const res = landBranch({ branch, worktree });
-      log(res.merged ? `merged ${pbiId}` : `merge-blocked ${pbiId}: ${res.reason ?? ''}`);
-      if (res.merged) releaseClaim(CREW, pbiId);
+  /**
+   * Route a finished worker's branch: reviewer-gated auto-merge, else human queue.
+   * A blocked merge (rebase conflict / gate fail after rebase) also goes to the queue
+   * rather than silently stranding the claim.
+   * @param {string} pbiId @param {string} branch @param {string} worktree
+   */
+  function finishWorker(pbiId, branch, worktree) {
+    const files = deps.changedFiles(branch);
+    const tier = classify(files, config);
+    const verdict = tier === 'auto' ? deps.runReviewer(branch, pbiId) : null;
+    const action = decideAction(tier, verdict);
+    if (action.action === 'merge') {
+      const res = deps.landBranch({ branch, worktree });
+      if (res.merged) {
+        deps.log(`merged ${pbiId}`);
+        deps.releaseClaim(pbiId);
+      } else {
+        deps.log(`merge-blocked ${pbiId}: ${res.reason ?? ''}`);
+        deps.queueForHuman(pbiId, branch, res.reason ?? 'merge blocked');
+      }
       return;
     }
-    queueForHuman(pbiId, branch, verdict.reason ?? 'flagged');
-    return;
+    deps.queueForHuman(pbiId, branch, action.reason ?? 'review');
   }
-  queueForHuman(pbiId, branch, `tier=review (${files.length} files)`);
+
+  /** One scheduling pass: reclaim expired leases, then fill every free slot. */
+  function tick() {
+    reclaimExpired();
+    while (assignOne()) {
+      /* keep filling slots until none remain or nothing is assignable */
+    }
+  }
+
+  return { reclaimExpired, assignOne, finishWorker, tick };
 }
 
-/** @param {string} pbiId @param {string} branch @param {string} reason */
-function queueForHuman(pbiId, branch, reason) {
-  const dir = join(CREW, 'review-queue');
+// ───────────────────────── real-dependency wiring (entrypoint only) ──────────
+
+/**
+ * @param {string} crew
+ * @returns {CrewConfig}
+ */
+function readConfig(crew) {
+  return /** @type {CrewConfig} */ (JSON.parse(readFileSync(join(crew, 'config.json'), 'utf8')));
+}
+
+/**
+ * @param {string} crew @param {string} msg
+ */
+function appendLog(crew, msg) {
+  const line = `${new Date().toISOString()} ${msg}\n`;
+  if (!existsSync(crew)) mkdirSync(crew, { recursive: true });
+  writeFileSync(join(crew, 'log.md'), line, { flag: 'a' });
+  process.stdout.write(line);
+}
+
+/**
+ * @param {string} crew @param {string} pbiId @param {string} branch @param {string} reason
+ */
+function writeReviewQueue(crew, pbiId, branch, reason) {
+  const dir = join(crew, 'review-queue');
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, `${pbiId}.md`),
@@ -114,20 +197,62 @@ function queueForHuman(pbiId, branch, reason) {
       `Review: \`git diff main...${branch}\`\n` +
       `Approve: \`pnpm crew approve ${pbiId}\`\n`,
   );
-  log(`review-queue ${pbiId}: ${reason}`);
+  appendLog(crew, `review-queue ${pbiId}: ${reason}`);
 }
 
-async function loop() {
-  log('conductor start');
-  for (;;) {
-    if (!PAUSED()) {
-      reclaimExpired();
-      while (assignOne()) {
-        /* fill open worker slots */
-      }
+/** @returns {ConductorDeps} */
+function realDeps() {
+  const root = process.cwd();
+  const crew = join(root, '.crew');
+  const config = readConfig(crew);
+  return {
+    root,
+    config,
+    readBacklog: () => readFileSync(join(root, 'docs/BACKLOG.md'), 'utf8'),
+    readClaims: () => readClaims(crew),
+    tryClaim: (c) => tryClaim(crew, c),
+    writeClaim: (c) => {
+      writeClaim(crew, c);
+    },
+    releaseClaim: (id) => {
+      releaseClaim(crew, id);
+    },
+    addWorktree: (wt, br, base) => {
+      addWorktree(wt, br, base);
+    },
+    installDeps: (wt) => {
+      execFileSync('pnpm', ['install', '--frozen-lockfile'], { cwd: wt, stdio: 'inherit' });
+    },
+    changedFiles: (br) => changedFiles(br),
+    launchWorker: (wt, id, onExit) => {
+      launchWorker(config, wt, id, onExit);
+    },
+    runReviewer: (br, id) => runReviewer(br, id),
+    landBranch: (o) => landBranch(o),
+    consultBrain: (pbi) => consultBrain(pbi),
+    queueForHuman: (id, br, reason) => {
+      writeReviewQueue(crew, id, br, reason);
+    },
+    log: (msg) => {
+      appendLog(crew, msg);
+    },
+    now: () => Date.now(),
+  };
+}
+
+const invokedDirectly =
+  typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  const deps = realDeps();
+  const conductor = createConductor(deps);
+  const paused = () => existsSync(join(deps.root, '.crew', 'PAUSED'));
+  deps.log('conductor start');
+  const run = async () => {
+    for (;;) {
+      if (!paused()) conductor.tick();
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
-    await new Promise((r) => setTimeout(r, 5000));
-  }
+  };
+  void run();
 }
-
-loop();
