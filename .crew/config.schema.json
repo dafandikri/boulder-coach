@@ -8,6 +8,7 @@
     "workerTool": { "type": "string" },
     "leaseSeconds": { "type": "integer", "minimum": 60 },
     "maxGateAttempts": { "type": "integer", "minimum": 1 },
+    "aiAgent": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "launchAdapters": { "type": "object", "additionalProperties": { "type": "string" } },
     "autoMerge": {
       "type": "object",
