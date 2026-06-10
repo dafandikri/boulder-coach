@@ -41,6 +41,7 @@ function makeHarness(opts: {
   landed?: { merged: boolean; reason?: string };
 }) {
   const claims: Claim[] = [];
+  const completed = new Set<string>();
   const log: string[] = [];
   const queued: { pbiId: string; reason: string }[] = [];
   const landedCalls: string[] = [];
@@ -61,6 +62,10 @@ function makeHarness(opts: {
       },
     },
     readBacklog: () => opts.backlog,
+    readCompleted: () => [...completed],
+    recordCompleted: (id: string) => {
+      completed.add(id);
+    },
     readClaims: () => claims,
     tryClaim: (c: Claim) => {
       if (claims.some((x) => x.pbiId === c.pbiId)) return false;
@@ -99,7 +104,7 @@ function makeHarness(opts: {
     },
     now: () => NOW,
   };
-  return { deps, claims, log, queued, landedCalls, worktrees, installed, exits };
+  return { deps, claims, completed, log, queued, landedCalls, worktrees, installed, exits };
 }
 
 describe('conductor state machine (fakes)', () => {
@@ -172,6 +177,35 @@ describe('conductor state machine (fakes)', () => {
     createConductor(h.deps).tick();
     expect(h.claims.map((c) => c.pbiId).sort()).toEqual(['BC-91a', 'BC-91b']);
     expect(h.log.some((l) => l.includes('split BC-91'))).toBe(true);
+  });
+
+  it('falls back to the whole PBI when a split cannot fit the free slots', () => {
+    const h = makeHarness({
+      backlog: LARGE,
+      maxWorkers: 1, // only one slot, but the split has two units
+      split: [
+        { id: 'BC-91a', files: ['src/domain/x.ts'] },
+        { id: 'BC-91b', files: ['src/domain/y.ts'] },
+      ],
+    });
+    createConductor(h.deps).tick();
+    // Assigns BC-91 whole (1 slot) rather than stranding a sub-task.
+    expect(h.claims.map((c) => c.pbiId)).toEqual(['BC-91']);
+  });
+
+  it('does not re-assign a PBI it already merged, even if backlog still says open', () => {
+    const h = makeHarness({
+      backlog: ALPHA,
+      changed: ['src/domain/a.ts'],
+      verdict: { verdict: 'approve' },
+    });
+    const c = createConductor(h.deps);
+    c.tick();
+    h.exits[0]?.(); // BC-90 merged → recorded completed + claim released
+    expect(h.claims).toHaveLength(0);
+    expect(h.completed.has('BC-90')).toBe(true);
+    c.tick(); // ALPHA still lists BC-90 'open', but it must not be re-assigned
+    expect(h.claims).toHaveLength(0);
   });
 
   it('reclaims a claim whose lease has expired', () => {

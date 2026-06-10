@@ -44,8 +44,9 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 
-# Crew runtime state (claims/queue/log are ephemeral; config + schema are tracked)
+# Crew runtime state (claims/queue/log/completed are ephemeral; config + schema are tracked)
 .crew/claims/
 .crew/review-queue/
+.crew/completed/
 .crew/log.md
 .crew/PAUSED
