@@ -43,3 +43,9 @@ next-env.d.ts
 # playwright artifacts
 /test-results/
 /playwright-report/
+
+# Crew runtime state (claims/queue/log are ephemeral; config + schema are tracked)
+.crew/claims/
+.crew/review-queue/
+.crew/log.md
+.crew/PAUSED
