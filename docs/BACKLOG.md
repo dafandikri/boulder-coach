@@ -186,7 +186,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - **Acceptance criteria:** a pure domain rule detects a gap (e.g. ≥ 14 days since last log) and
   forces a conservative re-entry (deload-volume week, capped intensity) with a clear reason shown
   on Today; tests cover gap boundary. If implemented inside `adaptation.ts` → safety-file protocol.
-- **Files:** `src/domain/adaptation.ts` or `periodization.ts`, tests.
+- **Files:** `src/domain/periodization.ts`
 
 ### BC-09 · Rest timer in the session player — `open`
 
@@ -196,7 +196,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - **Acceptance criteria:** per-block start/stop rest timer with sensible defaults by session type
   (limit ≈ 3 min, 4×4 ≈ 1 min between problems / 4 min between rounds); audible/vibration cue;
   works with screen re-lock (PWA constraint — document what's feasible).
-- **Files:** `src/app/session/page.tsx` (+ small component).
+- **Files:** `src/app/lib/restTimer.ts`, `src/app/session/page.tsx`
 
 ### BC-10 · Data export / import (backup) — `open`
 
@@ -207,7 +207,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - **Acceptance criteria:** export downloads a single versioned JSON (profile, program, check-ins,
   logs); import restores it (replace, with confirmation); round-trip integration test via
   fake-indexeddb; entry points on a settings/profile surface.
-- **Files:** `src/data/` (export/import over `IClimbRepo`), profile/settings page.
+- **Files:** `src/app/lib/backup.ts`, `src/app/profile/page.tsx`
 
 ---
 
@@ -248,6 +248,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   quality. Install-to-home-screen currently looks unfinished.
 - **Acceptance criteria:** branded 192/512 maskable PNGs (+ apple-touch-icon), manifest updated,
   `tests/pwa/manifest.test.ts` extended to require the maskable purpose + both sizes.
+- **Files:** `public/manifest.webmanifest`, `tests/pwa/manifest.test.ts`
 
 ### BC-15 · Deploy to Vercel (production URL) — `open`
 
@@ -257,6 +258,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - **Acceptance criteria:** production deployment from `main` (human runs the deploy/connects the
   repo — agents must not push); README documents the URL + deploy flow; service-worker update path
   verified once on the live origin (bump `CACHE` checklist noted in HANDOFF).
+- **Files:** `README.md`, `docs/HANDOFF.md`
 
 ### BC-16 · Installability + offline e2e in CI (carried from HANDOFF) — `open`
 
@@ -275,6 +277,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - **Problem:** CI reinstalls Chromium (~100 MB) on every run (`.github/workflows/ci.yml:27`).
 - **Acceptance criteria:** `actions/cache` keyed on the Playwright version; install step skipped
   on hit; CI stays green.
+- **Files:** `.github/workflows/ci.yml`
 
 ---
 
@@ -287,6 +290,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   implementation (e.g. Supabase/Postgres) with offline-first merge semantics (last-write-wins per
   entity is probably fine for single-user). Deliverable is a spec in `docs/specs/`, not code.
   Prereq: BC-10 (export gives a migration/backup path first).
+- **Files:** `docs/specs/cloud-sync-design.md`
 
 ### BC-19 · Technique-drill rotation in volume sessions — `open`
 
@@ -294,12 +298,14 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - Volume/technique sessions say "one deliberate drill (e.g. silent feet)" but never pick one. Pull
   from `src/domain/drills.ts`, rotate week-to-week, and show the drill card inline in the session
   player. Closes the "no technique development" original problem beyond a passive library.
+- **Files:** `src/domain/drills.ts`, `src/app/session/page.tsx`
 
 ### BC-20 · Training-day reminders — `open`
 
 - **Type:** feature · **Complexity:** M
 - Local notifications (PWA Notification + service worker) on `availableWeekdays` mornings:
   "Limit day today — check in first." Depends on BC-03 (real schedule) and BC-15 (HTTPS origin).
+- **Files:** `src/app/lib/reminders.ts`
 
 ### BC-21 · Single repo instance — `open`
 
@@ -307,6 +313,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - Every page constructs `new DexieClimbRepo()`. Works, but a module-level singleton (or a tiny
   provider) gives one Dexie connection and one seam to swap when BC-18 lands. Pure
   leave-it-better refactor; fold into another PBI's commit if convenient.
+- **Files:** `src/data/repoInstance.ts`
 
 ---
 
