@@ -16,8 +16,9 @@ echo "REQUIRED READING (in order):"
 echo "  1. AGENTS.md                      — rules every agent/tool follows (the contract)"
 echo "  2. docs/HANDOFF.md                — live cursor: state, next actions, gate-blind risks"
 echo "  3. docs/LEARNINGS.md              — grep it for any file you will edit"
-echo "  4. docs/plans/<feature>.md        — the plan for what you're building"
-echo "  5. skills/README.md               — read the matching skill BEFORE the matching task"
+echo "  4. docs/BACKLOG.md                — prioritized PBIs: pick the topmost unblocked item"
+echo "  5. docs/plans/<feature>.md        — the plan for what you're building"
+echo "  6. skills/README.md               — read the matching skill BEFORE the matching task"
 hr
 
 echo "📍 LIVE CURSOR — docs/HANDOFF.md"

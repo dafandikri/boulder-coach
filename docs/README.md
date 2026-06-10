@@ -9,6 +9,8 @@ All project documentation lives **inside the repo** so it's discoverable when re
 - [`HANDOFF.md`](HANDOFF.md) — the **live cursor**: where we are, what's next, and the gate-blind risks
   to watch. A memoryless agent reads this first and updates it last. The cross-tool handoff protocol is
   in [`../AGENTS.md`](../AGENTS.md) → "START HERE" and "Definition of done".
+- [`BACKLOG.md`](BACKLOG.md) — the **prioritized product backlog (PBIs)**: what to build next and
+  why, with acceptance criteria. Pick the topmost unblocked item; update its status when you ship.
 
 ## Specs (the "what" and "why")
 
