@@ -1,6 +1,6 @@
 {
   "$schema": "./config.schema.json",
-  "maxWorkers": 3,
+  "maxWorkers": 1,
   "workerTool": "claude",
   "leaseSeconds": 1800,
   "maxGateAttempts": 3,
