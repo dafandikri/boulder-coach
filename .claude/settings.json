@@ -1,5 +1,20 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(pnpm onboard)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm gate)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm vitest:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm build)",
+      "Bash(pnpm format:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
     "deny": ["Bash(git push:*)", "Bash(git push)", "Bash(gh pr create:*)", "Bash(gh pr merge:*)"]
   },
   "hooks": {
