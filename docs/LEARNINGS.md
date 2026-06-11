@@ -28,6 +28,26 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-11 — scripts/crew/adapters/claude.sh — runtime (live crew run, gate-blind)
+
+- **Task:** First live `pnpm crew start` (parallel workers on BC-06/08/09).
+- **What failed:** Every worker received an EMPTY charge. The conductor log filled with
+  `Permission deny rule "You" matches no known tool`, `"are"`, `"a"`, `"Crew"`, … — i.e. the
+  worker prompt's individual words were being parsed as `--disallowed-tools` names.
+- **Root cause:** `--disallowedTools, --disallowed-tools <tools...>` is **variadic** (greedily
+  consumes all following tokens). The adapter passed the prompt as a trailing positional
+  (`… --disallowed-tools "Bash(git push:*)" … "$charge"`), so `$charge` was swallowed into the
+  deny list and no prompt reached the worker.
+- **Fix:** Feed the charge on **stdin** instead of as a positional — `claude --print` reads the
+  prompt from stdin when no positional is given, so the variadic flag has nothing left to eat:
+  `exec claude … --disallowed-tools … <<<"$charge"`. Verified live: worker replies to the prompt,
+  zero deny-rule spam.
+- **Prevention:** **Promoted to Tier-1** — `tests/crew/adapter.test.ts` asserts the charge is
+  delivered via `<<<"$charge"` (never a bare trailing positional) and re-pins the security contract
+  (acceptEdits + push/PR denied, no blanket bypass). The shell adapter was the one seam with zero
+  test coverage; it now fails the gate on regression without needing a live run.
+- **Attempts to green:** 1 (verified with an isolated `claude --print <<<"…"` smoke test).
+
 ## 2026-06-11 — scripts/crew/adapters/claude.sh — security (review)
 
 - **Task:** Make Crew workers run unattended.
