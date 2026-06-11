@@ -177,7 +177,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   via `IClimbRepo`; Insights renders the decision log newest-first.
 - **Files:** `src/app/lib/bootstrap.ts`, `src/data/IClimbRepo.ts` + `dexieRepo.ts` (new store), `src/app/page.tsx`, `src/app/insights/page.tsx`.
 
-### BC-08 · Long-layoff detection and re-ramp — `open`
+### BC-08 · Long-layoff detection and re-ramp — `done`
 
 - **Type:** feature · **Priority:** P1 · **Complexity:** M · **Depends on:** BC-01
 - **Problem:** spec edge case "Long layoff → detect gap, restart with deloaded ramp" is
