@@ -31,20 +31,20 @@ Deliver a harness that:
 4. **Enforces production quality automatically** at four tiers: in-loop → pre-commit → pre-push → CI.
 5. **Encodes the architecture** so the layered design (domain pure, repo seam) is a lint rule, not a hope.
 
-**Non-goals (v1 of the harness):** multi-repo orchestration; remote/cloud agents; auto-push or
-auto-PR (explicitly forbidden); GSD `.planning/` migration; performance/load testing.
+**Non-goals (v1 of the harness):** multi-repo orchestration; remote/cloud agents; unattended auto-push or
+auto-PR from autonomous workers (scoped out — supervised sessions may push/PR/merge); GSD `.planning/` migration; performance/load testing.
 
 ## Decisions (from brainstorming)
 
-| Decision    | Choice                                                                         | Rationale                                                                                |
-| ----------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Loop engine | **Approach A — superpowers `subagent-driven-development`**                     | Reuses proven primitives; the plan already names it; fresh subagent per task = no drift. |
-| Checkpoints | **Per-task gates**                                                             | Tight blast radius; stops only on repeated failure or safety-rule change.                |
-| Git policy  | **Auto-commit local only; push/PR forbidden**                                  | Honors user CLAUDE.md ("nothing leaves my machine") as a config guarantee, not a hope.   |
-| Quality bar | **Production-ready; static + dynamic analysis; highest quality**               | Climber safety + forward-compat depend on it.                                            |
-| Enforcement | **Automated, four-tier defense in depth + agent feedback loopback**            | Fast checks early/often; slow checks in CI; failures auto-route back to agents.          |
-| Learning    | **Append-only learning ledger + promotion path**                               | Every failure logged; recurring ones graduate into automated checks. Minimize repeats.   |
-| Scalability | **Plan-agnostic loop, parallel agents, workspace-ready, affected-only checks** | Same harness drives Plan 2/3+; gate time stays flat as the codebase grows.               |
+| Decision    | Choice                                                                           | Rationale                                                                                                      |
+| ----------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Loop engine | **Approach A — superpowers `subagent-driven-development`**                       | Reuses proven primitives; the plan already names it; fresh subagent per task = no drift.                       |
+| Checkpoints | **Per-task gates**                                                               | Tight blast radius; stops only on repeated failure or safety-rule change.                                      |
+| Git policy  | **Two-tier: workers commit locally only; supervised sessions may push/PR/merge** | Autonomous workers denied push per-invocation; supervised push goes through PR + green CI on protected `main`. |
+| Quality bar | **Production-ready; static + dynamic analysis; highest quality**                 | Climber safety + forward-compat depend on it.                                                                  |
+| Enforcement | **Automated, four-tier defense in depth + agent feedback loopback**              | Fast checks early/often; slow checks in CI; failures auto-route back to agents.                                |
+| Learning    | **Append-only learning ledger + promotion path**                                 | Every failure logged; recurring ones graduate into automated checks. Minimize repeats.                         |
+| Scalability | **Plan-agnostic loop, parallel agents, workspace-ready, affected-only checks**   | Same harness drives Plan 2/3+; gate time stays flat as the codebase grows.                                     |
 
 ## Architecture
 
@@ -56,7 +56,7 @@ CONTROL PLANE (static config — makes ANY agent behave correctly)
   boulder-coach/
     CLAUDE.md                      # arch invariants, TDD mandate, gate commands, git/design principles
     .claude/
-      settings.json                # hooks (Stop-gate) + deny rules (git push / gh pr create)
+      settings.json                # hooks (Stop-gate) + scoped push: workers denied, supervised allowed
       agents/
         safety-rule-reviewer.md    # reviews domain diffs vs the spec rule-table
       skills/
@@ -81,7 +81,7 @@ ORCHESTRATION LOOP (runtime — subagent-driven-development)
     1. dispatch task → FRESH subagent   (TDD: failing test → minimal impl → refactor)
     2. run scripts/gate.sh              (deterministic; exit code is law)
     3. IF domain file touched → safety-rule-reviewer subagent
-    4. git add && git commit (local)    ← never push
+    4. git add && git commit (local)    ← workers never push; supervised session may
     5. FEEDBACK LOOP on any failure (see below)
     6. → next task
 ```
@@ -148,8 +148,7 @@ Same checks, escalating cost, nothing reaches "done" by slipping one gate:
 3. **Pre-push** (`.husky/pre-push` → `gate.sh`) — full gate runs when the human pushes.
 4. **CI/CD** (`.github/workflows/ci.yml`) — full gate + Semgrep + Knip + Playwright on every push/PR.
 
-Note: the agent **cannot** push (denied in `settings.json`); the pre-push hook guards the human's
-push, and CI is the backstop for branch protection later.
+Note: autonomous Crew workers **cannot** push (denied per-invocation via `--disallowed-tools`); a supervised session **may** push, and the pre-push hook + CI + branch protection on `main` are the backstop regardless of who pushes.
 
 ## The Feedback Loop (self-healing reiteration)
 
@@ -239,8 +238,7 @@ truth instead of paraphrasing.
 ## Git & Autonomy Policy (config, not memory)
 
 - `git add` + `git commit` — **allowed** autonomously, per task, after a green gate.
-- `git push`, `gh pr create` — **denied** via `.claude/settings.json` deny rules. A confused agent
-  physically cannot push.
+- `git push`, `gh pr create`, `gh pr merge` — **scoped** by session type. A supervised session (human-driven or actively supervised) may push, open PRs, and merge via `permissions.allow` in `.claude/settings.json`. Autonomous Crew workers are denied push per-invocation (`--disallowed-tools "Bash(git push:*)" "Bash(gh pr …)"`), which overrides the shared `allow`; workers commit locally only. The real backstop is **GitHub branch protection on `main`** (required `quality` CI status check + `enforce_admins: true`): nothing reaches `main` except via a PR with a green gate. The original design used a global deny rule; the policy evolved to scoped push once supervised push/PR/merge was authorized.
 - `git init` runs first (no repo exists yet).
 - Commit style: conventional commits, one commit per Plan 1 task (matches the plan).
 

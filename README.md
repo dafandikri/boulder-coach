@@ -106,15 +106,19 @@ provider/model to the same bar, not just Claude.
   against the rule table; on deviation the loop **stops**. Not something the gate depends on.
 - **`domain-rule-authoring`** skill (`.claude/skills/`) injects the canonical ACWR math + rule table
   so safety logic is implemented from source, not paraphrase.
-- **Git guardrails** (`.claude/settings.json`): `git push` / `gh pr create` are denied to agents;
-  a Stop-gate hook blocks "done" claims while the gate is red. Nothing leaves the machine without a human.
+- **Git guardrails:** autonomous agents commit **locally only** — they never push. Pushing, opening
+  PRs, and merging are reserved for a **supervised session** (a human in the loop), and `main` is
+  protected so every change lands via a pull request with a green gate. A Stop-gate hook blocks "done"
+  claims while the gate is red. (Mechanics: `.claude/settings.json` + branch protection — see
+  `AGENTS.md` / `docs/crew/README.md`.)
 
 ### Learning ledger + autonomous loop
 
 - **Ledger** (`docs/LEARNINGS.md`): every gate failure → root cause → fix → prevention.
   Recurring failures (≥2×) get **promoted** into automated checks.
 - **Loop** (`.claude/LOOP.md`): plan-agnostic protocol — fresh subagent per task → gate → safety
-  review on domain files → ledger on failure → feedback retry ≤3 → local commit. Never pushes.
+  review on domain files → ledger on failure → feedback retry ≤3 → local commit. The autonomous loop
+  never pushes; a supervised session does (see Git guardrails).
 
 ## Documentation discipline
 
