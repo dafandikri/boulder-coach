@@ -25,6 +25,16 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Current state — 2026-06-11 (last touched by: Claude Opus 4.8)
 
+- **Crew's first live parallel run shipped 3 PBIs.** `pnpm crew start` (maxWorkers 3) ran BC-06, BC-08,
+  BC-09 in file-disjoint worktrees; all three merged to `main` via the real rebase→gate→ff-merge path:
+  - **BC-08** (`e311380`) — long-layoff detection + deloaded re-entry (`detectLayoff`/`reEntryReRamp`).
+  - **BC-09** (`4cfc447`) — per-block rest timer (`restTimer.ts` pure logic + `RestControl` wiring).
+  - **BC-06** (`bee8515`) — onboarding + editable profile (`validateProfile`/`applyProfile`); home now
+    routes first-run visitors to `/profile` instead of silently seeding `DEFAULT_PROFILE`.
+- **Live run found + fixed a gate-blind adapter bug** (`b180e6c`): `--disallowed-tools` is variadic and
+  swallowed the worker prompt as deny-rules → workers got an EMPTY charge. Fix: feed the charge on stdin
+  (`<<<"$charge"`). Promoted to Tier-1: `tests/crew/adapter.test.ts` pins stdin delivery + the security
+  contract. `maxWorkers` default is now **3** (`cc45574`). See `docs/LEARNINGS.md` (2026-06-11).
 - **App:** Plans 1–3 + **all five P0 backlog items (BC-01…BC-05)** + the font-flake build fix (`fd0b4be`)
   are committed on `main`. PWA: Today, check-in, session player, history, insights, program, drills, SW.
 - **Crew multi-agent orchestrator — MERGED to `main`** (PRs #1–#4): a git-native, tool-neutral system
@@ -35,7 +45,8 @@ file is the live position** — update it as the LAST step of any session (see "
   in `.claude/settings.json` (a security review flagged the first cut's `bypassPermissions` — fixed).
   **Scoped push:** `allow` grants push/`gh` to the _supervised_ session; the worker adapter passes
   `--disallowed-tools "Bash(git push:*)" …` so autonomous **workers cannot push**. Recommend enabling
-  **GitHub branch protection on `main`**. `.crew/config.json` ships `maxWorkers: 1` for a first smoke run.
+  **GitHub branch protection on `main`**. `.crew/config.json` now defaults to `maxWorkers: 3` (the
+  adapter stdin-fix made parallel viable).
 - **Backlog groomed (PR #3):** added BC-22 (off-wall exercises, P2), BC-23 (visual redesign + dark
   mode + branding, P2), BC-24 (CV technique coach — future, design-only, P3). "Timer" = existing BC-09.
 - **Domain (pure):** loadMetrics, warmup, periodization, programClock, schedule, adaptation (safety),
@@ -43,9 +54,10 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Pending (uncommitted) — none
 
-Everything is on `main` (`pnpm gate` green: **32 test files, 137 tests**, type-coverage 99.83%). All
-feature branches merged + deleted. **Note:** a PR #2 merge race once dropped the security commits;
-they were recovered via cherry-pick in PR #4 — when merging, verify the PR head SHA equals local HEAD.
+Everything is on `main` (`pnpm gate` green: **35 test files, 175 tests**, type-coverage ≥99.8%). All
+feature + `agent/*` branches merged + deleted; no worktrees but the primary. **Note:** a PR #2 merge
+race once dropped the security commits; they were recovered via cherry-pick in PR #4 — when merging,
+verify the PR head SHA equals local HEAD.
 
 ## Code-review hardening (7 findings fixed, each tested)
 
@@ -85,19 +97,28 @@ review}.mjs`, adapters, prompts, `.crew/config.json`.
 
 ## Remaining honest caveats (genuinely out of CI scope)
 
-- A true end-to-end run with **live agent CLIs + real worktrees** isn't in CI (you can't cheaply spawn
-  Claude/Codex in the gate); the orchestration logic is now fully faked-tested, the shell adapters and
-  real git calls are exercised only by running `pnpm crew start`.
+- A true end-to-end run with **live agent CLIs + real worktrees** is no longer purely hypothetical — it
+  ran (3 PBIs merged) — but it's still not in CI (you can't cheaply spawn Claude/Codex in the gate). The
+  orchestration logic is fully faked-tested; the shell adapter is now Tier-1 guarded; real git/merge
+  calls are still only exercised by running `pnpm crew start`.
+- **`crew approve` releases the claim but does not write the `.crew/completed/` ledger** (only the
+  conductor's auto-merge path does). After a batch of manual approvals, mark the PBIs `done` in
+  `docs/BACKLOG.md` (status is what gates re-assignment) — done for BC-06/08/09 this run.
+- **A killed worker leaves an empty-branch `review-queue/<PBI>.md`** (its `onExit` routes a 0-commit
+  branch). After an interrupted run, clear stale `.crew/review-queue/*` before relying on the queue.
 
 ## Next actions (prioritized)
 
-1. **Smoke-test Crew** (`maxWorkers: 1`): on `main`, `pnpm crew start` + `pnpm crew status`, watch one
-   PBI go worktree → worker → reviewer → merge. The smallest pure-domain candidate is **BC-08**
-   (`src/domain/periodization.ts`). See `docs/crew/README.md` → "First run".
-2. **Scale to parallel:** once the smoke run lands a PBI cleanly, set `.crew/config.json`
-   `maxWorkers: 3` and restart — file-disjoint P1s (BC-06, BC-08, BC-10) run together.
-3. **Or work `docs/BACKLOG.md` from P1 by hand** — top unblocked item is **BC-06** (onboarding &
-   profile screen; profile is still the hardcoded `DEFAULT_PROFILE`). Size M → `docs/plans/` plan first.
+1. **Next parallel batch (Crew).** On `main`, `pnpm crew start` (now `maxWorkers: 3`) will pick the next
+   file-disjoint set. Top unblocked P1s: **BC-07** (neutral-check-in flag + adaptation log) and **BC-10**
+   (data export/import). NOTE BC-07/BC-10 both share files with each other or BC-06's area — the
+   scheduler resolves disjointness, but check `pnpm crew status`. **Supervise it** (don't walk away):
+   workers can be killed mid-task (session/usage limits) leaving uncommitted worktree state to finish.
+2. **Do NOT let it churn into deferred/unsuitable PBIs.** `BC-14` (icons) needs real art, `BC-15`
+   (Vercel deploy) needs secrets, `BC-24` (CV coach) is explicitly _future, do not start_. Their status
+   is `open`, so the scheduler **will** assign them — `pnpm crew pause` after the intended batch, or set
+   `maxWorkers` to bound the run.
+3. **Or work `docs/BACKLOG.md` from P1 by hand** — next is **BC-07** (size M).
 
 ## Open threads / known gate-blind risks
 
