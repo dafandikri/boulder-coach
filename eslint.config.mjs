@@ -36,7 +36,19 @@ const eslintConfig = defineConfig([
     },
   },
   eslintConfigPrettier,
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'coverage/**', 'e2e/**']),
+  // `.claude/worktrees/**` are full repo copies created by parallel-agent runs (Agent-tool
+  // worktree isolation). They are not gitignored, so `eslint .` would lint those sibling
+  // checkouts and a local pre-push gate fails on code that isn't in the branch being pushed.
+  // Ignoring them keeps the LOCAL gate honest; CI runs in a clean checkout with no worktrees.
+  globalIgnores([
+    '.next/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts',
+    'coverage/**',
+    'e2e/**',
+    '.claude/worktrees/**',
+  ]),
 ]);
 
 export default eslintConfig;

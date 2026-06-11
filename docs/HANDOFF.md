@@ -26,6 +26,29 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Current state — 2026-06-11 (last touched by: Claude Opus 4.8)
 
+- **Third parallel batch shipped 3 P2 PBIs — first P2 wins are in.** A supervised session dispatched
+  three file-disjoint worker agents (Agent-tool worktree isolation), then ran the full
+  push→PR→CI→review→merge cycle. All merged to `main` (rebase→green-`quality`→rebase-merge):
+  - **BC-13** (`d418717`, PR #14) — pain/soreness severity now cycles none→1→2→3→none (was a 0↔2
+    toggle, so 1 and 3 were unreachable). Cycle logic lives in covered `src/app/lib/checkinForm.ts`
+    (`cycleSeverity`), not the gate-blind page; Insights log already renders `severity` so 1/3 now
+    surface automatically.
+  - **BC-17** (`c85d5a6`, PR #13) — CI caches Playwright browsers (`actions/cache` on
+    `~/.cache/ms-playwright`, keyed on `pnpm-lock.yaml` hash). Cache-hit skips the ~100 MB download but
+    still runs `playwright install-deps` (OS deps aren't cacheable). The hit path proves out on the NEXT
+    CI run (this batch's runs primed the cache).
+  - **BC-22** (`2687031`, PR #15) — off-wall antagonist/core/mobility prescription. Pure
+    `src/domain/offWallExercises.ts` (`prescribeOffWall(type, phase?)`, exhaustive `SessionType` switch,
+    **additive-only safety contract — never raises climbing load**) + render-only `/exercises` route.
+    _Follow-up (open):_ no link to `/exercises` from Today yet — reachable by direct URL only; fold a
+    card/link into BC-11 (bottom nav) or a small UI pass.
+- **Tier-1 fix (this batch's close-out): ESLint now ignores the agent worktrees.** Worktree pollution
+  caused a _false_ local pre-push gate failure for the second time (batch 2 it was `prettier --check .`,
+  batch 3 it was `eslint .` linting sibling agent checkouts under `.claude/worktrees/`). Crossing the
+  ≥2× line, the lesson moved out of prose into `eslint.config.mjs` `globalIgnores` (the `worktrees`
+  glob). Parallel-agent supervisors: still remove worktrees before a deliberate clean local gate
+  (`git worktree remove --force … && git worktree prune`), but a push while a sibling agent is still
+  in-flight no longer false-fails. CI is unaffected (clean checkout, no worktrees).
 - **Second parallel batch shipped 3 PBIs — ALL P1 now done.** A supervised session dispatched three
   isolated worker agents (Agent-tool worktree isolation) on a file-disjoint set, then ran the full
   push→PR→CI→review→merge cycle. All merged to `main` via rebase→green-`quality`→rebase-merge:
@@ -138,19 +161,25 @@ review}.mjs`, adapters, prompts, `.crew/config.json`.
 > **All P0 and all P1 PBIs are now done.** The remaining open work is P2 (polish/infra) + P3
 > (design-only future bets). Next batches are P2.
 
-1. **Next parallel batch (P2).** A good file-disjoint set: **BC-13** (severity cycle — `checkin/page.tsx`),
-   **BC-17** (cache Playwright in CI — `.github/workflows/ci.yml`), **BC-22** (off-wall exercises —
-   `src/domain/offWallExercises.ts` + `src/app/exercises/page.tsx`). **BC-11** (bottom-tab nav —
-   `layout.tsx` + every page) conflicts with most page-touching PBIs, so run it solo. Whether you use
-   `pnpm crew start` or Agent-tool worktree isolation, verify the real `git diff --name-only` of each
-   branch against `main` before merging — an agent can stray from its declared `Files:` (BC-10 did).
+1. **Remaining P2 is mostly page-touching or solo work — fewer clean parallel sets left.** Done this
+   round: BC-12, BC-13, BC-17, BC-22. Still open: **BC-11** (bottom-tab nav — `layout.tsx` + every
+   page; run **solo**, it conflicts with any page-touching PBI), **BC-16** (installability/offline e2e
+   in CI — `e2e/` + `ci.yml`; promotes the SW gate-blind risk to Tier-1), **BC-23** (visual redesign +
+   dark mode, size **L** — solo it). A plausible disjoint pair is **BC-16** (CI/e2e) + **BC-23**
+   (`globals.css`/`layout.tsx`/`theme.ts`) only if BC-23 doesn't also rework the nav BC-11 owns —
+   sequence BC-11 → BC-23 to avoid the `layout.tsx` overlap. Whether `pnpm crew start` or Agent-tool
+   isolation: verify the real `git diff --name-only` of each branch against `main` before merging — an
+   agent can stray from its declared `Files:` (BC-10 did).
 2. **Do NOT churn into deferred/unsuitable PBIs.** `BC-14` (icons) needs real art, `BC-15` (Vercel
    deploy) needs secrets/human, `BC-24` (CV coach) is explicitly _future, do not start_. `BC-18`/`BC-24`
    are design-only. Bound any autonomous run so it doesn't pick these.
-3. **BC-23** (visual redesign + dark mode, P2, size L) is the big one if you want UX polish — solo it.
-4. **Worktree hygiene:** if you used Agent-tool isolation, `git worktree remove --force` every
-   `.claude/worktrees/agent-*` and delete orphan `worktree-agent-*` branches BEFORE running the gate
-   or pushing on `main` (they pollute the gate's file scan).
+3. **Small UX follow-up:** `/exercises` (BC-22) has no entry point from Today yet — reachable by direct
+   URL only. Fold a card/link into BC-11 (bottom nav) or a tiny UI pass.
+4. **Worktree hygiene:** ESLint now ignores `.claude/worktrees/**` (batch-3 close-out), so a push while
+   a sibling agent is still working no longer false-fails the local pre-push gate. Still **remove
+   worktrees before a deliberate clean local gate run** — `git worktree remove --force` every
+   `.claude/worktrees/agent-*`, `git worktree prune`, and delete orphan `worktree-agent-*` branches —
+   for an accurate full-tree result. CI is unaffected either way (clean checkout, no worktrees).
 
 ## Open threads / known gate-blind risks
 

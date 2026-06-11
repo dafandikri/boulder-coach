@@ -232,7 +232,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   check-in pre-fills today's existing entry when present.
 - **Files:** `src/app/session/page.tsx`, `src/app/program/page.tsx`, `src/app/checkin/page.tsx`.
 
-### BC-13 · Severity levels for pain/soreness — `done (7302479, 2026-06-11)`
+### BC-13 · Severity levels for pain/soreness — `done (d418717, 2026-06-11)`
 
 - **Type:** ux/feature · **Priority:** P2 · **Complexity:** S
 - **Problem:** the check-in body buttons toggle severity 0↔2; the spec models 1–3. Severity is
@@ -271,7 +271,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   build. This promotes the HANDOFF's top gate-blind risk to Tier-1.
 - **Files:** `e2e/`, `.github/workflows/ci.yml`, possibly `playwright.config.ts`.
 
-### BC-17 · CI speed: cache Playwright browsers — `done (d46389c, 2026-06-11)`
+### BC-17 · CI speed: cache Playwright browsers — `done (c85d5a6, 2026-06-11)`
 
 - **Type:** ci/optimization · **Priority:** P2 · **Complexity:** S
 - **Problem:** CI reinstalls Chromium (~100 MB) on every run (`.github/workflows/ci.yml:27`).
@@ -279,7 +279,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   on hit; CI stays green.
 - **Files:** `.github/workflows/ci.yml`
 
-### BC-22 · Off-the-wall exercises (antagonist / core / mobility) — `done (884b2e6, 2026-06-11)`
+### BC-22 · Off-the-wall exercises (antagonist / core / mobility) — `done (2687031, 2026-06-11)`
 
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** —
 - **Problem:** training is wall-only. Injury-resilient, well-rounded bouldering needs supplementary
