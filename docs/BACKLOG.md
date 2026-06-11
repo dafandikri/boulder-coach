@@ -154,7 +154,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 
 ## P1 — Spec'd v1 behavior still missing
 
-### BC-06 · Onboarding & profile screen (the profile is hardcoded) — `open`
+### BC-06 · Onboarding & profile screen (the profile is hardcoded) — `done (bee8515, 2026-06-11)`
 
 - **Type:** feature · **Priority:** P1 · **Complexity:** M · **Depends on:** —
 - **Problem:** `DEFAULT_PROFILE` (V5, 3×/week, Mon/Wed/Fri) is silently written on first load
@@ -177,7 +177,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   via `IClimbRepo`; Insights renders the decision log newest-first.
 - **Files:** `src/app/lib/bootstrap.ts`, `src/data/IClimbRepo.ts` + `dexieRepo.ts` (new store), `src/app/page.tsx`, `src/app/insights/page.tsx`.
 
-### BC-08 · Long-layoff detection and re-ramp — `done`
+### BC-08 · Long-layoff detection and re-ramp — `done (e311380, 2026-06-11)`
 
 - **Type:** feature · **Priority:** P1 · **Complexity:** M · **Depends on:** BC-01
 - **Problem:** spec edge case "Long layoff → detect gap, restart with deloaded ramp" is
@@ -188,7 +188,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   on Today; tests cover gap boundary. If implemented inside `adaptation.ts` → safety-file protocol.
 - **Files:** `src/domain/periodization.ts`
 
-### BC-09 · Rest timer in the session player — `open`
+### BC-09 · Rest timer in the session player — `done (4cfc447, 2026-06-11)`
 
 - **Type:** feature · **Priority:** P1 · **Complexity:** S · **Depends on:** —
 - **Problem:** spec screen 3 includes a rest timer. Limit bouldering lives and dies on full rest
