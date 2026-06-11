@@ -11,9 +11,15 @@
 # --disallowed-tools hard-blocks push/PR for THIS worker session only (it wins over
 # the shared `allow`). The human/supervised session may push; autonomous workers
 # never can — they commit locally and the conductor merges to local main.
+#
+# The charge (worker prompt) is piped on STDIN, NOT passed as a positional arg:
+# --disallowed-tools is variadic (`<tools...>`), so a trailing positional prompt
+# gets greedily parsed as more tool names (the prompt's words become bogus deny
+# rules and the worker receives an empty charge). `claude --print` reads the
+# prompt from stdin when no positional is given, which keeps the two unambiguous.
 set -euo pipefail
 charge="$(sed "s/{{PBI_ID}}/$2/g" "$3")"
 cd "$1"
 exec claude --permission-mode acceptEdits --print \
   --disallowed-tools "Bash(git push:*)" "Bash(git push)" "Bash(gh pr create:*)" "Bash(gh pr merge:*)" \
-  "$charge"
+  <<<"$charge"
