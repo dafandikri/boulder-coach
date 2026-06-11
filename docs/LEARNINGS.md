@@ -351,3 +351,55 @@ claims/manager.mjs`) so JSDoc is enforced and identifiers get real types; rewrot
 - **Prevention:** the three bug classes are now build failures, not review notes. The gate is the
   contract for every tool/model equally.
 - **Attempts to green:** 2 (prettier reflow; one `no-unnecessary-condition` on `v ?? 0`).
+
+## 2026-06-11 — .claude/worktrees/ — format/pre-push (gate-blind footgun)
+
+- **Task:** Parallel batch 2 (BC-07/10/12) via Agent-tool **worktree isolation**, then push from `main`.
+- **What failed:** `git push` on `main` was rejected by the pre-push hook (`pnpm gate`) — `prettier
+--check .` (stage 1/8) flagged files **inside** the agent worktrees. The baseline gate had passed
+  minutes earlier (before the worktrees existed).
+- **Root cause:** Agent-tool worktree isolation creates real git worktrees under `.claude/worktrees/
+agent-*` — full repo copies. That path is **not gitignored**, so `prettier --check .` (and other
+  whole-tree tools) scan the nested copies. The gate runs against the current tree regardless of which
+  branch you're pushing.
+- **Fix:** `git worktree remove --force .claude/worktrees/agent-*` (+ `git worktree prune`) before
+  gating/pushing. The feature branches survive as refs — you don't need the worktree dirs once the
+  agents have committed. Also delete the orphan `worktree-agent-*` branches the harness leaves behind.
+- **Prevention:** documented in HANDOFF ("Worktree hygiene"). **Candidate Tier-1 promotion if it
+  recurs:** add `.claude/worktrees/` to `.gitignore` (prettier 3 + knip honor it) — but verify ESLint
+  flat-config `ignores` and `tsconfig` `exclude` also skip it, since they don't all read `.gitignore`.
+- **Attempts to green:** 1 (remove worktrees → gate green).
+
+## 2026-06-11 — src/data/{IClimbRepo,dexieRepo}.ts — integration (parallel-agent Files: drift)
+
+- **Task:** Merging the parallel batch; BC-07 and BC-10 both edited the repo seam.
+- **What failed:** The backlog declared BC-10's `Files:` as only `backup.ts` + `profile/page.tsx`, so
+  the scheduler treated it as disjoint from BC-07. But BC-10's isolated worker decided it needed
+  `clearAll()` and added it to `IClimbRepo`/`dexieRepo` — files BC-07 was also editing. Rebase conflict
+  on both; worse, two **invisible** integration defects: `clearAll()` didn't wipe BC-07's new
+  `adaptationLog` store (orphaned data on import-replace) and `BackupV1` neither exported nor restored
+  it (silent backup data loss). Neither isolated agent could see the other's store.
+- **Root cause:** the file-disjoint lock is only as good as the **declared** `Files:` set; an agent that
+  discovers a new seam method mid-task edits a "free" shared file. Isolation hides cross-feature
+  consistency requirements.
+- **Fix:** order merges so the overlapping pair rebases sequentially (clean 2-way, not 3-way). The
+  **supervisor** (not the workers) reconciled: extended `clearAll()` to wipe `adaptationLog`, added
+  `adaptationLog` to `BackupV1` export/import + validation + round-trip test, fixed a latent BC-02 UTC
+  bug in `backupFilename` (→ `localDateIso`). Added a test asserting replace-import wipes stale
+  adaptation entries.
+- **Prevention:** after any parallel batch, diff each branch's **actual** `git diff --name-only` against
+  `main` (not the declared `Files:`) and hand-review any shared-file overlap for semantic integration,
+  not just textual conflicts. Noted in HANDOFF "Next actions".
+- **Attempts to green:** 2 (prettier reflow of a multi-line import; Dexie `transaction()` arity — below).
+
+## 2026-06-11 — src/data/dexieRepo.ts — typecheck (TS2554)
+
+- **Task:** Extending `clearAll()` to also clear the `adaptationLog` table (5 tables total).
+- **What failed:** `error TS2554: Expected 3-6 arguments, but got 7` on `this.db.transaction('rw',
+t1, t2, t3, t4, t5, cb)`.
+- **Root cause:** Dexie's variadic `transaction(mode, ...tables, cb)` overloads only type up to **4
+  explicit tables** (mode + 4 tables + callback = 6 args). A 5th table exceeds the typed overloads.
+- **Fix:** use the **array form** — `transaction('rw', tablesArray, cb)` — which has no arity cap;
+  also lets `Promise.all(tablesArray.map((t) => t.clear()))` stay DRY.
+- **Prevention:** for any Dexie transaction over ≥5 stores, default to the array form.
+- **Attempts to green:** 1.
