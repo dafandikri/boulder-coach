@@ -16,7 +16,8 @@ file is the live position** — update it as the LAST step of any session (see "
 
 1. `pnpm onboard` — load context (this file + recent learnings + gate/git state).
 2. Read `AGENTS.md` (rules) and the relevant `docs/plans/*` for the feature you're touching.
-3. `grep` `docs/LEARNINGS.md` for any file/module you will edit. Fix from the lesson, not blind retry.
+3. `pnpm learnings <file-or-keyword>` — retrieve only the lessons for what you'll edit (don't read the
+   whole ledger). Fix from the lesson, not blind retry.
 4. Do the work under TDD; `pnpm gate` must be green before commit (it runs on Stop + pre-push + CI).
 5. **Before you stop:** update this file (state + next actions), append a ledger entry for any failure,
    and update `README`/`AGENTS.md`/specs if behavior or infra changed (same commit).
@@ -25,6 +26,13 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Current state — 2026-06-11 (last touched by: Claude Opus 4.8)
 
+- **Ledger retrieval added — `pnpm learnings <file-or-keyword>` ("look up, don't load").** The ledger
+  is long-term memory; a fresh agent now pulls ONLY the entries relevant to what it's touching instead
+  of reading all 350+ lines. `pnpm learnings` (no arg) prints the index; a query prints the full block
+  of each matching entry (case-insensitive, header + body). Plain awk/grep — deliberately NOT a vector
+  DB (YAGNI at this scale; the gate stays plain shell+git). Tier-1: `tests/harness/learnings.test.ts`
+  pins the retrieval contract. Docs reframed from "grep the ledger" → the lookup command across
+  `AGENTS.md`, `CLAUDE.md`, `README.md`, `onboard.sh`, and this file. (UNCOMMITTED — see Pending.)
 - **Crew's first live parallel run shipped 3 PBIs.** `pnpm crew start` (maxWorkers 3) ran BC-06, BC-08,
   BC-09 in file-disjoint worktrees; all three merged to `main` via the real rebase→gate→ff-merge path:
   - **BC-08** (`e311380`) — long-layoff detection + deloaded re-entry (`detectLayoff`/`reEntryReRamp`).
@@ -52,9 +60,16 @@ file is the live position** — update it as the LAST step of any session (see "
 - **Domain (pure):** loadMetrics, warmup, periodization, programClock, schedule, adaptation (safety),
   sessionLog, insights, drills. Gate green; adaptation/loadMetrics + schedule all 100% branch.
 
-## Pending (uncommitted) — none
+## Pending (uncommitted) — ledger-retrieval (`pnpm learnings`)
 
-Everything is on `main` (`pnpm gate` green: **35 test files, 175 tests**, type-coverage ≥99.8%). All
+The `pnpm learnings` retrieval seam + its doc reframe are **staged in the working tree, not yet
+committed** (the human commits — agents never `git push`). Files: `scripts/learnings.sh` (new),
+`tests/harness/learnings.test.ts` (new), `package.json`, `scripts/onboard.sh`, `AGENTS.md`,
+`CLAUDE.md`, `README.md`, `docs/LEARNINGS.md`, `docs/HANDOFF.md`. Suggested commit:
+`feat(harness): retrieve ledger lessons on demand (pnpm learnings), reframe docs from full-read`.
+
+Before this change the tree was clean on `main` (`pnpm gate` green: **35 test files, 175 tests**,
+type-coverage ≥99.8%). All
 feature + `agent/*` branches merged + deleted; no worktrees but the primary. **Note:** a PR #2 merge
 race once dropped the security commits; they were recovered via cherry-pick in PR #4 — when merging,
 verify the PR head SHA equals local HEAD.
