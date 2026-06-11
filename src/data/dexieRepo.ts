@@ -101,4 +101,20 @@ export class DexieClimbRepo implements IClimbRepo {
     // than appending — idempotent per local date (BC-07).
     await this.db.adaptationLog.put(entry);
   }
+
+  async clearAll(): Promise<void> {
+    // Includes adaptationLog (BC-07's store): import has replace semantics, so a
+    // stale "why" log from the old dataset must not survive the wipe. Array form
+    // of transaction() — the variadic overloads cap at 4 tables.
+    const tables = [
+      this.db.profile,
+      this.db.programs,
+      this.db.checkIns,
+      this.db.logs,
+      this.db.adaptationLog,
+    ];
+    await this.db.transaction('rw', tables, async () => {
+      await Promise.all(tables.map((t) => t.clear()));
+    });
+  }
 }
