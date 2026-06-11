@@ -86,7 +86,13 @@ This project is built and maintained under an AI-first quality harness. Before c
   `scripts/check-safety-change.sh` surfaces the canonical rule table + runs `pnpm test:safety` when
   you touch them. Read [`skills/safety-critical-change.md`](skills/safety-critical-change.md) and use
   `domain-rule-authoring`; on Claude, the `safety-rule-reviewer` agent is an additional optional eye.
-- **Git:** local commits only (conventional commits). NEVER `git push` / open PRs — denied by config.
+- **Git (two-tier):** conventional commits. A **supervised session** (human-driven or actively supervised)
+  may `git push`, `gh pr create`, and `gh pr merge` — granted via `permissions.allow` in
+  `.claude/settings.json`. **Autonomous Crew workers cannot push**: the adapter passes
+  `--disallowed-tools "Bash(git push:*)" "Bash(gh pr …)"` per-invocation, which overrides the shared
+  allow. Workers commit locally; the conductor merges to local `main`; publishing to the remote is a
+  supervised/human action. `main` is protected (PR + green `quality` CI required), so push is never
+  an unreviewed path.
 - **Learning ledger:** before a task, retrieve its lessons with `pnpm learnings <file-or-keyword>`
   (targeted lookup, not a full read of `docs/LEARNINGS.md`); on any gate failure, append an entry
   (root cause → fix → prevention).

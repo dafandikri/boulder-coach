@@ -12,7 +12,7 @@ Drives ANY plan in `docs/plans/` task-by-task. Currently targets Plan 1
 5. On gate failure: append a LEARNINGS.md entry, re-dispatch a fresh subagent with the EXACT failure output and "fix ONLY this, do not weaken tests". Retry up to N=3. Persistent → STOP + escalate.
 6. If the task made a SUBSTANTIAL change to infra/design/system/scripts/loop, update the affected docs
    (`README.md`, `AGENTS.md`, `CLAUDE.md`, specs, this `LOOP.md`) in the SAME commit. Docs are part of "done".
-7. `git add -A && git commit` (conventional message). NEVER push.
+7. `git add -A && git commit` (conventional message). The autonomous loop does NOT push — a supervised session may (push/PR/merge are allowed for the human-driven session; `main` is protected by PR + green CI). See `docs/crew/README.md`.
 8. Next task.
 
 ## Parallelization map (Plan 1)

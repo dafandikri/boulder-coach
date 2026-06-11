@@ -41,7 +41,13 @@ executable invariants, not a substitute the gate depends on.
 ## Git policy
 
 - Commit per task (conventional commits: `feat(domain): …`). Local commits are allowed.
-- NEVER `git push` or `gh pr create` — denied by `.claude/settings.json`. Only the human pushes.
+- **Supervised sessions** (human-driven or actively supervised) **may** `git push`, `gh pr create`,
+  and `gh pr merge` — granted by `permissions.allow` in `.claude/settings.json`.
+- **Autonomous Crew workers** cannot push or open PRs — the worker adapter passes
+  `--disallowed-tools "Bash(git push:*)" "Bash(gh pr …)"` per-invocation, overriding the shared
+  `allow`. Workers commit locally only; the conductor merges to local `main`.
+- `main` is protected (required `quality` CI + `enforce_admins: true`): every change reaches `main`
+  via a PR with a green gate, even from a supervised session.
 
 ## Learning ledger
 
