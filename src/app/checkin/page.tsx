@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { localDateIso } from '@/app/lib/date';
-import { checkInFormValues, type CheckInFlags } from '@/app/lib/checkinForm';
+import { checkInFormValues, cycleSeverity, type CheckInFlags } from '@/app/lib/checkinForm';
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
 import type { BodyPart, CheckIn } from '@/domain/types';
 
@@ -14,14 +14,6 @@ const PARTS: { key: BodyPart; label: string }[] = [
   { key: 'shoulder', label: 'Shoulder' },
   { key: 'elbow', label: 'Elbow' },
 ];
-
-function toggleFlag(map: CheckInFlags, key: BodyPart): CheckInFlags {
-  if (map[key]) {
-    const { [key]: _removed, ...rest } = map;
-    return rest;
-  }
-  return { ...map, [key]: 2 };
-}
 
 export default function CheckInPage() {
   const router = useRouter();
@@ -141,17 +133,17 @@ export default function CheckInPage() {
       ))}
 
       <Section
-        title="Soreness (tap)"
+        title="Soreness (tap to cycle 1–3)"
         map={soreness}
         onToggle={(k) => {
-          setSoreness((m) => toggleFlag(m, k));
+          setSoreness((m) => cycleSeverity(m, k));
         }}
       />
       <Section
-        title="Pain (tap)"
+        title="Pain (tap to cycle 1–3)"
         map={pain}
         onToggle={(k) => {
-          setPain((m) => toggleFlag(m, k));
+          setPain((m) => cycleSeverity(m, k));
         }}
       />
 
@@ -179,19 +171,23 @@ function Section({
     <section>
       <p className="mb-2 text-sm font-semibold">{title}</p>
       <div className="grid grid-cols-2 gap-2">
-        {PARTS.map((p) => (
-          <button
-            key={p.key}
-            onClick={() => {
-              onToggle(p.key);
-            }}
-            className={`rounded-lg border px-3 py-2 text-sm ${
-              map[p.key] ? 'border-red-500 bg-red-50 text-red-800' : 'border-gray-300'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+        {PARTS.map((p) => {
+          const severity = map[p.key];
+          return (
+            <button
+              key={p.key}
+              onClick={() => {
+                onToggle(p.key);
+              }}
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                severity ? 'border-red-500 bg-red-50 text-red-800' : 'border-gray-300'
+              }`}
+            >
+              {p.label}
+              {severity ? ` · ${String(severity)}/3` : ''}
+            </button>
+          );
+        })}
       </div>
     </section>
   );
