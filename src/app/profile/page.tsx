@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import {
@@ -9,6 +9,7 @@ import {
   validateProfile,
   type ProfileDraft,
 } from '@/app/lib/bootstrap';
+import { exportBackup, importBackup, backupFilename, BackupError } from '@/app/lib/backup';
 
 const WEEKDAYS: { n: number; label: string }[] = [
   { n: 0, label: 'Sun' },
@@ -33,6 +34,8 @@ export default function ProfilePage() {
   const [regenerate, setRegenerate] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void new DexieClimbRepo().getProfile().then((existing) => {
@@ -63,6 +66,32 @@ export default function ProfilePage() {
     // climber confirmed they want to replace the current cycle.
     await applyProfile(new DexieClimbRepo(), draft, isFirstRun || regenerate);
     router.push('/');
+  }
+
+  // --- Backup wiring (BC-10). All logic lives in backup.ts; this only does the
+  // browser-only I/O: serialize→download, pick file→read text, and the confirm
+  // before a destructive import. ---
+
+  async function exportData(): Promise<void> {
+    const backup = await exportBackup(new DexieClimbRepo());
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = backupFilename();
+    a.click();
+    URL.revokeObjectURL(url);
+    setBackupMsg('Backup downloaded.');
+  }
+
+  async function importData(file: File): Promise<void> {
+    if (!window.confirm('Importing replaces ALL current data on this device. Continue?')) return;
+    try {
+      await importBackup(new DexieClimbRepo(), await file.text());
+      router.push('/');
+    } catch (e) {
+      setBackupMsg(e instanceof BackupError ? e.message : 'Import failed: unreadable file.');
+    }
   }
 
   if (!loaded) return <main className="p-6">Loading…</main>;
@@ -182,6 +211,48 @@ export default function ProfilePage() {
       >
         {isFirstRun ? 'Start training' : 'Save'}
       </button>
+
+      {!isFirstRun && (
+        <section className="space-y-3 border-t pt-6">
+          <div>
+            <h2 className="text-sm font-semibold">Backup &amp; restore</h2>
+            <p className="text-sm text-gray-500">
+              Your data lives only in this browser. Export a JSON backup, or import one to restore
+              it on a new device.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void exportData();
+              }}
+              className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold"
+            >
+              Export
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold"
+            >
+              Import
+            </button>
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = ''; // allow re-picking the same file
+              if (file) void importData(file);
+            }}
+          />
+          {backupMsg && <p className="text-sm font-medium text-slate-700">{backupMsg}</p>}
+        </section>
+      )}
     </main>
   );
 }

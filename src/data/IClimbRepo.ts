@@ -22,4 +22,12 @@ export interface IClimbRepo {
    *  overwrites (idempotent), so re-rendering a day never duplicates an entry. */
   getAdaptationLog(): Promise<AdaptationLogEntry[]>;
   saveAdaptationLogEntry(entry: AdaptationLogEntry): Promise<void>;
+
+  /**
+   * Wipe every persisted record (profile, programs, check-ins, logs, adaptation
+   * log). The only destructive bulk operation — used by import (replace
+   * semantics, BC-10). A cloud impl must clear the same logical scope a single
+   * export covers.
+   */
+  clearAll(): Promise<void>;
 }

@@ -198,7 +198,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   works with screen re-lock (PWA constraint — document what's feasible).
 - **Files:** `src/app/lib/restTimer.ts`, `src/app/session/page.tsx`
 
-### BC-10 · Data export / import (backup) — `open`
+### BC-10 · Data export / import (backup) — `done (44fe5f0, 2026-06-11)`
 
 - **Type:** feature · **Priority:** P1 · **Complexity:** S · **Depends on:** —
 - **Problem:** all training history lives in one browser's IndexedDB. Browser storage is evictable
