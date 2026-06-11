@@ -271,7 +271,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   build. This promotes the HANDOFF's top gate-blind risk to Tier-1.
 - **Files:** `e2e/`, `.github/workflows/ci.yml`, possibly `playwright.config.ts`.
 
-### BC-17 · CI speed: cache Playwright browsers — `open`
+### BC-17 · CI speed: cache Playwright browsers — `done (d46389c, 2026-06-11)`
 
 - **Type:** ci/optimization · **Priority:** P2 · **Complexity:** S
 - **Problem:** CI reinstalls Chromium (~100 MB) on every run (`.github/workflows/ci.yml:27`).
