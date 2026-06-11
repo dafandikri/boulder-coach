@@ -279,7 +279,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   on hit; CI stays green.
 - **Files:** `.github/workflows/ci.yml`
 
-### BC-22 · Off-the-wall exercises (antagonist / core / mobility) — `open`
+### BC-22 · Off-the-wall exercises (antagonist / core / mobility) — `done (884b2e6, 2026-06-11)`
 
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** —
 - **Problem:** training is wall-only. Injury-resilient, well-rounded bouldering needs supplementary
