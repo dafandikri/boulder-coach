@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { CheckIn, Program, SessionLog, UserProfile } from '@/domain/types';
+import type { AdaptationLogEntry, CheckIn, Program, SessionLog, UserProfile } from '@/domain/types';
 import type { IClimbRepo } from './IClimbRepo';
 
 interface ProfileRow extends UserProfile {
@@ -20,6 +20,8 @@ class ClimbDB extends Dexie {
   programs!: Table<ProgramRow, string>;
   checkIns!: Table<CheckInRow, string>;
   logs!: Table<SessionLog, string>;
+  // BC-07: the persisted "why" log, keyed by local date (primary key `date`).
+  adaptationLog!: Table<AdaptationLogEntry, string>;
 
   constructor(name: string) {
     super(name);
@@ -28,6 +30,11 @@ class ClimbDB extends Dexie {
       programs: 'id, active',
       checkIns: 'date',
       logs: 'id, date',
+    });
+    // v2 adds the adaptation log. Dexie versioning is order-sensitive: keep prior
+    // versions intact and append; existing stores carry forward unchanged.
+    this.version(2).stores({
+      adaptationLog: 'date',
     });
   }
 }
@@ -83,5 +90,15 @@ export class DexieClimbRepo implements IClimbRepo {
 
   async saveLog(log: SessionLog): Promise<void> {
     await this.db.logs.put(log);
+  }
+
+  async getAdaptationLog(): Promise<AdaptationLogEntry[]> {
+    return this.db.adaptationLog.toArray();
+  }
+
+  async saveAdaptationLogEntry(entry: AdaptationLogEntry): Promise<void> {
+    // put() is keyed by `date`, so re-deciding the same day overwrites rather
+    // than appending — idempotent per local date (BC-07).
+    await this.db.adaptationLog.put(entry);
   }
 }
