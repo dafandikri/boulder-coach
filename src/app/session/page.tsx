@@ -1,13 +1,45 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { localDateIso } from '@/app/lib/date';
 import { canFinishSession, expandTally, warmupDone } from '@/app/lib/sessionForm';
+import {
+  formatRest,
+  restConfigFor,
+  restElapsed,
+  restEndsAt,
+  restRemainingSec,
+  type RestConfig,
+} from '@/app/lib/restTimer';
 import { createSessionLog, type BlockActual } from '@/domain/sessionLog';
 import type { VGrade } from '@/domain/types';
+
+/** Audible + haptic "rest over" cue. Lives in the (gate-blind) component because
+ *  it touches browser-only APIs; all the *decisions* about WHEN to fire are the
+ *  tested pure helpers in restTimer.ts. Guarded so it no-ops where unsupported. */
+function fireRestCue(): void {
+  // Access browser-only APIs through optional-typed views: the DOM lib types them
+  // as always-present, but they are genuinely absent under SSR / older browsers, so
+  // the guards are real (not the "unnecessary conditions" the strict types assume).
+  if (typeof navigator !== 'undefined') {
+    const nav: { vibrate?: (pattern: number | number[]) => boolean } = navigator;
+    nav.vibrate?.([200, 100, 200]);
+  }
+  if (typeof window === 'undefined') return;
+  const w: { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext } =
+    window;
+  const Ctor = w.AudioContext ?? w.webkitAudioContext;
+  if (!Ctor) return;
+  const ctx = new Ctor();
+  const osc = ctx.createOscillator();
+  osc.frequency.value = 880;
+  osc.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.2);
+}
 
 type Tally = Partial<Record<VGrade, number>>;
 
@@ -32,6 +64,48 @@ export default function SessionPage() {
   const [entries, setEntries] = useState<Record<string, BlockEntry>>({});
   const [warmupChecked, setWarmupChecked] = useState<Set<string>>(new Set());
   const [durationMin, setDuration] = useState(60);
+
+  // Rest timer: per block we store the wall-clock END timestamp (ms), or null when
+  // idle. `now` re-derives the countdown from the clock each tick, so a screen-lock
+  // (which suspends the interval) self-heals on wake instead of losing time.
+  const [restEndsByBlock, setRestEndsByBlock] = useState<Record<string, number | null>>({});
+  const [now, setNow] = useState(() => Date.now());
+  const cuedRef = useRef<Set<string>>(new Set());
+
+  const anyRestActive = Object.values(restEndsByBlock).some((e) => e !== null);
+  useEffect(() => {
+    if (!anyRestActive) return;
+    const sync = (): void => {
+      setNow(Date.now());
+    };
+    const id = setInterval(sync, 250);
+    // Recompute immediately when the PWA returns to the foreground (post screen-lock).
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, [anyRestActive]);
+
+  useEffect(() => {
+    for (const [blockId, endsAt] of Object.entries(restEndsByBlock)) {
+      if (endsAt !== null && restElapsed(endsAt, now) && !cuedRef.current.has(blockId)) {
+        cuedRef.current.add(blockId);
+        fireRestCue();
+      }
+    }
+  }, [now, restEndsByBlock]);
+
+  const startRest = useCallback((blockId: string, seconds: number): void => {
+    cuedRef.current.delete(blockId);
+    setRestEndsByBlock((prev) => ({ ...prev, [blockId]: restEndsAt(Date.now(), seconds) }));
+    setNow(Date.now());
+  }, []);
+
+  const stopRest = useCallback((blockId: string): void => {
+    cuedRef.current.delete(blockId);
+    setRestEndsByBlock((prev) => ({ ...prev, [blockId]: null }));
+  }, []);
 
   useEffect(() => {
     void getTodaySession(new DexieClimbRepo()).then((t) => {
@@ -200,6 +274,18 @@ export default function SessionPage() {
                   className="w-full"
                 />
               </label>
+
+              <RestControl
+                endsAt={restEndsByBlock[b.id] ?? null}
+                now={now}
+                config={restConfigFor(session.type)}
+                onStart={(seconds) => {
+                  startRest(b.id, seconds);
+                }}
+                onStop={() => {
+                  stopRest(b.id);
+                }}
+              />
             </li>
           );
         })}
@@ -232,6 +318,70 @@ export default function SessionPage() {
         {finishBlocked ? 'Complete warm-up first' : 'Finish & log session'}
       </button>
     </main>
+  );
+}
+
+/** Per-block rest timer. Idle: one (or two, for 4×4) "start rest" buttons sized
+ *  to the session-type defaults. Running: a live M:SS countdown + Stop. All timing
+ *  maths is delegated to restTimer.ts; this is pure wiring. */
+function RestControl({
+  endsAt,
+  now,
+  config,
+  onStart,
+  onStop,
+}: {
+  endsAt: number | null;
+  now: number;
+  config: RestConfig;
+  onStart: (seconds: number) => void;
+  onStop: () => void;
+}) {
+  if (endsAt !== null) {
+    const remaining = restRemainingSec(endsAt, now);
+    const done = remaining === 0;
+    return (
+      <div className="mt-3 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+        <span
+          className={`font-mono text-lg tabular-nums ${done ? 'text-emerald-600' : 'text-slate-900'}`}
+          aria-live="polite"
+        >
+          {done ? 'Rest done — go!' : `Rest ${formatRest(remaining)}`}
+        </span>
+        <button
+          type="button"
+          onClick={onStop}
+          className="rounded bg-gray-200 px-3 py-1 text-sm font-medium hover:bg-gray-300"
+        >
+          {done ? 'Dismiss' : 'Stop'}
+        </button>
+      </div>
+    );
+  }
+  const rounds = config.betweenRounds;
+  return (
+    <div className="mt-3 flex gap-2">
+      <button
+        type="button"
+        onClick={() => {
+          onStart(config.betweenSets);
+        }}
+        className="rounded bg-slate-100 px-3 py-1.5 text-sm font-medium hover:bg-slate-200"
+      >
+        Rest {formatRest(config.betweenSets)}
+      </button>
+      {rounds !== undefined && (
+        <button
+          type="button"
+          onClick={() => {
+            onStart(rounds);
+          }}
+          className="rounded bg-slate-100 px-3 py-1.5 text-sm font-medium hover:bg-slate-200"
+        >
+          Round {formatRest(rounds)}
+        </button>
+      )}
+    </div>
   );
 }
 
