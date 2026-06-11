@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { computeLoadMetrics } from '@/domain/loadMetrics';
 import { computeInsights, type Insights } from '@/domain/insights';
+import { loadAdaptationLog } from '@/app/lib/bootstrap';
+import type { AdaptationLogEntry } from '@/domain/types';
 
 function acwrColor(acwr: number): string {
   if (acwr === 0) return 'bg-gray-200 text-gray-600';
@@ -23,14 +25,20 @@ function acwrLabel(acwr: number): string {
 export default function InsightsPage() {
   const [insights, setInsights] = useState<Insights | null>(null);
   const [acwr, setAcwr] = useState(0);
+  const [decisionLog, setDecisionLog] = useState<AdaptationLogEntry[]>([]);
 
   useEffect(() => {
     async function load() {
       const repo = new DexieClimbRepo();
-      const [logs, checkIns] = await Promise.all([repo.getLogs(), repo.getCheckIns()]);
+      const [logs, checkIns, adaptationLog] = await Promise.all([
+        repo.getLogs(),
+        repo.getCheckIns(),
+        loadAdaptationLog(repo), // already sorted newest-first (BC-07)
+      ]);
       const metrics = computeLoadMetrics(logs, new Date());
       setAcwr(metrics.acwr);
       setInsights(computeInsights(logs, checkIns));
+      setDecisionLog(adaptationLog);
     }
     void load();
   }, []);
@@ -94,6 +102,31 @@ export default function InsightsPage() {
                 >
                   {t.bodyPart} ({t.severity})
                 </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {decisionLog.length > 0 && (
+        <section className="rounded-lg border p-4">
+          <p className="mb-2 text-sm font-semibold">The “why” log</p>
+          <ul className="space-y-2 text-sm">
+            {decisionLog.map((entry) => (
+              <li key={entry.date} className="border-b pb-2 last:border-b-0 last:pb-0">
+                <p className="text-xs text-gray-400">{entry.date}</p>
+                {entry.changes.length > 0 ? (
+                  entry.changes.map((c) => (
+                    <p key={c.ruleId} className="text-gray-700">
+                      • {c.reason}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-gray-500">No adjustments — session ran as planned.</p>
+                )}
+                {entry.neutralAssumed && (
+                  <p className="text-xs text-gray-400">No check-in — assumed neutral.</p>
+                )}
               </li>
             ))}
           </ul>

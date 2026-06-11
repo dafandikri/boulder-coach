@@ -100,4 +100,31 @@ describe('DexieClimbRepo', () => {
     });
     expect(await repo.getLogs()).toHaveLength(2);
   });
+
+  it('round-trips adaptation-log entries and overwrites per date (BC-07)', async () => {
+    expect(await repo.getAdaptationLog()).toHaveLength(0);
+    await repo.saveAdaptationLogEntry({
+      date: '2026-06-09',
+      changes: [{ ruleId: 'test-rule', reason: 'mock reason' }],
+      neutralAssumed: true,
+    });
+    await repo.saveAdaptationLogEntry({
+      date: '2026-06-11',
+      changes: [],
+      neutralAssumed: false,
+    });
+    expect(await repo.getAdaptationLog()).toHaveLength(2);
+
+    // re-saving the same date overwrites (idempotent per local date)
+    await repo.saveAdaptationLogEntry({
+      date: '2026-06-09',
+      changes: [],
+      neutralAssumed: false,
+    });
+    const log = await repo.getAdaptationLog();
+    expect(log).toHaveLength(2);
+    const entry = log.find((e) => e.date === '2026-06-09');
+    expect(entry?.neutralAssumed).toBe(false);
+    expect(entry?.changes).toHaveLength(0);
+  });
 });

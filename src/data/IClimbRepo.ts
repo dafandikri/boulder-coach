@@ -1,4 +1,4 @@
-import type { CheckIn, Program, SessionLog, UserProfile } from '@/domain/types';
+import type { AdaptationLogEntry, CheckIn, Program, SessionLog, UserProfile } from '@/domain/types';
 
 /**
  * Storage seam. The Dexie impl backs this now; a cloud impl can replace it
@@ -17,4 +17,9 @@ export interface IClimbRepo {
 
   getLogs(): Promise<SessionLog[]>;
   saveLog(log: SessionLog): Promise<void>;
+
+  /** BC-07: the persisted "why" log. Keyed by local date; saving the same date
+   *  overwrites (idempotent), so re-rendering a day never duplicates an entry. */
+  getAdaptationLog(): Promise<AdaptationLogEntry[]>;
+  saveAdaptationLogEntry(entry: AdaptationLogEntry): Promise<void>;
 }

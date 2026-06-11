@@ -104,3 +104,15 @@ export interface AdaptationResult {
   changes: AdaptationChange[];
   warmupMandatory: boolean;
 }
+
+/**
+ * A persisted record of what the engine decided on a given local date and why
+ * (BC-07). One entry per local date — re-deciding the same day overwrites it
+ * (idempotent), so the "why" log never accumulates duplicates. `neutralAssumed`
+ * is true when no check-in existed for the date and the engine assumed neutral.
+ */
+export interface AdaptationLogEntry {
+  date: string; // local calendar date YYYY-MM-DD, see localDateIso
+  changes: AdaptationChange[];
+  neutralAssumed: boolean;
+}

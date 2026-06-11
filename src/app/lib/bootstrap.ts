@@ -1,5 +1,6 @@
 import type {
   AdaptationChange,
+  AdaptationLogEntry,
   CheckIn,
   PlannedSession,
   Program,
@@ -105,6 +106,9 @@ export interface TodayResult {
   session: PlannedSession;
   changes: AdaptationChange[];
   warmupMandatory: boolean;
+  /** True when no check-in existed for today, so the engine assumed neutral.
+   *  Drives the "No check-in today — assuming you feel normal" banner (BC-07). */
+  neutralAssumed: boolean;
 }
 
 function neutralCheckIn(dateIso: string): CheckIn {
@@ -164,15 +168,37 @@ export async function getTodaySession(
 
   // BC-03: a rest day is an explicit recovery prescription — no adaptation noise.
   if (planned.type === 'rest') {
-    return { session: planned, changes: [], warmupMandatory: false };
+    return { session: planned, changes: [], warmupMandatory: false, neutralAssumed: false };
   }
 
   const dateIso = localDateIso(asOf);
-  const checkIn = (await repo.getCheckIn(dateIso)) ?? neutralCheckIn(dateIso);
+  const storedCheckIn = await repo.getCheckIn(dateIso);
+  const neutralAssumed = storedCheckIn === undefined;
+  const checkIn = storedCheckIn ?? neutralCheckIn(dateIso);
   const logs = await repo.getLogs();
   const metrics = computeLoadMetrics(logs, asOf);
 
   const { adjustedSession, changes, warmupMandatory } = adapt(planned, checkIn, logs, metrics);
 
-  return { session: adjustedSession, changes, warmupMandatory };
+  // BC-07: persist the "why" log idempotently per local date — re-rendering the
+  // same day overwrites the entry (keyed by date) rather than duplicating it.
+  await repo.saveAdaptationLogEntry({ date: dateIso, changes, neutralAssumed });
+
+  return { session: adjustedSession, changes, warmupMandatory, neutralAssumed };
+}
+
+/**
+ * The persisted "why" log, newest-first (BC-07). Pure sort over a copy so the
+ * Insights page can render it directly — the decision-ordering logic lives here
+ * (covered), not in the gate-blind component.
+ */
+export function sortAdaptationLogNewestFirst(
+  entries: readonly AdaptationLogEntry[],
+): AdaptationLogEntry[] {
+  return [...entries].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** Load the decision log from the repo, already sorted newest-first (BC-07). */
+export async function loadAdaptationLog(repo: IClimbRepo): Promise<AdaptationLogEntry[]> {
+  return sortAdaptationLogNewestFirst(await repo.getAdaptationLog());
 }

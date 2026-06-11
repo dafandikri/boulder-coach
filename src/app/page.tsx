@@ -36,7 +36,7 @@ export default function TodayPage() {
     return <main className="p-6">Loading today’s session…</main>;
   }
 
-  const { session, changes, warmupMandatory } = today;
+  const { session, changes, warmupMandatory, neutralAssumed } = today;
   const isRest = session.type === 'rest';
 
   return (
@@ -65,6 +65,15 @@ export default function TodayPage() {
             Start session
           </Link>
         </div>
+      )}
+
+      {!isRest && neutralAssumed && (
+        <Link
+          href="/checkin"
+          className="block rounded-lg bg-sky-50 p-4 text-sm text-sky-900 hover:bg-sky-100"
+        >
+          No check-in today — assuming you feel normal. Check in →
+        </Link>
       )}
 
       {changes.length > 0 && (

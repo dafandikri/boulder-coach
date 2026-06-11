@@ -1,7 +1,13 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect } from 'vitest';
 import { DexieClimbRepo } from '../../src/data/dexieRepo';
-import { getTodaySession, DEFAULT_PROFILE } from '../../src/app/lib/bootstrap';
+import {
+  getTodaySession,
+  loadAdaptationLog,
+  sortAdaptationLogNewestFirst,
+  DEFAULT_PROFILE,
+} from '../../src/app/lib/bootstrap';
+import type { AdaptationLogEntry, CheckIn } from '../../src/domain/types';
 
 describe('getTodaySession', () => {
   it('creates a profile + program on first run and returns an adapted session', async () => {
@@ -53,5 +59,68 @@ describe('getTodaySession', () => {
         expect(r.changes).toHaveLength(0); // rest day carries no adaptation noise
       }
     }
+  });
+
+  it('flags neutral when no check-in exists for the day (BC-07)', async () => {
+    const repo = new DexieClimbRepo(`boot-neutral-${Math.random()}`);
+    const r = await getTodaySession(repo, new Date(2026, 5, 1, 8)); // Mon, training day
+    expect(r.session.type).not.toBe('rest');
+    expect(r.neutralAssumed).toBe(true);
+  });
+
+  it('does not flag neutral when a check-in exists for the day (BC-07)', async () => {
+    const repo = new DexieClimbRepo(`boot-checkin-${Math.random()}`);
+    // seed program first so the date matches a training day
+    await getTodaySession(repo, new Date(2026, 5, 1, 8));
+    const checkIn: CheckIn = {
+      date: '2026-06-01',
+      sleepQuality: 4,
+      overallFatigue: 2,
+      soreness: {},
+      pain: {},
+      motivation: 4,
+    };
+    await repo.saveCheckIn(checkIn);
+    const r = await getTodaySession(repo, new Date(2026, 5, 1, 8));
+    expect(r.neutralAssumed).toBe(false);
+  });
+
+  it('persists one adaptation-log entry per training day, idempotently (BC-07)', async () => {
+    const repo = new DexieClimbRepo(`boot-log-${Math.random()}`);
+    const day = new Date(2026, 5, 1, 8); // Mon, training day
+    await getTodaySession(repo, day);
+    await getTodaySession(repo, day); // re-render same day must not duplicate
+    const log = await repo.getAdaptationLog();
+    expect(log).toHaveLength(1);
+    expect(log[0]!.date).toBe('2026-06-01');
+    expect(log[0]!.neutralAssumed).toBe(true);
+  });
+
+  it('does not persist a log entry on a rest day (BC-07)', async () => {
+    const repo = new DexieClimbRepo(`boot-rest-log-${Math.random()}`);
+    await getTodaySession(repo, new Date(2026, 5, 2, 8)); // Tue, rest day
+    expect(await repo.getAdaptationLog()).toHaveLength(0);
+  });
+
+  it('loadAdaptationLog returns the persisted log newest-first (BC-07)', async () => {
+    const repo = new DexieClimbRepo(`boot-load-${Math.random()}`);
+    await getTodaySession(repo, new Date(2026, 5, 1, 8)); // Mon
+    await getTodaySession(repo, new Date(2026, 5, 3, 8)); // Wed
+    const log = await loadAdaptationLog(repo);
+    expect(log.map((e) => e.date)).toEqual(['2026-06-03', '2026-06-01']);
+  });
+});
+
+describe('sortAdaptationLogNewestFirst', () => {
+  it('orders entries by date descending without mutating the input (BC-07)', () => {
+    const entries: AdaptationLogEntry[] = [
+      { date: '2026-06-01', changes: [], neutralAssumed: true },
+      { date: '2026-06-10', changes: [], neutralAssumed: false },
+      { date: '2026-06-05', changes: [], neutralAssumed: true },
+    ];
+    const sorted = sortAdaptationLogNewestFirst(entries);
+    expect(sorted.map((e) => e.date)).toEqual(['2026-06-10', '2026-06-05', '2026-06-01']);
+    // input untouched
+    expect(entries.map((e) => e.date)).toEqual(['2026-06-01', '2026-06-10', '2026-06-05']);
   });
 });
