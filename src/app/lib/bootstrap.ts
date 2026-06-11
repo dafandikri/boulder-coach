@@ -22,6 +22,85 @@ export const DEFAULT_PROFILE: UserProfile = {
   availableWeekdays: [1, 3, 5],
 };
 
+/** A profile as entered in the onboarding/edit form — same shape as the stored
+ *  UserProfile, named to make the form's intent clear at call sites. */
+export type ProfileDraft = UserProfile;
+
+const MIN_GRADE = 1;
+const MAX_GRADE = 17; // V-scale ceiling
+const MIN_SESSIONS = 2;
+const MAX_SESSIONS = 4;
+
+function isWholeGrade(g: number): boolean {
+  return Number.isInteger(g) && g >= MIN_GRADE && g <= MAX_GRADE;
+}
+
+/**
+ * Validate a profile draft from the onboarding/edit form. Returns the first
+ * human-readable problem found, or null when the draft is well-formed. Pure: the
+ * form renders the message; the domain never sees an invalid profile. Checks run
+ * in field order so the message names the field the user just touched.
+ */
+export function validateProfile(draft: ProfileDraft): string | null {
+  if (!isWholeGrade(draft.currentGrade)) {
+    return `Current grade must be a whole V-grade between V${MIN_GRADE} and V${MAX_GRADE}.`;
+  }
+  if (!isWholeGrade(draft.goalGrade)) {
+    return `Goal grade must be a whole V-grade between V${MIN_GRADE} and V${MAX_GRADE}.`;
+  }
+  if (draft.goalGrade < draft.currentGrade) {
+    return "Goal grade can't be below your current grade.";
+  }
+  if (
+    !Number.isInteger(draft.sessionsPerWeek) ||
+    draft.sessionsPerWeek < MIN_SESSIONS ||
+    draft.sessionsPerWeek > MAX_SESSIONS
+  ) {
+    return `Sessions per week must be between ${MIN_SESSIONS} and ${MAX_SESSIONS}.`;
+  }
+  const days = draft.availableWeekdays;
+  if (days.length === 0) {
+    return 'Pick at least one training day.';
+  }
+  if (days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+    return 'Training days must be valid weekdays (Sun–Sat).';
+  }
+  if (new Set(days).size !== days.length) {
+    return 'Training days must not repeat.';
+  }
+  if (days.length < draft.sessionsPerWeek) {
+    return 'Pick at least as many training days as sessions per week.';
+  }
+  return null;
+}
+
+export interface ApplyProfileResult {
+  /** True when the program was (re)built from this draft. */
+  regenerated: boolean;
+}
+
+/**
+ * Persist a profile from onboarding or an edit. On first run (no program yet) the
+ * program is always generated from the draft. On a later edit it is rebuilt —
+ * a fresh cycle anchored at `asOf` — ONLY when `regenerate` is true; otherwise the
+ * current cycle keeps running and just the profile changes. The caller (form)
+ * owns the "this replaces your current cycle" confirmation before passing true.
+ */
+export async function applyProfile(
+  repo: IClimbRepo,
+  draft: ProfileDraft,
+  regenerate: boolean,
+  asOf: Date = new Date(),
+): Promise<ApplyProfileResult> {
+  const existing = await repo.getActiveProgram();
+  await repo.saveProfile(draft);
+  if (!existing || regenerate) {
+    await repo.saveProgram(generateProgram(draft, localDateIso(asOf)));
+    return { regenerated: true };
+  }
+  return { regenerated: false };
+}
+
 export interface TodayResult {
   session: PlannedSession;
   changes: AdaptationChange[];
