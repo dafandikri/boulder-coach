@@ -26,6 +26,21 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Current state — 2026-06-11 (last touched by: Claude Opus 4.8)
 
+- **Second parallel batch shipped 3 PBIs — ALL P1 now done.** A supervised session dispatched three
+  isolated worker agents (Agent-tool worktree isolation) on a file-disjoint set, then ran the full
+  push→PR→CI→review→merge cycle. All merged to `main` via rebase→green-`quality`→rebase-merge:
+  - **BC-07** (`f03e5ba`, PR #9) — persisted "why" log + neutral-check-in flag. New `adaptationLog`
+    Dexie store (`.version(2)`), idempotent per local date; Today shows the neutral banner, Insights
+    renders the decision log newest-first. Logic in covered `bootstrap.ts`, pages only render.
+  - **BC-12** (`245764e`, PR #10) — honest error/empty states (session retry, program→/profile,
+    check-in prefill-not-overwrite). Decisions live in covered `loadState.ts`/`checkinForm.ts`.
+  - **BC-10** (`ce98d53`, PR #11) — versioned JSON export/import (`BackupV1`, validate-before-wipe).
+  - **Supervisor reconciled an integration defect the isolated workers couldn't see:** BC-10's worker
+    added `clearAll()` to the repo seam (straying from its declared `Files:`), overlapping BC-07's
+    seam edits. Merges were ordered so the overlap rebased sequentially; during BC-10's rebase the
+    supervisor made `clearAll()` also wipe `adaptationLog`, added `adaptationLog` to `BackupV1`
+    export/import (past decisions aren't regenerable), and fixed a latent BC-02 UTC bug in
+    `backupFilename` (now uses `localDateIso`). See `docs/LEARNINGS.md` (2026-06-11).
 - **Ledger retrieval added — `pnpm learnings <file-or-keyword>` ("look up, don't load").** The ledger
   is long-term memory; a fresh agent now pulls ONLY the entries relevant to what it's touching instead
   of reading all 350+ lines. `pnpm learnings` (no arg) prints the index; a query prints the full block
@@ -63,11 +78,12 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Pending (uncommitted) — none
 
-Everything is on `main` (`pnpm gate` green: **36 test files, 181 tests**, type-coverage ≥99.8%). The
-`pnpm learnings` retrieval seam shipped via PR #6 (`8300cf9`). All
-feature + `agent/*` branches merged + deleted; no worktrees but the primary. **Note:** a PR #2 merge
-race once dropped the security commits; they were recovered via cherry-pick in PR #4 — when merging,
-verify the PR head SHA equals local HEAD.
+Everything is on `main` (`pnpm gate` green). BC-07/BC-12/BC-10 shipped via PRs #9/#10/#11; all
+feature branches merged + deleted; no worktrees but the primary. **Note:** a PR #2 merge race once
+dropped commits — when merging, verify the PR head SHA equals local HEAD. **Worktree-isolation
+gotcha (this batch):** Agent-tool worktrees live under `.claude/worktrees/` (NOT gitignored), so
+`pnpm gate`/pre-push scans them and fails on `main` while they exist — `git worktree remove --force`
+them before gating/pushing. Not yet a Tier-1 check (candidate: gitignore `.claude/worktrees/`).
 
 ## Code-review hardening (7 findings fixed, each tested)
 
@@ -119,16 +135,22 @@ review}.mjs`, adapters, prompts, `.crew/config.json`.
 
 ## Next actions (prioritized)
 
-1. **Next parallel batch (Crew).** On `main`, `pnpm crew start` (now `maxWorkers: 3`) will pick the next
-   file-disjoint set. Top unblocked P1s: **BC-07** (neutral-check-in flag + adaptation log) and **BC-10**
-   (data export/import). NOTE BC-07/BC-10 both share files with each other or BC-06's area — the
-   scheduler resolves disjointness, but check `pnpm crew status`. **Supervise it** (don't walk away):
-   workers can be killed mid-task (session/usage limits) leaving uncommitted worktree state to finish.
-2. **Do NOT let it churn into deferred/unsuitable PBIs.** `BC-14` (icons) needs real art, `BC-15`
-   (Vercel deploy) needs secrets, `BC-24` (CV coach) is explicitly _future, do not start_. Their status
-   is `open`, so the scheduler **will** assign them — `pnpm crew pause` after the intended batch, or set
-   `maxWorkers` to bound the run.
-3. **Or work `docs/BACKLOG.md` from P1 by hand** — next is **BC-07** (size M).
+> **All P0 and all P1 PBIs are now done.** The remaining open work is P2 (polish/infra) + P3
+> (design-only future bets). Next batches are P2.
+
+1. **Next parallel batch (P2).** A good file-disjoint set: **BC-13** (severity cycle — `checkin/page.tsx`),
+   **BC-17** (cache Playwright in CI — `.github/workflows/ci.yml`), **BC-22** (off-wall exercises —
+   `src/domain/offWallExercises.ts` + `src/app/exercises/page.tsx`). **BC-11** (bottom-tab nav —
+   `layout.tsx` + every page) conflicts with most page-touching PBIs, so run it solo. Whether you use
+   `pnpm crew start` or Agent-tool worktree isolation, verify the real `git diff --name-only` of each
+   branch against `main` before merging — an agent can stray from its declared `Files:` (BC-10 did).
+2. **Do NOT churn into deferred/unsuitable PBIs.** `BC-14` (icons) needs real art, `BC-15` (Vercel
+   deploy) needs secrets/human, `BC-24` (CV coach) is explicitly _future, do not start_. `BC-18`/`BC-24`
+   are design-only. Bound any autonomous run so it doesn't pick these.
+3. **BC-23** (visual redesign + dark mode, P2, size L) is the big one if you want UX polish — solo it.
+4. **Worktree hygiene:** if you used Agent-tool isolation, `git worktree remove --force` every
+   `.claude/worktrees/agent-*` and delete orphan `worktree-agent-*` branches BEFORE running the gate
+   or pushing on `main` (they pollute the gate's file scan).
 
 ## Open threads / known gate-blind risks
 
