@@ -222,7 +222,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   e2e nav smoke updated.
 - **Files:** `src/app/layout.tsx`, new nav component, pages lose their ad-hoc links.
 
-### BC-12 · Honest error/empty states — `open`
+### BC-12 · Honest error/empty states — `done (21f6f7a, 2026-06-11)`
 
 - **Type:** ux · **Priority:** P2 · **Complexity:** S
 - **Problem:** `/session`'s load promise has no catch (silent infinite "Loading…" on failure);

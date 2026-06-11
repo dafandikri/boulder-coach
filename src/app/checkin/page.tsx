@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { localDateIso } from '@/app/lib/date';
+import { checkInFormValues, type CheckInFlags } from '@/app/lib/checkinForm';
+import { toLoadState, type LoadState } from '@/app/lib/loadState';
 import type { BodyPart, CheckIn } from '@/domain/types';
 
 const PARTS: { key: BodyPart; label: string }[] = [
@@ -13,9 +15,7 @@ const PARTS: { key: BodyPart; label: string }[] = [
   { key: 'elbow', label: 'Elbow' },
 ];
 
-type Flags = Partial<Record<BodyPart, number>>;
-
-function toggleFlag(map: Flags, key: BodyPart): Flags {
+function toggleFlag(map: CheckInFlags, key: BodyPart): CheckInFlags {
   if (map[key]) {
     const { [key]: _removed, ...rest } = map;
     return rest;
@@ -25,12 +25,42 @@ function toggleFlag(map: Flags, key: BodyPart): Flags {
 
 export default function CheckInPage() {
   const router = useRouter();
+  // The existing check-in for today (if any) drives the prefill. `loading`/`error`
+  // here replace the old silent path that started blank and overwrote any entry.
+  const [load, setLoad] = useState<LoadState<CheckIn | undefined>>({ status: 'loading' });
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const [editing, setEditing] = useState(false);
   const [sleepQuality, setSleep] = useState(4);
   const [overallFatigue, setFatigue] = useState(2);
   const [motivation, setMotivation] = useState(4);
-  const [soreness, setSoreness] = useState<Flags>({});
-  const [pain, setPain] = useState<Flags>({});
+  const [soreness, setSoreness] = useState<CheckInFlags>({});
+  const [pain, setPain] = useState<CheckInFlags>({});
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const today = localDateIso(new Date());
+    void new DexieClimbRepo().getCheckIn(today).then(
+      (existing) => {
+        if (cancelled) return;
+        const v = checkInFormValues(existing);
+        setSleep(v.sleepQuality);
+        setFatigue(v.overallFatigue);
+        setMotivation(v.motivation);
+        setSoreness(v.soreness);
+        setPain(v.pain);
+        setEditing(v.editing);
+        setLoad(toLoadState({ ok: true, data: existing }));
+      },
+      (error: unknown) => {
+        if (!cancelled) setLoad(toLoadState<CheckIn | undefined>({ ok: false, error }));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   async function save(): Promise<void> {
     setSaving(true);
@@ -46,6 +76,36 @@ export default function CheckInPage() {
     router.push('/');
   }
 
+  if (load.status === 'loading') return <main className="p-6">Loading…</main>;
+  if (load.status === 'error') {
+    return (
+      <main className="mx-auto max-w-md space-y-4 p-6">
+        <h1 className="text-2xl font-bold">Couldn&apos;t load your check-in</h1>
+        <p className="text-sm text-gray-600">{load.message}</p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setReloadKey((k) => k + 1);
+            }}
+            className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              router.push('/');
+            }}
+            className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-50"
+          >
+            Back to Today
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   const sliders: [string, number, (n: number) => void][] = [
     ['Sleep', sleepQuality, setSleep],
     ['Fatigue', overallFatigue, setFatigue],
@@ -55,6 +115,12 @@ export default function CheckInPage() {
   return (
     <main className="mx-auto max-w-md space-y-6 p-6">
       <h1 className="text-2xl font-bold">Check-in</h1>
+      {editing && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          You already checked in today — these are your saved answers. Editing and saving will
+          update today&apos;s entry.
+        </p>
+      )}
 
       {sliders.map(([label, value, set]) => (
         <label key={label} className="block">
@@ -94,7 +160,7 @@ export default function CheckInPage() {
         disabled={saving}
         className="w-full rounded-lg bg-slate-900 py-3 font-medium text-white disabled:opacity-50"
       >
-        {saving ? 'Saving…' : 'Save check-in'}
+        {saving ? 'Saving…' : editing ? 'Update check-in' : 'Save check-in'}
       </button>
     </main>
   );
@@ -106,7 +172,7 @@ function Section({
   onToggle,
 }: {
   title: string;
-  map: Flags;
+  map: CheckInFlags;
   onToggle: (key: BodyPart) => void;
 }) {
   return (

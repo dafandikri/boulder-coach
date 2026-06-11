@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { localDateIso } from '@/app/lib/date';
+import { toLoadState, type LoadState } from '@/app/lib/loadState';
 import { canFinishSession, expandTally, warmupDone } from '@/app/lib/sessionForm';
 import {
   formatRest,
@@ -60,7 +61,8 @@ function gradeChoices(targetGrade: VGrade | undefined): VGrade[] {
 
 export default function SessionPage() {
   const router = useRouter();
-  const [today, setToday] = useState<TodayResult | null>(null);
+  const [load, setLoad] = useState<LoadState<TodayResult>>({ status: 'loading' });
+  const [reloadKey, setReloadKey] = useState(0);
   const [entries, setEntries] = useState<Record<string, BlockEntry>>({});
   const [warmupChecked, setWarmupChecked] = useState<Set<string>>(new Set());
   const [durationMin, setDuration] = useState(60);
@@ -108,15 +110,26 @@ export default function SessionPage() {
   }, []);
 
   useEffect(() => {
-    void getTodaySession(new DexieClimbRepo()).then((t) => {
-      setToday(t);
-      const seed: Record<string, BlockEntry> = {};
-      for (const b of t.session.blocks) {
-        seed[b.id] = { setsCompleted: b.sets, rpe: b.targetRPE, attempts: {}, sends: {} };
-      }
-      setEntries(seed);
-    });
-  }, []);
+    let cancelled = false;
+    void getTodaySession(new DexieClimbRepo()).then(
+      (t) => {
+        if (cancelled) return;
+        setLoad(toLoadState({ ok: true, data: t }));
+        const seed: Record<string, BlockEntry> = {};
+        for (const b of t.session.blocks) {
+          seed[b.id] = { setsCompleted: b.sets, rpe: b.targetRPE, attempts: {}, sends: {} };
+        }
+        setEntries(seed);
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        setLoad(toLoadState<TodayResult>({ ok: false, error }));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   const setRpe = useCallback((blockId: string, rpe: number): void => {
     setEntries((prev) => {
@@ -155,7 +168,36 @@ export default function SessionPage() {
     });
   }, []);
 
-  if (!today) return <main className="p-6">Loading…</main>;
+  if (load.status === 'loading') return <main className="p-6">Loading…</main>;
+  if (load.status === 'error') {
+    return (
+      <main className="mx-auto max-w-md space-y-4 p-6">
+        <h1 className="text-2xl font-bold">Couldn&apos;t load today&apos;s session</h1>
+        <p className="text-sm text-gray-600">{load.message}</p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setReloadKey((k) => k + 1);
+            }}
+            className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              router.push('/');
+            }}
+            className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-50"
+          >
+            Back to Today
+          </button>
+        </div>
+      </main>
+    );
+  }
+  const today = load.data;
   const session = today.session;
   const warmupBlockIds = session.blocks.filter((b) => b.category === 'warmup').map((b) => b.id);
   const finishBlocked = !canFinishSession(today.warmupMandatory, warmupBlockIds, warmupChecked);

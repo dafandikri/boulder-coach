@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { programPosition } from '@/domain/programClock';
+import { toOptionalLoadState, type OptionalLoadState } from '@/app/lib/loadState';
 import type { Program, PhaseKind } from '@/domain/types';
 
 const PHASE_COLORS: Record<PhaseKind, string> = {
@@ -13,16 +14,66 @@ const PHASE_COLORS: Record<PhaseKind, string> = {
 };
 
 export default function ProgramPage() {
-  const [program, setProgram] = useState<Program | null>(null);
+  const [load, setLoad] = useState<OptionalLoadState<Program>>({ status: 'loading' });
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    void new DexieClimbRepo().getActiveProgram().then((p) => {
-      setProgram(p ?? null);
-    });
-  }, []);
+    let cancelled = false;
+    void new DexieClimbRepo().getActiveProgram().then(
+      (p) => {
+        if (!cancelled) setLoad(toOptionalLoadState({ ok: true, data: p }));
+      },
+      (error: unknown) => {
+        if (!cancelled) setLoad(toOptionalLoadState<Program>({ ok: false, error }));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
-  if (!program) return <main className="p-6">No active program.</main>;
+  if (load.status === 'loading') return <main className="p-6">Loading…</main>;
+  if (load.status === 'error') {
+    return (
+      <main className="mx-auto max-w-md space-y-4 p-6">
+        <Link href="/" className="text-sm text-gray-500">
+          &larr; Today
+        </Link>
+        <h1 className="text-2xl font-bold">Couldn&apos;t load your program</h1>
+        <p className="text-sm text-gray-600">{load.message}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setReloadKey((k) => k + 1);
+          }}
+          className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
+        >
+          Retry
+        </button>
+      </main>
+    );
+  }
+  if (load.status === 'empty') {
+    return (
+      <main className="mx-auto max-w-md space-y-4 p-6">
+        <Link href="/" className="text-sm text-gray-500">
+          &larr; Today
+        </Link>
+        <h1 className="text-2xl font-bold">No active program</h1>
+        <p className="text-sm text-gray-600">
+          Set up your profile to generate a training cycle tailored to your grade and schedule.
+        </p>
+        <Link
+          href="/profile"
+          className="inline-block rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
+        >
+          Create a program &rarr;
+        </Link>
+      </main>
+    );
+  }
 
+  const program = load.data;
   const currentWeekIndex = programPosition(program, new Date()).weekIndex;
 
   return (
