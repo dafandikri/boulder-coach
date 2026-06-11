@@ -232,7 +232,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   check-in pre-fills today's existing entry when present.
 - **Files:** `src/app/session/page.tsx`, `src/app/program/page.tsx`, `src/app/checkin/page.tsx`.
 
-### BC-13 · Severity levels for pain/soreness — `open`
+### BC-13 · Severity levels for pain/soreness — `done (7302479, 2026-06-11)`
 
 - **Type:** ux/feature · **Priority:** P2 · **Complexity:** S
 - **Problem:** the check-in body buttons toggle severity 0↔2; the spec models 1–3. Severity is
