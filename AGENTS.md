@@ -21,7 +21,10 @@ UP a tier:
 
 **Every session, step 0:** run **`pnpm onboard`** (tool-neutral — works in Codex, OpenCode, Cursor,
 Aider, Claude Code, or by hand). It prints the required reading, the live cursor, the latest learnings,
-and the gate/git state. Then read `docs/HANDOFF.md` and grep `docs/LEARNINGS.md` for files you'll edit.
+and the gate/git state. Then read `docs/HANDOFF.md`, and — **don't read the whole ledger** — pull only
+the lessons relevant to what you'll touch: **`pnpm learnings <file-or-keyword>`** (e.g.
+`pnpm learnings adaptation.ts`, `pnpm learnings "service worker"`). `pnpm learnings` with no argument
+lists the index. The ledger is long-term memory; retrieve from it on demand, never load it whole.
 
 # Definition of done (enforces the WRITE side of the handoff)
 
@@ -84,8 +87,9 @@ This project is built and maintained under an AI-first quality harness. Before c
   you touch them. Read [`skills/safety-critical-change.md`](skills/safety-critical-change.md) and use
   `domain-rule-authoring`; on Claude, the `safety-rule-reviewer` agent is an additional optional eye.
 - **Git:** local commits only (conventional commits). NEVER `git push` / open PRs — denied by config.
-- **Learning ledger:** before a task, grep `docs/LEARNINGS.md` for files you touch; on
-  any gate failure, append an entry (root cause → fix → prevention).
+- **Learning ledger:** before a task, retrieve its lessons with `pnpm learnings <file-or-keyword>`
+  (targeted lookup, not a full read of `docs/LEARNINGS.md`); on any gate failure, append an entry
+  (root cause → fix → prevention).
 
 # Parallel work with Crew (optional)
 

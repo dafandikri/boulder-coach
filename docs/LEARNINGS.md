@@ -1,7 +1,9 @@
 # Learnings Ledger
 
 Append-only. Every gate failure, feedback-loop iteration, and safety escalation gets one entry.
-Read-before-write: before a task, grep this file for the file/module you're touching.
+Read-before-write: before a task, retrieve its lessons with `pnpm learnings <file-or-keyword>` —
+targeted lookup, not a full read (this file is long-term memory; pull only what's relevant). Run
+`pnpm learnings` with no argument for the index of all entries.
 
 ## Entry format
 

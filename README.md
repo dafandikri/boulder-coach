@@ -15,15 +15,18 @@ today, adapts to performance and how they feel, and keeps them out of injury.
 
 ```bash
 pnpm install
-pnpm onboard    # STEP 0 — load context: live cursor + latest learnings + gate/git state
-pnpm dev        # http://localhost:3000
-pnpm gate       # run the full quality gate (must be green before any commit)
-pnpm test       # vitest (domain) ;  pnpm e2e  for Playwright smoke
+pnpm onboard            # STEP 0 — load context: live cursor + latest learnings + gate/git state
+pnpm learnings <kw>     # retrieve only the past lessons for a file/topic (don't read the whole ledger)
+pnpm dev                # http://localhost:3000
+pnpm gate               # run the full quality gate (must be green before any commit)
+pnpm test               # vitest (domain) ;  pnpm e2e  for Playwright smoke
 ```
 
 **Continuing someone else's work (or a different model/tool)?** Run `pnpm onboard`, then read
 [`docs/HANDOFF.md`](docs/HANDOFF.md) (the live cursor) and [`AGENTS.md`](AGENTS.md) → "START HERE".
-Context lives in the repo and is enforced, so a memoryless agent picks up exactly where the last left off.
+Before editing a file, pull its relevant lessons with `pnpm learnings <file-or-keyword>` — the ledger
+is long-term memory you **retrieve from on demand**, not read whole each session. Context lives in the
+repo and is enforced, so a memoryless agent picks up exactly where the last left off.
 
 ## System architecture
 
@@ -121,16 +124,17 @@ Docs are part of "done" — see `AGENTS.md` → "Documentation discipline".
 
 ## Scripts
 
-| Script                                      | Purpose                                 |
-| ------------------------------------------- | --------------------------------------- |
-| `pnpm gate`                                 | Full quality gate (the source of truth) |
-| `pnpm dev` / `build` / `start`              | Next.js                                 |
-| `pnpm test` / `test:watch`                  | Vitest domain tests                     |
-| `pnpm test:safety`                          | Safety unit + fuzzed invariant suites   |
-| `pnpm e2e`                                  | Playwright smoke                        |
-| `pnpm lint` / `format` / `format:check`     | ESLint / Prettier                       |
-| `pnpm depcruise` / `type-coverage` / `knip` | Static analysis                         |
-| `pnpm semgrep`                              | Security/static scan (needs `uv`)       |
+| Script                                      | Purpose                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| `pnpm gate`                                 | Full quality gate (the source of truth)                           |
+| `pnpm onboard` / `pnpm learnings <kw>`      | Load session context / retrieve ledger lessons by file or keyword |
+| `pnpm dev` / `build` / `start`              | Next.js                                                           |
+| `pnpm test` / `test:watch`                  | Vitest domain tests                                               |
+| `pnpm test:safety`                          | Safety unit + fuzzed invariant suites                             |
+| `pnpm e2e`                                  | Playwright smoke                                                  |
+| `pnpm lint` / `format` / `format:check`     | ESLint / Prettier                                                 |
+| `pnpm depcruise` / `type-coverage` / `knip` | Static analysis                                                   |
+| `pnpm semgrep`                              | Security/static scan (needs `uv`)                                 |
 
 ## Tech stack
 

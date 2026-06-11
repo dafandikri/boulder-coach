@@ -45,8 +45,10 @@ executable invariants, not a substitute the gate depends on.
 
 ## Learning ledger
 
-Before starting a task, grep `docs/LEARNINGS.md` for the file/module you're touching.
-On any gate failure, append an entry (see ledger header for format). Fix from the lesson, not blind retry.
+Before starting a task, retrieve its lessons with `pnpm learnings <file-or-keyword>` (targeted lookup —
+don't read the whole `docs/LEARNINGS.md`; `pnpm learnings` alone lists the index). The ledger is
+long-term memory: pull only what's relevant on demand. On any gate failure, append an entry (see ledger
+header for format). Fix from the lesson, not blind retry.
 
 ## Knip ignores
 
