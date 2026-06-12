@@ -6,11 +6,19 @@ import { DexieClimbRepo } from '@/data/dexieRepo';
 import { programPosition } from '@/domain/programClock';
 import { toOptionalLoadState, type OptionalLoadState } from '@/app/lib/loadState';
 import type { Program, PhaseKind } from '@/domain/types';
+import { Card } from '@/app/components/Card';
+import { Badge } from '@/app/components/Badge';
+import { Button } from '@/app/components/Button';
+import { Callout } from '@/app/components/Callout';
+import { HoldMark } from '@/app/components/HoldMark';
+import { BackLink } from '@/app/components/BackLink';
+import { Spinner } from '@/app/components/Spinner';
 
-const PHASE_COLORS: Record<PhaseKind, string> = {
-  hard: 'bg-slate-900 text-white',
-  peak: 'bg-amber-100 text-amber-900',
-  deload: 'bg-green-100 text-green-800',
+/** Phase → Badge tone (presentational): hard pushes, peak warns, deload recovers. */
+const PHASE_TONE: Record<PhaseKind, 'brand' | 'warning' | 'success'> = {
+  hard: 'brand',
+  peak: 'warning',
+  deload: 'success',
 };
 
 export default function ProgramPage() {
@@ -32,43 +40,42 @@ export default function ProgramPage() {
     };
   }, [reloadKey]);
 
-  if (load.status === 'loading') return <main className="p-6">Loading…</main>;
+  if (load.status === 'loading') return <Spinner label="Loading your program…" />;
+
   if (load.status === 'error') {
     return (
-      <main className="mx-auto max-w-md space-y-4 p-6">
-        <Link href="/" className="text-sm text-gray-500">
-          &larr; Today
-        </Link>
-        <h1 className="text-2xl font-bold">Couldn&apos;t load your program</h1>
-        <p className="text-sm text-gray-600">{load.message}</p>
-        <button
-          type="button"
+      <main className="space-y-4 p-5">
+        <BackLink href="/" label="Today" />
+        <Callout tone="danger" title="Couldn't load your program">
+          {load.message}
+        </Callout>
+        <Button
+          variant="secondary"
+          icon="arrow-right"
           onClick={() => {
             setReloadKey((k) => k + 1);
           }}
-          className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
         >
           Retry
-        </button>
+        </Button>
       </main>
     );
   }
+
   if (load.status === 'empty') {
     return (
-      <main className="mx-auto max-w-md space-y-4 p-6">
-        <Link href="/" className="text-sm text-gray-500">
-          &larr; Today
-        </Link>
-        <h1 className="text-2xl font-bold">No active program</h1>
-        <p className="text-sm text-gray-600">
-          Set up your profile to generate a training cycle tailored to your grade and schedule.
-        </p>
-        <Link
-          href="/profile"
-          className="inline-block rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
-        >
-          Create a program &rarr;
-        </Link>
+      <main className="space-y-4 p-5">
+        <BackLink href="/" label="Today" />
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <HoldMark color="grape" size={72} rotate={-6} />
+          <h1 style={{ fontSize: 'var(--fs-xl)' }}>No active program</h1>
+          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', maxWidth: '22rem' }}>
+            Set up your profile to generate a training cycle tailored to your grade and schedule.
+          </p>
+          <Link href="/profile" className="bc-btn">
+            Create a program →
+          </Link>
+        </div>
       </main>
     );
   }
@@ -77,37 +84,52 @@ export default function ProgramPage() {
   const currentWeekIndex = programPosition(program, new Date()).weekIndex;
 
   return (
-    <main className="mx-auto max-w-md space-y-4 p-6">
-      <Link href="/" className="text-sm text-gray-500">
-        &larr; Today
-      </Link>
-      <h1 className="text-2xl font-bold">Program</h1>
-      <p className="text-sm text-gray-500">
-        {program.lengthWeeks}-week cycle &middot; Started {program.startDate}
-      </p>
-      <div className="space-y-2">
+    <main className="space-y-4 p-5">
+      <BackLink href="/" label="Today" />
+      <header className="pt-1">
+        <div className="bc-eyebrow">
+          {program.lengthWeeks}-week cycle · Started {program.startDate}
+        </div>
+        <h1 style={{ fontSize: 'var(--fs-2xl)' }}>Program</h1>
+      </header>
+
+      <div className="space-y-2.5">
         {program.weeks.map((w) => {
           const isCurrent = w.weekIndex === currentWeekIndex;
           return (
-            <div
+            <Card
               key={w.weekIndex}
-              className={`rounded-lg border p-3 ${isCurrent ? 'ring-2 ring-slate-500' : ''}`}
+              feature={isCurrent}
+              accent={isCurrent ? 'var(--brand)' : undefined}
+              padding="sm"
             >
-              <div className="flex items-baseline justify-between">
-                <span className="font-medium">
+              <div className="flex items-center justify-between gap-2">
+                <span style={{ fontWeight: 800, fontSize: 'var(--fs-base)' }}>
                   Week {w.weekIndex + 1}
-                  {isCurrent && <span className="ml-2 text-xs text-slate-500">(current)</span>}
+                  {isCurrent && (
+                    <span
+                      className="bc-eyebrow"
+                      style={{ marginLeft: 8, color: 'var(--brand-deep)' }}
+                    >
+                      Now
+                    </span>
+                  )}
                 </span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${PHASE_COLORS[w.phase]}`}
-                >
+                <Badge tone={PHASE_TONE[w.phase]} solid={isCurrent}>
                   {w.phase}
-                </span>
+                </Badge>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                {w.sessions.map((s) => s.type.replace('-', ' ')).join(', ')}
+              <p
+                style={{
+                  marginTop: 4,
+                  fontSize: 'var(--fs-xs)',
+                  color: 'var(--text-muted)',
+                  fontWeight: 600,
+                }}
+              >
+                {w.sessions.map((s) => s.type.replace('-', ' ')).join(' · ')}
               </p>
-            </div>
+            </Card>
           );
         })}
       </div>

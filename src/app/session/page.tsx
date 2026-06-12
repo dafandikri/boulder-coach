@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
@@ -17,6 +17,13 @@ import {
 } from '@/app/lib/restTimer';
 import { createSessionLog, type BlockActual } from '@/domain/sessionLog';
 import type { VGrade } from '@/domain/types';
+import { Card } from '@/app/components/Card';
+import { Badge } from '@/app/components/Badge';
+import { Button } from '@/app/components/Button';
+import { Callout } from '@/app/components/Callout';
+import { GradePill } from '@/app/components/GradePill';
+import { BackLink } from '@/app/components/BackLink';
+import { Spinner } from '@/app/components/Spinner';
 
 /** Audible + haptic "rest over" cue. Lives in the (gate-blind) component because
  *  it touches browser-only APIs; all the *decisions* about WHEN to fire are the
@@ -58,6 +65,14 @@ function gradeChoices(targetGrade: VGrade | undefined): VGrade[] {
   const lo = Math.max(1, (targetGrade ?? 4) - 2);
   return [lo, lo + 1, lo + 2, lo + 3];
 }
+
+const CAT_TONE: Record<string, 'info' | 'brand' | 'grape' | 'success' | 'neutral'> = {
+  warmup: 'info',
+  main: 'brand',
+  prehab: 'grape',
+  technique: 'success',
+  cooldown: 'neutral',
+};
 
 export default function SessionPage() {
   const router = useRouter();
@@ -168,31 +183,32 @@ export default function SessionPage() {
     });
   }, []);
 
-  if (load.status === 'loading') return <main className="p-6">Loading…</main>;
+  if (load.status === 'loading') return <Spinner label="Loading today's session…" />;
   if (load.status === 'error') {
     return (
-      <main className="mx-auto max-w-md space-y-4 p-6">
-        <h1 className="text-2xl font-bold">Couldn&apos;t load today&apos;s session</h1>
-        <p className="text-sm text-gray-600">{load.message}</p>
-        <div className="flex gap-3">
-          <button
-            type="button"
+      <main className="space-y-4 p-5">
+        <BackLink href="/" label="Today" />
+        <Callout tone="danger" title="Couldn't load today's session">
+          {load.message}
+        </Callout>
+        <div className="flex gap-2.5">
+          <Button
+            variant="secondary"
+            fullWidth
             onClick={() => {
               setReloadKey((k) => k + 1);
             }}
-            className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
           >
             Retry
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            fullWidth
             onClick={() => {
               router.push('/');
             }}
-            className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-50"
           >
             Back to Today
-          </button>
+          </Button>
         </div>
       </main>
     );
@@ -225,140 +241,200 @@ export default function SessionPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md space-y-4 p-6">
-      <h1 className="text-2xl font-bold">Session</h1>
+    <main className="space-y-4 p-5">
+      <BackLink href="/" label="Today" />
+      <header className="pt-1">
+        <div className="bc-eyebrow">Log as you go</div>
+        <h1 style={{ fontSize: 'var(--fs-2xl)' }}>Session</h1>
+      </header>
+
+      {today.warmupMandatory && (
+        <Callout tone="warning" title="Warm-up is mandatory today.">
+          Tick every warm-up block before you can finish &amp; log.
+        </Callout>
+      )}
+
       <ol className="space-y-3">
         {session.blocks.map((b) => {
           const entry = entries[b.id];
           if (!entry) return null;
           const isWarmup = b.category === 'warmup';
           const showGrades = b.category === 'main' && b.targetGrade !== undefined;
+          const checked = warmupChecked.has(b.id);
           return (
-            <li key={b.id} className="rounded-lg border p-4">
-              <p className="font-medium">
-                {isWarmup && (
-                  <input
-                    type="checkbox"
-                    checked={warmupChecked.has(b.id)}
-                    onChange={() => {
-                      toggleWarmup(b.id);
-                    }}
-                    className="mr-2 align-middle"
-                  />
-                )}
-                {b.name}
-              </p>
-              <p className="text-sm text-gray-600">
-                target: {b.sets} × {b.grip}
-                {b.targetGrade !== undefined ? ` · V${b.targetGrade}` : ''} · RPE {b.targetRPE}
-              </p>
-
-              <label className="mt-2 block text-sm">
-                Sets completed:
-                <input
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={entry.setsCompleted}
-                  onChange={(e) => {
-                    setSets(b.id, Math.max(0, Number(e.target.value)));
-                  }}
-                  className="ml-2 w-16 rounded border px-2 py-0.5 text-sm"
-                />
-              </label>
-
-              {showGrades && (
-                <div className="mt-3 space-y-1">
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2 text-xs text-gray-400">
-                    <span></span>
-                    <span className="text-center">attempts</span>
-                    <span className="text-center">sends</span>
-                  </div>
-                  {gradeChoices(b.targetGrade).map((g) => (
-                    <div
-                      key={g}
-                      className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2 text-sm"
-                    >
-                      <span className="font-medium">V{g}</span>
-                      <Stepper
-                        value={entry.attempts[g] ?? 0}
-                        onAdd={() => {
-                          adjustTally(b.id, 'attempts', g, 1);
+            <li key={b.id}>
+              <Card feature={isWarmup && checked}>
+                <div className="flex items-start justify-between gap-2">
+                  <label className="flex items-start gap-2" style={{ minWidth: 0 }}>
+                    {isWarmup && (
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          toggleWarmup(b.id);
                         }}
-                        onSub={() => {
-                          adjustTally(b.id, 'attempts', g, -1);
-                        }}
+                        style={{ marginTop: 3, width: 18, height: 18, accentColor: 'var(--brand)' }}
                       />
-                      <Stepper
-                        value={entry.sends[g] ?? 0}
-                        onAdd={() => {
-                          adjustTally(b.id, 'sends', g, 1);
-                        }}
-                        onSub={() => {
-                          adjustTally(b.id, 'sends', g, -1);
-                        }}
-                      />
-                    </div>
-                  ))}
+                    )}
+                    <span style={{ fontWeight: 800, fontSize: 'var(--fs-md)' }}>{b.name}</span>
+                  </label>
+                  <Badge tone={CAT_TONE[b.category] ?? 'neutral'}>{b.category}</Badge>
                 </div>
-              )}
-
-              <label className="mt-3 block text-sm">
-                Your RPE: {entry.rpe}
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  value={entry.rpe}
-                  onChange={(e) => {
-                    setRpe(b.id, Number(e.target.value));
+                <p
+                  style={{
+                    marginTop: 4,
+                    fontSize: 'var(--fs-xs)',
+                    color: 'var(--text-muted)',
+                    fontWeight: 600,
                   }}
-                  className="w-full"
-                />
-              </label>
+                >
+                  target: {b.sets} × {b.grip}
+                  {b.targetGrade !== undefined ? ` · V${b.targetGrade}` : ''} · RPE {b.targetRPE}
+                </p>
 
-              <RestControl
-                endsAt={restEndsByBlock[b.id] ?? null}
-                now={now}
-                config={restConfigFor(session.type)}
-                onStart={(seconds) => {
-                  startRest(b.id, seconds);
-                }}
-                onStop={() => {
-                  stopRest(b.id);
-                }}
-              />
+                <label
+                  className="flex items-center gap-2"
+                  style={{ marginTop: 12, fontSize: 'var(--fs-sm)', fontWeight: 700 }}
+                >
+                  Sets completed
+                  <input
+                    type="number"
+                    min={0}
+                    max={20}
+                    value={entry.setsCompleted}
+                    onChange={(e) => {
+                      setSets(b.id, Math.max(0, Number(e.target.value)));
+                    }}
+                    style={{
+                      width: 64,
+                      borderRadius: 'var(--r-sm)',
+                      border: '2px solid var(--border)',
+                      background: 'var(--surface)',
+                      padding: '4px 8px',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--fs-sm)',
+                    }}
+                  />
+                </label>
+
+                {showGrades && (
+                  <div className="space-y-1.5" style={{ marginTop: 12 }}>
+                    <div
+                      className="grid items-center gap-2 bc-eyebrow"
+                      style={{ gridTemplateColumns: '3rem 1fr 1fr' }}
+                    >
+                      <span></span>
+                      <span style={{ textAlign: 'center' }}>attempts</span>
+                      <span style={{ textAlign: 'center' }}>sends</span>
+                    </div>
+                    {gradeChoices(b.targetGrade).map((g) => (
+                      <div
+                        key={g}
+                        className="grid items-center gap-2"
+                        style={{ gridTemplateColumns: '3rem 1fr 1fr' }}
+                      >
+                        <GradePill grade={g} size="sm" />
+                        <Stepper
+                          value={entry.attempts[g] ?? 0}
+                          onAdd={() => {
+                            adjustTally(b.id, 'attempts', g, 1);
+                          }}
+                          onSub={() => {
+                            adjustTally(b.id, 'attempts', g, -1);
+                          }}
+                        />
+                        <Stepper
+                          value={entry.sends[g] ?? 0}
+                          onAdd={() => {
+                            adjustTally(b.id, 'sends', g, 1);
+                          }}
+                          onSub={() => {
+                            adjustTally(b.id, 'sends', g, -1);
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <label className="block" style={{ marginTop: 12 }}>
+                  <span
+                    className="flex items-baseline justify-between"
+                    style={{ fontSize: 'var(--fs-sm)', fontWeight: 700 }}
+                  >
+                    Your RPE
+                    <span className="bc-mono" style={{ color: 'var(--brand-deep)' }}>
+                      {entry.rpe}/10
+                    </span>
+                  </span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={entry.rpe}
+                    onChange={(e) => {
+                      setRpe(b.id, Number(e.target.value));
+                    }}
+                    className="w-full"
+                    style={{ marginTop: 6 }}
+                  />
+                </label>
+
+                <RestControl
+                  endsAt={restEndsByBlock[b.id] ?? null}
+                  now={now}
+                  config={restConfigFor(session.type)}
+                  onStart={(seconds) => {
+                    startRest(b.id, seconds);
+                  }}
+                  onStop={() => {
+                    stopRest(b.id);
+                  }}
+                />
+              </Card>
             </li>
           );
         })}
       </ol>
 
-      <label className="block text-sm">
-        Duration (min): {durationMin}
-        <input
-          type="range"
-          min={20}
-          max={150}
-          step={5}
-          value={durationMin}
-          onChange={(e) => {
-            setDuration(Number(e.target.value));
-          }}
-          className="w-full"
-        />
-      </label>
+      <Card padding="sm">
+        <label className="block">
+          <span
+            className="flex items-baseline justify-between"
+            style={{ fontSize: 'var(--fs-sm)', fontWeight: 700 }}
+          >
+            Duration
+            <span className="bc-mono" style={{ color: 'var(--brand-deep)' }}>
+              {durationMin} min
+            </span>
+          </span>
+          <input
+            type="range"
+            min={20}
+            max={150}
+            step={5}
+            value={durationMin}
+            onChange={(e) => {
+              setDuration(Number(e.target.value));
+            }}
+            className="w-full"
+            style={{ marginTop: 6 }}
+          />
+        </label>
+      </Card>
 
-      <button
+      <Button
+        variant="success"
+        size="lg"
+        icon={finishBlocked ? 'shield' : 'trophy'}
+        fullWidth
+        disabled={finishBlocked}
         onClick={() => {
           void finish();
         }}
-        disabled={finishBlocked}
-        className={`w-full rounded-lg py-3 font-medium text-white ${
-          finishBlocked ? 'cursor-not-allowed bg-gray-400' : 'bg-slate-900 hover:bg-slate-800'
-        }`}
       >
         {finishBlocked ? 'Complete warm-up first' : 'Finish & log session'}
-      </button>
+      </Button>
     </main>
   );
 }
@@ -383,45 +459,57 @@ function RestControl({
     const remaining = restRemainingSec(endsAt, now);
     const done = remaining === 0;
     return (
-      <div className="mt-3 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+      <div
+        className="flex items-center justify-between"
+        style={{
+          marginTop: 12,
+          padding: '10px 14px',
+          borderRadius: 'var(--r-md)',
+          background: done ? 'var(--success-tint)' : 'var(--bg-sunk)',
+          border: `2px solid ${done ? 'var(--success)' : 'var(--border)'}`,
+        }}
+      >
         <span
-          className={`font-mono text-lg tabular-nums ${done ? 'text-emerald-600' : 'text-slate-900'}`}
+          className="bc-mono"
+          style={{
+            fontSize: 'var(--fs-md)',
+            fontWeight: 700,
+            color: done ? 'var(--success-deep)' : 'var(--text)',
+          }}
           aria-live="polite"
         >
           {done ? 'Rest done — go!' : `Rest ${formatRest(remaining)}`}
         </span>
-        <button
-          type="button"
-          onClick={onStop}
-          className="rounded bg-gray-200 px-3 py-1 text-sm font-medium hover:bg-gray-300"
-        >
+        <Button variant="secondary" size="sm" onClick={onStop}>
           {done ? 'Dismiss' : 'Stop'}
-        </button>
+        </Button>
       </div>
     );
   }
   const rounds = config.betweenRounds;
   return (
-    <div className="mt-3 flex gap-2">
-      <button
-        type="button"
+    <div className="flex gap-2" style={{ marginTop: 12 }}>
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="timer"
         onClick={() => {
           onStart(config.betweenSets);
         }}
-        className="rounded bg-slate-100 px-3 py-1.5 text-sm font-medium hover:bg-slate-200"
       >
         Rest {formatRest(config.betweenSets)}
-      </button>
+      </Button>
       {rounds !== undefined && (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="timer"
           onClick={() => {
             onStart(rounds);
           }}
-          className="rounded bg-slate-100 px-3 py-1.5 text-sm font-medium hover:bg-slate-200"
         >
           Round {formatRest(rounds)}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -429,23 +517,27 @@ function RestControl({
 
 /** Thumb-sized −/count/+ control for a single grade tally. */
 function Stepper({ value, onAdd, onSub }: { value: number; onAdd: () => void; onSub: () => void }) {
+  const btn: CSSProperties = {
+    height: 32,
+    width: 32,
+    flex: 'none',
+    borderRadius: 'var(--r-sm)',
+    border: '2px solid var(--border)',
+    background: 'var(--surface)',
+    fontSize: 'var(--fs-md)',
+    fontWeight: 800,
+    lineHeight: 1,
+    cursor: 'pointer',
+  };
   return (
     <div className="flex items-center justify-center gap-2">
-      <button
-        type="button"
-        onClick={onSub}
-        aria-label="decrease"
-        className="h-7 w-7 rounded bg-gray-100 text-base leading-none hover:bg-gray-200"
-      >
+      <button type="button" onClick={onSub} aria-label="decrease" style={btn}>
         −
       </button>
-      <span className="w-4 text-center font-medium tabular-nums">{value}</span>
-      <button
-        type="button"
-        onClick={onAdd}
-        aria-label="increase"
-        className="h-7 w-7 rounded bg-gray-100 text-base leading-none hover:bg-gray-200"
-      >
+      <span className="bc-mono" style={{ width: 18, textAlign: 'center', fontWeight: 700 }}>
+        {value}
+      </span>
+      <button type="button" onClick={onAdd} aria-label="increase" style={btn}>
         +
       </button>
     </div>

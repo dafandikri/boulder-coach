@@ -24,6 +24,42 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-12 (last touched by: Claude Opus 4.8)
+
+- **BC-23 — Boulder Coach Design System adopted (full frontend reskin). Gate green, awaiting commit.**
+  The plain Tailwind/Geist grayscale UI is now the bright climbing-gym brand: warm chalk surfaces,
+  basalt ink, the climbing-hold rainbow, coral brand, chunky Baloo 2 / Nunito / Space Mono type, pebble
+  radii, and the signature "sticker pop" on buttons/feature cards. **Also closes BC-11** (bottom nav).
+  - **Tokens + fonts:** all design tokens are CSS custom properties in `src/app/globals.css`. The 3
+    webfonts load via a runtime CSS `@import` (browser fetch — NOT `next/font/google`, which broke the
+    offline `build` gate step; LEARNINGS 2026-06-10). **Gotcha fixed:** the font `@import` MUST sit
+    **before** `@import 'tailwindcss'` — Tailwind expands into real rules, and a bare `@import` is only
+    valid before any rule, so after it the CSS optimizer warns and can **drop the font import** (killing
+    the webfonts). Order is now font-first.
+  - **14 TS primitives** under `src/app/components/` (presentational only, no `any`, gate-blind by
+    design — they're outside the coverage `include` globs, so they carry no logic): `Button`, `Card`,
+    `SessionCard`, `Badge`, `GradePill`, `Chip`, `Callout`, `ProgressBar`, `StatCard`, `Icon`,
+    `HoldMark`, `Spinner`, `BackLink`, `BottomNav`. Icons are tree-shakeable named `lucide-react`
+    imports behind `Icon.tsx` (`IconName` union). Hold pebbles are `public/holds/hold-*.svg` rendered
+    as CSS backgrounds (no `<img>`, no layout shift).
+  - **App shell:** `layout.tsx` wraps children in a centred `max-w-[28rem]` column with `pb-24` and a
+    fixed `<BottomNav />` (Today / Insights / Program / Drills / You, active-route aware, safe-area
+    inset). All 9 pages dropped ad-hoc "← Today" anchors for the shared `BackLink`/bottom nav.
+  - **All 9 screens restyled** (Today, Check-in, Session, Insights, Program, Drills, Profile, Exercises,
+    History) — **logic untouched** (every hook, `cycleSeverity`, rest-timer maths, `prescribeOffWall`,
+    `validateProfile`, backup I/O preserved verbatim; only JSX/styles changed).
+  - `public/logo-mark.svg` (brand mark) renders on the first-run welcome header (as a CSS-background
+    span, like `HoldMark` — no `<img>`); hold pebbles decorate the other headers/empty states.
+  - **One deliberate YAGNI deviation from BC-23's criteria** (documented in the PBI): `Eyebrow` is the
+    `.bc-eyebrow` utility class, not a component — pure presentation used inline on every screen.
+- **Next actions:** (1) **commit** BC-23 (`feat(ui): adopt Boulder Coach Design System (BC-23, closes
+BC-11)`) — not yet committed; the working tree holds the reskin. (2) Optional follow-up still open
+  from BC-22: Today has no link to `/exercises` (direct-URL only) — the new bottom nav does **not**
+  cover it either, so fold an entry point in. (3) **BC-25 (dark mode)** is now unblocked — the light
+  token layer it extends is in place.
+- **Verify before commit:** `git status` shows only the intended reskin files; `pnpm gate` is green
+  (re-run after `git worktree prune` if any agent worktrees linger). Was last run green on 2026-06-12.
+
 ## Current state — 2026-06-11 (last touched by: Claude Opus 4.8)
 
 - **Third parallel batch shipped 3 P2 PBIs — first P2 wins are in.** A supervised session dispatched

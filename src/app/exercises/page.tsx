@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { programPosition } from '@/domain/programClock';
 import { prescribeOffWall, type OffWallPrescription } from '@/domain/offWallExercises';
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
+import { Card } from '@/app/components/Card';
+import { Badge } from '@/app/components/Badge';
+import { Callout } from '@/app/components/Callout';
+import { BackLink } from '@/app/components/BackLink';
+import { Spinner } from '@/app/components/Spinner';
 
 // BC-22: off-wall work is ADDITIVE ONLY — supplementary balance/mobility, never
 // a climbing-load increase. This page ONLY renders; the prescription (which
@@ -38,15 +42,14 @@ export default function ExercisesPage() {
     };
   }, []);
 
-  if (load.status === 'loading') return <main className="p-6">Loading…</main>;
+  if (load.status === 'loading') return <Spinner label="Loading off-wall work…" />;
   if (load.status === 'error') {
     return (
-      <main className="mx-auto max-w-md space-y-4 p-6">
-        <Link href="/" className="text-sm text-gray-500">
-          &larr; Today
-        </Link>
-        <h1 className="text-2xl font-bold">Couldn&apos;t load off-wall work</h1>
-        <p className="text-sm text-gray-600">{load.message}</p>
+      <main className="space-y-4 p-5">
+        <BackLink href="/" label="Today" />
+        <Callout tone="danger" title="Couldn't load off-wall work">
+          {load.message}
+        </Callout>
       </main>
     );
   }
@@ -54,27 +57,29 @@ export default function ExercisesPage() {
   const { purposes, exercises } = load.data;
 
   return (
-    <main className="mx-auto max-w-md space-y-4 p-6">
-      <Link href="/" className="text-sm text-gray-500">
-        &larr; Today
-      </Link>
-      <h1 className="text-2xl font-bold">Off-the-wall</h1>
-      <p className="text-sm text-gray-500">
-        Supplementary {purposes.join(' + ')} work to balance today&apos;s climbing — additive only,
-        it never adds climbing load.
-      </p>
+    <main className="space-y-4 p-5">
+      <BackLink href="/" label="Today" />
+      <header className="pt-1">
+        <div className="bc-eyebrow">Additive only</div>
+        <h1 style={{ fontSize: 'var(--fs-2xl)' }}>Off-the-wall</h1>
+      </header>
+
+      <Callout tone="success" icon="shield">
+        Supplementary {purposes.join(' + ')} work to balance today&apos;s climbing — it never adds
+        climbing load.
+      </Callout>
 
       <div className="space-y-3">
         {exercises.map((ex) => (
-          <article key={ex.id} className="rounded-lg border p-4">
-            <div className="flex items-baseline justify-between">
-              <h2 className="font-semibold">{ex.name}</h2>
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                {ex.purpose}
-              </span>
+          <Card key={ex.id}>
+            <div className="flex items-center justify-between gap-2">
+              <h2 style={{ fontSize: 'var(--fs-md)', fontWeight: 800 }}>{ex.name}</h2>
+              <Badge tone="grape">{ex.purpose}</Badge>
             </div>
-            <p className="mt-1 text-sm text-gray-600">{ex.description}</p>
-          </article>
+            <p style={{ marginTop: 4, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
+              {ex.description}
+            </p>
+          </Card>
         ))}
       </div>
     </main>

@@ -1,26 +1,364 @@
+/* ===========================================================================
+   Boulder Coach — brand theme (Design System adoption, BC-23)
+   A bright climbing-gym skin: warm chalk surfaces, basalt ink, a climbing-hold
+   rainbow, chunky rounded type, big pebble corners, and a signature "sticker
+   pop" on the hero/interactive thing on a screen.
+
+   Webfonts load via a runtime CSS @import (browser fetch) — NOT next/font/google,
+   which fetches at build time and made `next build` (the gate's last step) flaky
+   on any network blip. See docs/LEARNINGS.md 2026-06-10.
+
+   The font @import MUST precede `@import 'tailwindcss'` — Tailwind expands into
+   real rules, and a bare @import is only valid before any rule, so placing it
+   after would let the CSS optimizer drop it (and the webfonts with it).
+   =========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700&family=Space+Mono:wght@400;700&display=swap');
 @import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ---- Climbing-hold palette (base + deep press tone + soft tint) ---- */
+  --hold-red: #ff5747;
+  --hold-red-deep: #e0382a;
+  --hold-red-tint: #ffe5e1;
+  --hold-tangerine: #ff8a3c;
+  --hold-tangerine-deep: #eb6a16;
+  --hold-tangerine-tint: #ffe9d6;
+  --hold-sunshine: #ffc63d;
+  --hold-sunshine-deep: #eaa200;
+  --hold-sunshine-tint: #fff2cf;
+  --hold-lime: #74d13c;
+  --hold-lime-deep: #51ad1f;
+  --hold-lime-tint: #e6f8d6;
+  --hold-teal: #25c2b3;
+  --hold-teal-deep: #109488;
+  --hold-teal-tint: #d3f5f0;
+  --hold-sky: #38a1ee;
+  --hold-sky-deep: #1c80cd;
+  --hold-sky-tint: #dbeefc;
+  --hold-grape: #9b5de5;
+  --hold-grape-deep: #7a3ed2;
+  --hold-grape-tint: #ede1fb;
+  --hold-pink: #ff5da2;
+  --hold-pink-deep: #e63c84;
+  --hold-pink-tint: #ffe0ee;
+
+  /* ---- Brand (energetic coral-tangerine, the chalk-bag orange) ---- */
+  --brand: #ff6a39;
+  --brand-deep: #e84e1c;
+  --brand-tint: #ffe8dd;
+
+  /* ---- Warm neutrals: chalk (surfaces) + basalt (ink) ---- */
+  --chalk-50: #fffcf7;
+  --chalk-100: #fff7ed;
+  --chalk-200: #f7ecdc;
+  --chalk-300: #ecdcc6;
+  --chalk-400: #dcc6a9;
+  --basalt-900: #2a2233;
+  --basalt-700: #483e54;
+  --basalt-500: #6f6579;
+  --basalt-400: #8d8497;
+  --basalt-300: #b1a8ba;
+  --white: #ffffff;
+
+  /* =====================  SEMANTIC ALIASES  ===================== */
+  --bg: var(--chalk-100);
+  --bg-sunk: var(--chalk-200);
+  --surface: var(--white);
+  --surface-tint: var(--chalk-50);
+  --text: var(--basalt-900);
+  --text-muted: var(--basalt-500);
+  --text-soft: var(--basalt-400);
+  --text-on-brand: #ffffff;
+  --border: var(--chalk-300);
+  --border-strong: var(--basalt-900);
+
+  --action: var(--brand);
+  --action-press: var(--brand-deep);
+  --action-tint: var(--brand-tint);
+  --ring: var(--brand);
+  --focus-ring: color-mix(in srgb, var(--brand) 45%, transparent);
+
+  --success: var(--hold-lime);
+  --success-deep: var(--hold-lime-deep);
+  --success-tint: var(--hold-lime-tint);
+  --warning: var(--hold-sunshine);
+  --warning-deep: var(--hold-sunshine-deep);
+  --warning-tint: var(--hold-sunshine-tint);
+  --danger: var(--hold-red);
+  --danger-deep: var(--hold-red-deep);
+  --danger-tint: var(--hold-red-tint);
+  --info: var(--hold-sky);
+  --info-deep: var(--hold-sky-deep);
+  --info-tint: var(--hold-sky-tint);
+
+  /* Session-type accents (mirror the wall-tag colors) */
+  --session-limit: var(--hold-red);
+  --session-power: var(--hold-tangerine);
+  --session-volume: var(--hold-sky);
+  --session-prehab: var(--hold-grape);
+  --session-rest: var(--hold-lime);
+
+  --pop-shadow: var(--basalt-900);
+
+  /* ---- Type ---- */
+  --font-display: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+  --fw-black: 900;
+  --fs-2xs: 0.6875rem;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+  --fs-3xl: 3rem;
+  --fs-4xl: 4rem;
+  --lh-tight: 1.05;
+  --lh-snug: 1.2;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+  --ls-tight: -0.02em;
+  --ls-normal: 0;
+  --ls-wide: 0.04em;
+  --ls-caps: 0.08em;
+
+  /* ---- Spacing / radii / shadows / motion ---- */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-2xl: 36px;
+  --r-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(42, 34, 51, 0.06), 0 2px 6px rgba(42, 34, 51, 0.05);
+  --shadow-md: 0 4px 10px rgba(42, 34, 51, 0.08), 0 10px 24px rgba(42, 34, 51, 0.07);
+  --shadow-lg: 0 12px 28px rgba(42, 34, 51, 0.12), 0 24px 60px rgba(42, 34, 51, 0.1);
+  --pop-1: 2px 2px 0 var(--pop-shadow);
+  --pop-2: 4px 4px 0 var(--pop-shadow);
+  --pop-3: 6px 6px 0 var(--pop-shadow);
+  --bw: 2px;
+  --bw-thick: 3px;
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --app-max: 28rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ===========================  Base / reset  =========================== */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  color: var(--text);
+  /* Flat warm chalk with two sparse hold-tinted glows — the playful gym backdrop. */
+  background:
+    radial-gradient(circle at 8% 6%, var(--hold-sky-tint), transparent 32%),
+    radial-gradient(circle at 92% 96%, var(--hold-grape-tint), transparent 34%), var(--bg);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-extrabold);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tight);
+  color: var(--text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The brand "eyebrow": small all-caps tracked label */
+.bc-eyebrow {
+  font-family: var(--font-body);
+  font-weight: var(--fw-extrabold);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.bc-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===========================  Button  ===========================
+   The signature sticker "pop": solid offset + ink border, drops onto its
+   shadow on press (translate down to meet the offset) and switches to -deep. */
+.bc-btn {
+  --_bg: var(--brand);
+  --_press: var(--brand-deep);
+  --_fg: #fff;
+  --_bd: var(--basalt-900);
+  font-family: var(--font-body);
+  font-weight: var(--fw-extrabold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--r-pill);
+  border: var(--bw) solid var(--_bd);
+  background: var(--_bg);
+  color: var(--_fg);
+  cursor: pointer;
+  box-shadow: var(--pop-2);
+  transition:
+    transform var(--dur-fast) var(--ease-pop),
+    box-shadow var(--dur-fast) var(--ease-pop),
+    background var(--dur-fast) ease;
+  white-space: nowrap;
+  text-decoration: none;
+  line-height: 1;
+  font-size: var(--fs-base);
+  padding: 11px 22px;
+}
+.bc-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--pop-3);
+}
+.bc-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--pop-shadow);
+  background: var(--_press);
+}
+.bc-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--pop-1);
+}
+.bc-btn--sm {
+  font-size: var(--fs-sm);
+  padding: 8px 16px;
+}
+.bc-btn--lg {
+  font-size: var(--fs-md);
+  padding: 15px 28px;
+}
+.bc-btn--secondary {
+  --_bg: var(--surface);
+  --_fg: var(--text);
+}
+.bc-btn--secondary:active {
+  --_bg: var(--chalk-200);
+}
+.bc-btn--danger {
+  --_bg: var(--danger);
+  --_press: var(--danger-deep);
+}
+.bc-btn--success {
+  --_bg: var(--success);
+  --_press: var(--success-deep);
+}
+.bc-btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--action-press);
+  box-shadow: none;
+}
+.bc-btn--ghost:hover {
+  background: var(--action-tint);
+  transform: none;
+  box-shadow: none;
+}
+.bc-btn--ghost:active {
+  background: var(--action-tint);
+  transform: none;
+  box-shadow: none;
+}
+.bc-btn--full {
+  width: 100%;
+}
+
+/* ===========================  Chip (selectable pill)  =========================== */
+.bc-chip {
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  border: var(--bw) solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  transition:
+    transform var(--dur-fast) var(--ease-pop),
+    background var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+.bc-chip:hover {
+  background: var(--chalk-100);
+}
+.bc-chip:active {
+  transform: scale(0.95);
+}
+.bc-chip[aria-pressed='true'] {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--basalt-900);
+}
+
+/* Native range inputs (RPE / sleep / duration sliders), brand-tinted. */
+input[type='range'] {
+  accent-color: var(--brand);
+}
+
+/* Friendly loading bob for the hold pebble. */
+@keyframes bc-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(4deg);
+  }
+}
+.bc-bob {
+  animation: bc-bob 1.4s var(--ease-pop) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-btn,
+  .bc-btn:hover,
+  .bc-btn:active,
+  .bc-chip:active {
+    transition: background var(--dur-fast) ease;
+    transform: none;
+  }
+  .bc-bob {
+    animation: none;
+  }
 }
