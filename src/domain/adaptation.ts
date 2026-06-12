@@ -8,6 +8,7 @@ import type {
   PlannedSession,
   SessionLog,
 } from './types';
+import { VB, MAX_GRADE, formatGrade } from './grade';
 
 function cloneSession(s: PlannedSession): PlannedSession {
   return { ...s, blocks: s.blocks.map((b) => ({ ...b })) };
@@ -149,16 +150,18 @@ export function adapt(
       );
 
       if (allCrushing) {
-        b.targetGrade = Math.min(17, target + 1);
+        b.targetGrade = Math.min(MAX_GRADE, target + 1);
         changes.push({
           ruleId: 'progression',
-          reason: `Crushing your targets — bumped grade from V${target} to V${b.targetGrade}. Keep it up!`,
+          reason: `Crushing your targets — bumped grade from ${formatGrade(target)} to ${formatGrade(b.targetGrade)}. Keep it up!`,
         });
       } else if (allMissing) {
-        b.targetGrade = Math.max(1, target - 1);
+        // Ease DOWN toward the scale floor (VB), never up — a beginner missing a
+        // V0/VB target must not be pushed harder (additive-safety: regression only lowers).
+        b.targetGrade = Math.max(VB, target - 1);
         changes.push({
           ruleId: 'regression',
-          reason: `Missed targets on the last 2 sessions — eased grade from V${target} to V${b.targetGrade} to build confidence.`,
+          reason: `Missed targets on the last 2 sessions — eased grade from ${formatGrade(target)} to ${formatGrade(b.targetGrade)} to build confidence.`,
         });
       }
     }

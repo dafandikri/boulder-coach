@@ -16,6 +16,7 @@ import { Button } from '@/app/components/Button';
 import { Callout } from '@/app/components/Callout';
 import { HoldMark } from '@/app/components/HoldMark';
 import { Spinner } from '@/app/components/Spinner';
+import { VB, MAX_GRADE, formatGrade } from '@/domain/grade';
 import type { CSSProperties } from 'react';
 
 const WEEKDAYS: { n: number; label: string }[] = [
@@ -28,7 +29,8 @@ const WEEKDAYS: { n: number; label: string }[] = [
   { n: 6, label: 'Sat' },
 ];
 
-const GRADES: number[] = Array.from({ length: 17 }, (_, i) => i + 1); // V1..V17
+// VB(-1), V0, V1 … V17 — the beginner floor (BC-44) is selectable.
+const GRADES: number[] = Array.from({ length: MAX_GRADE - VB + 1 }, (_, i) => VB + i);
 const SESSION_OPTIONS: number[] = [2, 3, 4];
 
 const SELECT_STYLE: CSSProperties = {
@@ -162,7 +164,7 @@ export default function ProfilePage() {
             >
               {GRADES.map((g) => (
                 <option key={g} value={g}>
-                  V{g}
+                  {formatGrade(g)}
                 </option>
               ))}
             </select>
@@ -179,7 +181,7 @@ export default function ProfilePage() {
             >
               {GRADES.map((g) => (
                 <option key={g} value={g}>
-                  V{g}
+                  {formatGrade(g)}
                 </option>
               ))}
             </select>

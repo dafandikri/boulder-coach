@@ -30,8 +30,13 @@ describe('validateProfile', () => {
     expect(validateProfile({ ...validDraft, currentGrade: 6, goalGrade: 4 })).toMatch(/goal/i);
   });
 
+  it('accepts the VB and V0 beginner grades (BC-44 floor)', () => {
+    expect(validateProfile({ ...validDraft, currentGrade: -1, goalGrade: 6 })).toBeNull(); // VB
+    expect(validateProfile({ ...validDraft, currentGrade: 0, goalGrade: 6 })).toBeNull(); // V0
+  });
+
   it('rejects a non-integer or out-of-range current grade', () => {
-    expect(validateProfile({ ...validDraft, currentGrade: -1 })).toMatch(/grade/i);
+    expect(validateProfile({ ...validDraft, currentGrade: -2 })).toMatch(/grade/i); // below VB
     expect(validateProfile({ ...validDraft, currentGrade: 2.5 })).toMatch(/grade/i);
     expect(validateProfile({ ...validDraft, currentGrade: 99 })).toMatch(/grade/i);
   });

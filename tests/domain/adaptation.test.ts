@@ -235,6 +235,25 @@ describe('adapt — progression (rules 6-7)', () => {
     expect(r.changes.some((c) => c.ruleId === 'regression')).toBe(true);
   });
 
+  it('eases a V0 climber toward VB (never UP to V1) and renders VB, not "V-1" (BC-44)', () => {
+    const s = session();
+    s.blocks[1]!.targetGrade = 0; // V0 main block
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [
+        logBlock('m', { gradesAttempted: [0], gradesSent: [], rpe: 9 }),
+      ]),
+      sessionLog('log-2', '2026-06-05', [
+        logBlock('m', { gradesAttempted: [0], gradesSent: [], rpe: 9 }),
+      ]),
+    ];
+    const r = adapt(s, neutralCheckIn(), logs, okMetrics);
+    const main = r.adjustedSession.blocks.find((b) => b.category === 'main');
+    expect(main?.targetGrade).toBe(-1); // eased to VB, not forced up to V1
+    const reason = r.changes.find((c) => c.ruleId === 'regression')?.reason ?? '';
+    expect(reason).toContain('VB');
+    expect(reason).not.toContain('V-1');
+  });
+
   it('pain (rule 1) takes priority over crushing progression rule 6', () => {
     const ci = neutralCheckIn();
     ci.pain = { shoulder: 2 };

@@ -30,6 +30,36 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-13 — src/domain/grade.ts — dead-code (knip)
+
+- **Task:** BC-44 — extend the grade scale to VB/V0.
+- **What failed:** `knip` failed the gate with `Duplicate exports (1) VB|MIN_GRADE` after I exported
+  both `export const VB = -1` and `export const MIN_GRADE = VB` (semantic alias). knip flags two
+  exported symbols that resolve to the same value as duplicates.
+- **Root cause:** two public names for one constant. `VB` (the grade) and `MIN_GRADE` (the floor) were
+  the same value `-1`, so they read as a redundant re-export.
+- **Fix:** dropped `MIN_GRADE`; `VB` IS the floor, so every floor reads `Math.max(VB, …)` and
+  `isValidGrade` uses `>= VB`. One name, no duplicate. (`MAX_GRADE` stayed — `17` is exported once.)
+- **Prevention:** when a "min/floor" equals an already-named domain constant, reuse the name rather than
+  aliasing it — knip treats value-equal exports as dead duplicates.
+- **Attempts to green:** 1 (after a separate transient `coverage/.tmp` ENOENT race — `rm -rf coverage`
+  and re-run; not a real failure).
+
+## 2026-06-13 — src/domain/adaptation.ts — safety (regression floor)
+
+- **Task:** BC-44 — VB/V0 support reaching the rules engine.
+- **What failed:** latent bug surfaced by the lower floor: the regression rule eased a missed-target
+  grade with `Math.max(1, target-1)`, so a V0 climber (target 0) was floored UP to V1 — a regression
+  rule that _raised_ a beginner's grade.
+- **Root cause:** the literal `1` floor predated the scale extending below V1; it silently inverted the
+  rule's direction for sub-V1 grades.
+- **Fix:** `Math.max(VB, target-1)` (additive-safe — only ever lowers); reason strings via
+  `formatGrade` so a floored grade reads "VB", never "V-1". Followed the safety-critical-change
+  procedure: TDD boundary test (V0→VB), invariants fuzzer unchanged + green, `safety-rule-reviewer` PASS.
+- **Prevention:** grade floors now read the named `VB` constant, not a literal — extending the scale
+  again won't silently invert a rule. `tests/domain/adaptation.test.ts` pins the V0→VB easing.
+- **Attempts to green:** 1.
+
 ## 2026-06-12 — src/app/globals.css + layout.tsx — runtime (prod-only, gate-blind)
 
 - **Task:** BC-23 follow-up — user reported the shipped app looks "bland, dark, not bright… I suspect
@@ -497,3 +527,21 @@ t1, t2, t3, t4, t5, cb)`.
   project) from the start; treat the MCP as observability/management only. The one interactive step
   (`vercel login`) is inherently the account owner's — surface it early.
 - **Attempts to green:** N/A (deploy task; succeeded once the CLI was authenticated).
+
+## 2026-06-13 — docs/research + docs/specs — format:check (prettier on untracked new docs)
+
+- **Task:** CV-feasibility research + BC-24 design spec (docs-only, no code).
+- **What failed:** wrote new markdown under `docs/research/` and `docs/specs/`; a pre-stop
+  `pnpm prettier --check` flagged **3 files** with style issues (markdown table-pipe alignment, an
+  em-dash/quote normalisation). Had it gone unfixed, the gate's **`format:check`** stage would have
+  failed even though **no code changed and the files were untracked**.
+- **Root cause:** `format:check` is `prettier --check .` (whole tree) — it does **not** skip untracked
+  or docs-only files. Prettier reformats GFM tables (aligns column pipes to the widest cell) and
+  normalises punctuation, so hand-authored markdown tables almost always need a `--write` pass.
+- **Fix:** `pnpm prettier --write <files>` then re-`--check` (clean). `proseWrap` is unset → default
+  `preserve`, so manual ~100-col line wraps are kept; only tables/punctuation were touched.
+- **Prevention:** after writing any new `.md` (research, specs, handoff), run
+  `pnpm prettier --write` on it **before** ending the turn — the Stop-gate runs the full gate and a
+  dirty doc fails `format:check` like any source file. (Tier-2 prose lesson; not worth a new check —
+  `format:check` already catches it, this just shortcuts the iteration.)
+- **Attempts to green:** 1 (one `--write` pass).
