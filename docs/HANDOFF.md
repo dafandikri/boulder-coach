@@ -24,6 +24,31 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-12 (backlog-grooming session, last touched by: Claude Opus 4.8)
+
+- **Backlog extended + archived.** A brainstorming session added **17 new PBIs (BC-27…BC-43)** across
+  four themes — training depth (BC-27 benchmark recalibration, BC-28 readiness score, BC-29 restore
+  `injuryHistory[]`, BC-30 pyramid goals), stability/data-safety (BC-31 persistent storage, BC-32 schema
+  migration + integrity, BC-33 error boundary, BC-34 backup nudge), infra/quality-bar (BC-35 mutation
+  testing on the safety files, BC-36 bundle budget, BC-37 a11y gate), design/UX (BC-38 Insights charts,
+  BC-39 install prompt, BC-40 streak) + 3 P3 design-only vision bets (BC-41 health import, BC-42
+  AI weekly review, BC-43 shareable progress). Each verified a real gap against the code.
+- **Done PBIs condensed to a Shipped log (the "backlog is getting big" fix).** The 17 shipped PBIs
+  (BC-01…BC-13, BC-15, BC-17, BC-22, BC-23) lost their verbose bodies; they now live as one-line
+  done-status headers in the new **Shipped log** at the bottom of `docs/BACKLOG.md` (kept as `###`
+  headers, not plain bullets — see below). Git history + `docs/LEARNINGS.md` retain the detail, so
+  the active backlog is now just the **open** P2/P3 items.
+  - **Why they stay `###` headers (gate-blind trap, now Tier-1 guarded):** the Crew scheduler gates
+    assignment on `dependsOn.every(d => doneIds.has(d))` and builds `doneIds` only from PBIs that
+    `parseBacklog` returns as `done` (`scripts/crew/lib/schedule.mjs`). Collapsing a shipped PBI to a
+    plain bullet would drop it from `doneIds` → every open PBI depending on it (BC-27→BC-06,
+    BC-31/33/34/43→BC-10, BC-40→BC-03, BC-42→BC-07) becomes **un-assignable forever**. New guard:
+    `tests/crew/backlog-hygiene.test.ts` now also asserts **no dangling dependencies** (every
+    `dependsOn` ID resolves to a parsed PBI). Verified: 43 PBIs (26 open / 17 done), 0 fileless-open,
+    0 dangling deps.
+- **Not yet pushed.** Changes are local (BACKLOG.md + the hygiene-test guard + this file). A supervised
+  push/PR to `main` (protected) is the next step if the human wants it live.
+
 ## Current state — 2026-06-12 (deploy session, last touched by: Claude Opus 4.8)
 
 - **BC-15 DONE — the app is LIVE in production.** First production deploy to Vercel:
