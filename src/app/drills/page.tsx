@@ -1,8 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { getDrillsByCategory, type SkillCategory } from '@/domain/drills';
+import { Card } from '@/app/components/Card';
+import { Chip } from '@/app/components/Chip';
+import { BackLink } from '@/app/components/BackLink';
+
+const TABS: { key: SkillCategory; label: string; icon: 'target' | 'shield' }[] = [
+  { key: 'technique', label: 'Technique', icon: 'target' },
+  { key: 'prehab', label: 'Prehab', icon: 'shield' },
+];
 
 export default function DrillsPage() {
   const [tab, setTab] = useState<SkillCategory>('technique');
@@ -10,46 +17,52 @@ export default function DrillsPage() {
   const drills = getDrillsByCategory(tab);
 
   return (
-    <main className="mx-auto max-w-md space-y-4 p-6">
-      <Link href="/" className="text-sm text-gray-500">
-        &larr; Today
-      </Link>
-      <h1 className="text-2xl font-bold">Drills</h1>
+    <main className="space-y-4 p-5">
+      <BackLink href="/" label="Today" />
+      <header className="pt-1">
+        <div className="bc-eyebrow">Skill library</div>
+        <h1 style={{ fontSize: 'var(--fs-2xl)' }}>Drills</h1>
+      </header>
 
       <div className="flex gap-2">
-        <button
-          onClick={() => {
-            setTab('technique');
-          }}
-          className={`rounded-full px-4 py-1 text-sm font-medium ${tab === 'technique' ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Technique
-        </button>
-        <button
-          onClick={() => {
-            setTab('prehab');
-          }}
-          className={`rounded-full px-4 py-1 text-sm font-medium ${tab === 'prehab' ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Prehab
-        </button>
+        {TABS.map((t) => (
+          <Chip
+            key={t.key}
+            icon={t.icon}
+            selected={tab === t.key}
+            onClick={() => {
+              setTab(t.key);
+            }}
+          >
+            {t.label}
+          </Chip>
+        ))}
       </div>
 
       <div className="space-y-3">
         {drills.map((d) => (
-          <article key={d.id} className="rounded-lg border p-4">
-            <h2 className="font-semibold">{d.name}</h2>
-            <p className="mt-1 text-sm text-gray-600">{d.description}</p>
+          <Card key={d.id}>
+            <h2 style={{ fontSize: 'var(--fs-md)', fontWeight: 800 }}>{d.name}</h2>
+            <p style={{ marginTop: 4, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
+              {d.description}
+            </p>
             {d.cues.length > 0 && (
-              <ul className="mt-2 space-y-0.5">
+              <ul className="space-y-1" style={{ marginTop: 10 }}>
                 {d.cues.map((cue, i) => (
-                  <li key={i} className="text-xs text-gray-500">
-                    &bull; {cue}
+                  <li
+                    key={i}
+                    style={{
+                      fontSize: 'var(--fs-xs)',
+                      color: 'var(--text-soft)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    • {cue}
                   </li>
                 ))}
               </ul>
             )}
-          </article>
+          </Card>
         ))}
       </div>
     </main>

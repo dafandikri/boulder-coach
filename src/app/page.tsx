@@ -5,6 +5,25 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
+import { Button } from '@/app/components/Button';
+import { Badge } from '@/app/components/Badge';
+import { Callout } from '@/app/components/Callout';
+import { GradePill } from '@/app/components/GradePill';
+import { HoldMark } from '@/app/components/HoldMark';
+import { SessionCard } from '@/app/components/SessionCard';
+import { Spinner } from '@/app/components/Spinner';
+
+const CAT_LABEL: Record<string, string> = {
+  warmup: 'Warm-up',
+  main: 'Main',
+  prehab: 'Prehab',
+  technique: 'Technique',
+  cooldown: 'Cooldown',
+};
+
+function todayLabel(d: Date): string {
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
 
 export default function TodayPage() {
   const router = useRouter();
@@ -30,103 +49,124 @@ export default function TodayPage() {
   }, [router]);
 
   if (error) {
-    return <main className="p-6 text-red-600">Error: {error}</main>;
+    return (
+      <main className="space-y-4 p-5">
+        <Callout tone="danger" title="Couldn't load today's session">
+          {error}
+        </Callout>
+      </main>
+    );
   }
-  if (!today) {
-    return <main className="p-6">Loading today’s session…</main>;
-  }
+  if (!today) return <Spinner label="Loading today's session…" />;
 
   const { session, changes, warmupMandatory, neutralAssumed } = today;
   const isRest = session.type === 'rest';
 
   return (
-    <main className="mx-auto max-w-md space-y-6 p-6">
-      <header>
-        <h1 className="text-2xl font-bold">Today</h1>
-        <p className="text-sm capitalize text-gray-500">
-          {isRest ? 'Rest day' : session.type.replace('-', ' ')}
-        </p>
+    <main className="space-y-4 p-5">
+      <header className="flex items-center justify-between pt-1">
+        <div>
+          <div className="bc-eyebrow">{todayLabel(new Date())}</div>
+          <h1 style={{ fontSize: 'var(--fs-2xl)' }}>Today</h1>
+        </div>
+        <HoldMark color="tangerine" size={44} rotate={-8} />
       </header>
 
-      {isRest ? (
-        <section className="space-y-1 rounded-lg bg-green-50 p-4 text-sm text-green-900">
-          <p className="font-semibold">🧘 Rest day — recover and come back stronger.</p>
-          <p>No climbing load today. Light mobility, antagonist/prehab, and good sleep.</p>
-        </section>
-      ) : (
-        <div className="flex gap-3">
-          <Link href="/checkin" className="rounded-lg border px-4 py-2 text-sm font-medium">
-            Check-in
+      <SessionCard
+        type={session.type}
+        title={isRest ? 'Rest day' : 'Today you climb'}
+        meta={
+          isRest
+            ? 'Recover and come back stronger.'
+            : `${String(session.blocks.length)} blocks · ~60 min`
+        }
+      >
+        {isRest ? (
+          <Link href="/exercises" className="bc-btn bc-btn--secondary bc-btn--full">
+            See mobility &amp; prehab
           </Link>
-          <Link
-            href="/session"
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            Start session
-          </Link>
-        </div>
+        ) : (
+          <div className="flex gap-2.5">
+            <Button
+              variant="secondary"
+              icon="clipboard-check"
+              fullWidth
+              onClick={() => {
+                router.push('/checkin');
+              }}
+            >
+              Check-in
+            </Button>
+            <Button
+              icon="flame"
+              fullWidth
+              onClick={() => {
+                router.push('/session');
+              }}
+            >
+              Start
+            </Button>
+          </div>
+        )}
+      </SessionCard>
+
+      {warmupMandatory && (
+        <Callout tone="warning" title="Warm-up is mandatory today.">
+          Finish every warm-up block before the main set unlocks.
+        </Callout>
       )}
 
       {!isRest && neutralAssumed && (
-        <Link
-          href="/checkin"
-          className="block rounded-lg bg-sky-50 p-4 text-sm text-sky-900 hover:bg-sky-100"
-        >
-          No check-in today — assuming you feel normal. Check in →
+        <Link href="/checkin" style={{ textDecoration: 'none' }}>
+          <Callout tone="info" icon="heart-pulse">
+            No check-in today — assuming you feel normal. Check in →
+          </Callout>
         </Link>
       )}
 
       {changes.length > 0 && (
-        <section className="space-y-1 rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold">Adjusted for you:</p>
+        <Callout tone="brand" title="Adjusted for you" icon="sparkles">
           {changes.map((c) => (
-            <p key={c.ruleId}>• {c.reason}</p>
+            <div key={c.ruleId}>{c.reason}</div>
           ))}
-        </section>
+        </Callout>
       )}
 
-      {warmupMandatory && (
-        <p className="rounded bg-red-100 px-3 py-2 text-sm font-medium text-red-800">
-          Warm-up is mandatory today.
-        </p>
-      )}
-
-      <ol className="space-y-3">
+      <section className="space-y-1 pt-2">
+        <div className="bc-eyebrow">The plan</div>
         {session.blocks.map((b) => (
-          <li key={b.id} className="rounded-lg border p-4">
-            <div className="flex items-baseline justify-between">
-              <span className="font-medium">{b.name}</span>
-              <span className="text-xs uppercase text-gray-400">{b.category}</span>
+          <div
+            key={b.id}
+            className="flex items-start gap-3 py-3"
+            style={{ borderTop: '2px solid var(--border)' }}
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', color: 'var(--text)' }}>
+                  {b.name}
+                </span>
+                <Badge tone="neutral">{CAT_LABEL[b.category] ?? b.category}</Badge>
+              </div>
+              <div
+                style={{
+                  marginTop: 3,
+                  fontSize: 'var(--fs-xs)',
+                  color: 'var(--text-muted)',
+                  fontWeight: 600,
+                }}
+              >
+                {b.sets} × {b.grip} · RPE {b.targetRPE}
+              </div>
+              {b.notes && (
+                <div style={{ marginTop: 3, fontSize: 'var(--fs-xs)', color: 'var(--text-soft)' }}>
+                  {b.notes}
+                </div>
+              )}
             </div>
-            <p className="text-sm text-gray-600">
-              {b.sets} × {b.grip}
-              {b.targetGrade !== undefined ? ` · V${b.targetGrade}` : ''} · RPE {b.targetRPE}
-            </p>
-            {b.notes && <p className="mt-1 text-xs text-gray-500">{b.notes}</p>}
-          </li>
+            {b.targetGrade !== undefined ? <GradePill grade={b.targetGrade} size="sm" /> : null}
+          </div>
         ))}
-      </ol>
-
-      <nav className="grid grid-cols-2 gap-2 border-t pt-4 text-center text-sm">
-        <Link href="/history" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
-          History
-        </Link>
-        <Link href="/insights" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
-          Insights
-        </Link>
-        <Link href="/program" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
-          Program
-        </Link>
-        <Link href="/drills" className="rounded-lg border p-2 text-gray-600 hover:bg-gray-50">
-          Drills
-        </Link>
-        <Link
-          href="/profile"
-          className="col-span-2 rounded-lg border p-2 text-gray-600 hover:bg-gray-50"
-        >
-          Profile
-        </Link>
-      </nav>
+      </section>
     </main>
   );
 }

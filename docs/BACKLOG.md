@@ -293,17 +293,55 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   tested); the page only renders. No new injury risk: additive only, never raises climbing load.
 - **Files:** `src/domain/offWallExercises.ts`, `src/app/exercises/page.tsx`
 
-### BC-23 · Visual redesign + branding (bright & playful, dark mode, climbing-hold motif) — `open`
+### BC-23 · Adopt the Boulder Coach Design System (bright & playful brand skin) — `done (7b23140, 2026-06-12)`
 
-- **Type:** ux/design · **Priority:** P2 · **Complexity:** L · **Depends on:** —
-- **Problem:** the UI is functional but generic; the product wants a distinctive identity — bright,
-  slightly playful/childlike, with climbing-hold motifs (in the spirit of a Bali bouldering-gym logo)
-  and a real dark mode. Identity + dark mode also matter for an "installable PWA you open at the gym."
-- **Acceptance criteria:** a cohesive token-based theme (light **and** dark) via CSS variables; a
-  dark-mode toggle persisted locally (respects `prefers-color-scheme` on first load); a playful accent
-  palette and hold-shaped motif on key surfaces (Today header, app icon/logo); applied consistently
-  across pages with **no gate regression**. Theme tokens/toggle logic live in a covered
-  `src/app/lib/theme.ts`, not scattered across components (per the gate-blind-UI rule).
+- **Type:** ux/design · **Priority:** P2 · **Complexity:** L · **Depends on:** — · **Also closes:** BC-11 (shell/bottom-nav)
+- **Source of truth:** the delivered **Boulder Coach Design System** (`Boulder Coach Design System.zip`
+  — README + tokens + components + UI kit). A bright climbing-gym skin: warm **chalk** background
+  (#FFF7ED), **basalt** ink (#2A2233), a full **climbing-hold rainbow**, coral-tangerine **brand**
+  (#FF6A39), chunky rounded type (**Baloo 2** / **Nunito** / **Space Mono**), big pebble-round corners,
+  and a signature solid **"sticker pop"** (2px ink border + hard offset shadow) on buttons & feature
+  cards. Voice is a supportive climbing-buddy coach: sentence case, plain, direct about safety.
+- **Problem:** the shipping UI is the plain Tailwind/Geist grayscale default; it has no brand identity.
+- **Acceptance criteria:**
+  - Design tokens (color/type/spacing/radii/shadows/motion) ported into `src/app/globals.css` as CSS
+    custom properties; brand webfonts loaded **without** breaking the offline `next build` gate step
+    (CSS `@import` is a runtime browser fetch, not a build-time fetch — unlike `next/font/google`; see
+    LEARNINGS 2026-06-10).
+  - A small set of brand primitives (`Button`, `Card`, `SessionCard`, `Badge`, `GradePill`, `Chip`,
+    `Callout`, `ProgressBar`, `StatCard`, `Icon`, `Eyebrow`, `HoldMark`) ported to **TypeScript** React
+    under `src/app/components/` — **no `any`**, presentational only (no business logic; per the
+    gate-blind-UI rule, behavior-driving maps stay trivial/presentational).
+  - Icons via `lucide-react` (named imports, tree-shakeable) at stroke-width ~2.25; the hold-pebble
+    SVGs + logo mark live in `public/` and are used for decoration/empty states.
+  - Persistent **bottom tab nav** (Today / Insights / Program / Drills / You) on every page with
+    active-route state (this delivers **BC-11**); pages drop their ad-hoc "← Today" links.
+  - Every screen (Today, Check-in, Session, Insights, Program, Drills, Profile, Exercises, History)
+    restyled to the brand with **all logic/behavior preserved** and **no gate regression** (`pnpm gate`
+    green: format/lint/tsc/depcruise/type-coverage/tests/knip/build).
+- **Explicitly out of scope (split to BC-25):** dark mode — the delivered DS ships light tokens only.
+- **Files:** `src/app/globals.css`, `src/app/layout.tsx`, new `src/app/components/**`, all
+  `src/app/**/page.tsx`, `public/holds/**`, `public/logo-mark.svg`.
+- **Delivered (2026-06-12):** tokens + 3 webfonts in `globals.css` (font `@import` placed **before**
+  `@import 'tailwindcss'` so the CSS optimizer can't drop it — see LEARNINGS); 14 TS primitives in
+  `src/app/components/` (`Button`, `Card`, `SessionCard`, `Badge`, `GradePill`, `Chip`, `Callout`,
+  `ProgressBar`, `StatCard`, `Icon`, `HoldMark`, `Spinner`, `BackLink`, `BottomNav`); `lucide-react`
+  icons; all 9 screens restyled with logic preserved; `pnpm gate` green.
+  `public/logo-mark.svg` (the chalk-square brand mark) renders on the first-run welcome header; the
+  hold pebbles decorate the other headers/empty states.
+  **One YAGNI deviation from the criteria:** `Eyebrow` shipped as the `.bc-eyebrow` utility class, not a
+  component (it's pure presentation, used inline on every screen — a component added no value).
+
+### BC-25 · Dark mode (token theme + toggle) — `open` (design-first)
+
+- **Type:** ux/design · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-23
+- **Problem:** the delivered design system ships **light** chalk/basalt tokens only. A real dark theme
+  still matters for an "installable PWA you open at the gym" in low light.
+- **Acceptance criteria:** a dark token set layered over BC-23's CSS variables (chalk→deep basalt
+  surfaces, ink→chalk text, holds re-tuned for contrast); a toggle persisted locally that respects
+  `prefers-color-scheme` on first load; theme/toggle logic in a covered `src/app/lib/theme.ts`, not
+  scattered across components; **no gate regression**. Coordinate hold-color contrast with the brand
+  owner before shipping.
 - **Files:** `src/app/globals.css`, `src/app/layout.tsx`, `src/app/lib/theme.ts`
 
 ---

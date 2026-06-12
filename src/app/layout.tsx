@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
+import { BottomNav } from './components/BottomNav';
 
 export const metadata: Metadata = {
   title: 'Boulder Coach',
@@ -20,8 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        {children}
+      <body className="min-h-full">
+        {/* Mobile-first column (max 28rem) with room for the fixed bottom nav. */}
+        <div className="mx-auto flex min-h-dvh w-full max-w-[28rem] flex-col pb-24">{children}</div>
+        <BottomNav />
         <script
           dangerouslySetInnerHTML={{
             __html: `if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}`,
