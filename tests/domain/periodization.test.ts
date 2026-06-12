@@ -72,6 +72,26 @@ describe('generateProgram', () => {
     }
   });
 
+  it('supports 1..7 sessions/week with a safe rotation (BC-45)', () => {
+    for (let n = 1; n <= 7; n++) {
+      const p = generateProgram({ ...profile, sessionsPerWeek: n }, '2026-06-09');
+      const types = p.weeks[0]!.sessions.map((s) => s.type);
+      expect(types).toHaveLength(n);
+      // additive-safety: at most ONE limit day and at most one power-endurance day —
+      // extra frequency is filled with low-intensity volume/technique + prehab, never more
+      // max-effort climbing.
+      expect(types.filter((t) => t === 'limit-boulder').length).toBeLessThanOrEqual(1);
+      expect(types.filter((t) => t === 'power-endurance').length).toBeLessThanOrEqual(1);
+      const hardDays = types.filter((t) => t === 'limit-boulder' || t === 'power-endurance').length;
+      expect(hardDays).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('makes the single weekly session a limit day when sessionsPerWeek is 1', () => {
+    const p = generateProgram({ ...profile, sessionsPerWeek: 1 }, '2026-06-09');
+    expect(p.weeks[0]!.sessions.map((s) => s.type)).toEqual(['limit-boulder']);
+  });
+
   it('uses a 2-session rotation when sessionsPerWeek is 2', () => {
     const p = generateProgram({ ...profile, sessionsPerWeek: 2 }, '2026-06-09');
     expect(p.weeks[0]!.sessions).toHaveLength(2);

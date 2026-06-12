@@ -81,17 +81,26 @@ const PHASE_VOLUME: Record<PhaseKind, number> = {
   deload: 0.5,
 };
 
-/** Session rotation by how many sessions the climber does per week. */
+/**
+ * Session rotation by weekly frequency (BC-45: 1..7). Additive-safety contract: the
+ * week has at most ONE limit day and ONE power-endurance day; every extra session is
+ * low-intensity volume/technique or antagonist-prehab, never more max-effort climbing.
+ * So raising frequency adds easy volume, never injury-risking intensity.
+ */
 function sessionPlanFor(sessionsPerWeek: number): SessionType[] {
-  switch (sessionsPerWeek) {
-    case 2:
-      return ['limit-boulder', 'power-endurance'];
-    case 4:
-      return ['limit-boulder', 'power-endurance', 'volume-technique', 'antagonist-prehab'];
-    case 3:
-    default:
-      return ['limit-boulder', 'power-endurance', 'volume-technique'];
+  const base: SessionType[] = [
+    'limit-boulder',
+    'power-endurance',
+    'volume-technique',
+    'antagonist-prehab',
+  ];
+  const n = Math.max(1, Math.min(7, Math.trunc(sessionsPerWeek)));
+  const plan = base.slice(0, Math.min(n, base.length));
+  // Days 5+ alternate volume/technique and antagonist-prehab — low-intensity fillers.
+  for (let i = base.length; i < n; i++) {
+    plan.push((i - base.length) % 2 === 0 ? 'volume-technique' : 'antagonist-prehab');
   }
+  return plan;
 }
 
 function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number): Block[] {

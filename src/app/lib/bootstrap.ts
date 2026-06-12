@@ -28,8 +28,8 @@ export const DEFAULT_PROFILE: UserProfile = {
  *  UserProfile, named to make the form's intent clear at call sites. */
 export type ProfileDraft = UserProfile;
 
-const MIN_SESSIONS = 2;
-const MAX_SESSIONS = 4;
+const MIN_SESSIONS = 1; // BC-45: a single weekly quality session is valid …
+const MAX_SESSIONS = 7; // … up to daily, with a load-management note (frequencyNotes.ts).
 
 /**
  * Validate a profile draft from the onboarding/edit form. Returns the first

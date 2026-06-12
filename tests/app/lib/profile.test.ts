@@ -46,9 +46,21 @@ describe('validateProfile', () => {
     expect(validateProfile({ ...validDraft, goalGrade: 99 })).toMatch(/grade/i);
   });
 
-  it('rejects sessions/week outside the supported 2..4 band', () => {
-    expect(validateProfile({ ...validDraft, sessionsPerWeek: 1 })).toMatch(/sessions/i);
-    expect(validateProfile({ ...validDraft, sessionsPerWeek: 5 })).toMatch(/sessions/i);
+  it('accepts the full 1..7 sessions/week band (BC-45)', () => {
+    for (const n of [1, 2, 7]) {
+      expect(
+        validateProfile({
+          ...validDraft,
+          sessionsPerWeek: n,
+          availableWeekdays: [0, 1, 2, 3, 4, 5, 6],
+        }),
+      ).toBeNull();
+    }
+  });
+
+  it('rejects sessions/week outside the supported 1..7 band', () => {
+    expect(validateProfile({ ...validDraft, sessionsPerWeek: 0 })).toMatch(/sessions/i);
+    expect(validateProfile({ ...validDraft, sessionsPerWeek: 8 })).toMatch(/sessions/i);
   });
 
   it('rejects an empty weekday selection', () => {

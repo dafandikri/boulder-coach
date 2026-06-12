@@ -24,6 +24,17 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-45 shipped — 1–7 sessions/week, last touched by: Claude Opus 4.8)
+
+- **BC-45 DONE (PR #29) — sessions/week is now 1–7 with frequency guidance.** `bootstrap` band is
+  `MIN_SESSIONS=1`/`MAX_SESSIONS=7`; `sessionPlanFor` returns a safe rotation for any 1–7 (one limit +
+  one PE day max; extras are low-intensity volume/technique + antagonist-prehab — additive-safety, never
+  more max-effort work). New pure `src/domain/frequencyNotes.ts` (`frequencyGuidance`) gives a per-band
+  note; ≥5× carries a load-management caution. Profile offers 1×…7× and renders the note in a `Callout`.
+  TDD: new `frequencyNotes.test.ts` + extended `periodization`/`profile` tests. `pnpm gate` green.
+- **Two PO-feedback PBIs shipped (BC-44, BC-45). Next: BC-46** (exercise content model — the foundation
+  BC-47/49/50 reuse), then BC-47/49/50 → BC-48 → BC-51.
+
 ## Current state — 2026-06-13 (BC-44 shipped — VB/V0 grades, last touched by: Claude Opus 4.8)
 
 - **BC-44 DONE (PR #28) — the grade scale now reaches VB/V0**, so the app can finally onboard real
