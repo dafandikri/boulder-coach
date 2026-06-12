@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { getDrillsByCategory, type SkillCategory } from '@/domain/drills';
+import { getDrillsByCategory, getDrill, type SkillCategory } from '@/domain/drills';
+import { hasRichContent } from '@/domain/exerciseContent';
 import { Card } from '@/app/components/Card';
 import { Chip } from '@/app/components/Chip';
+import { Button } from '@/app/components/Button';
 import { BackLink } from '@/app/components/BackLink';
+import { ExerciseDetail } from '@/app/components/ExerciseDetail';
 
 const TABS: { key: SkillCategory; label: string; icon: 'target' | 'shield' }[] = [
   { key: 'technique', label: 'Technique', icon: 'target' },
@@ -13,6 +16,31 @@ const TABS: { key: SkillCategory; label: string; icon: 'target' | 'shield' }[] =
 
 export default function DrillsPage() {
   const [tab, setTab] = useState<SkillCategory>('technique');
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const open = openId ? getDrill(openId) : undefined;
+
+  // Detail view — full step-by-step + image (BC-46/BC-49).
+  if (open) {
+    return (
+      <main className="space-y-4 p-5">
+        <button
+          type="button"
+          onClick={() => {
+            setOpenId(null);
+          }}
+          className="bc-eyebrow"
+          style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--brand-deep)' }}
+        >
+          ← All drills
+        </button>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>{open.description}</p>
+        <Card>
+          <ExerciseDetail title={open.name} content={open} />
+        </Card>
+      </main>
+    );
+  }
 
   const drills = getDrillsByCategory(tab);
 
@@ -61,6 +89,20 @@ export default function DrillsPage() {
                   </li>
                 ))}
               </ul>
+            )}
+            {hasRichContent(d) && (
+              <div style={{ marginTop: 12 }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="arrow-right"
+                  onClick={() => {
+                    setOpenId(d.id);
+                  }}
+                >
+                  Instructions
+                </Button>
+              </div>
             )}
           </Card>
         ))}

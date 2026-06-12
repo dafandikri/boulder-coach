@@ -409,9 +409,16 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Tested: rotation for each of 1..7; the note text per band; the no-back-to-back-limit invariant.
 - **Files:** `src/domain/periodization.ts`, `src/domain/frequencyNotes.ts`, `src/app/lib/bootstrap.ts`, `src/app/profile/page.tsx`
 
-### BC-46 · Exercise content model — structured steps, dosage & image convention (foundation) — `open`
+### BC-46 · Exercise content model — structured steps, dosage & image convention (foundation) — `done (PR #30)`
 
 - **Type:** infra/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** —
+- **Shipped (together with BC-49 — a foundation with no consumer is dead code knip rejects, so it
+  landed with its first user):** pure `src/domain/exerciseContent.ts` (`ExerciseContent` shape:
+  `steps`/`cues`/`commonMistakes`/`dosage?`/`imageId?`; `imagePathFor` → `public/exercises/<id>.svg`
+  with a `_placeholder.svg` fallback so there's never a broken `<img>`; `hasRichContent`).
+  Presentational `src/app/components/ExerciseDetail.tsx` renders it; logic stays in the covered domain
+  file. Assets + convention in `public/exercises/` (`README.md`, `_placeholder.svg`, `silent-feet.svg`,
+  `band-pull-apart.svg`). Reused by BC-47/49/50.
 - **Problem:** every exercise surface (session blocks, drills, prehab/off-wall) carries only a one-line
   string. The PO wants **detailed todos, instructions, and images** across all of them. Building that
   three separate times would diverge — this PBI is the **shared foundation** (the repo's "use the
@@ -474,9 +481,14 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     the drill rotation cycles deterministically; clickable detail resolves a real session.
 - **Files:** `src/domain/periodization.ts`, `src/app/program/page.tsx`
 
-### BC-49 · Drills — step-by-step instructions, common mistakes & images + detail view — `open`
+### BC-49 · Drills — step-by-step instructions, common mistakes & images + detail view — `done (PR #30)`
 
 - **Type:** ux/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-46
+- **Shipped (with BC-46):** `Drill` now `extends ExerciseContent`; every drill has real `steps`,
+  `commonMistakes`, and an `imageId` (silent-feet & band-pull-apart have illustrations; the rest fall
+  back to the placeholder until art lands). `/drills` is now list → tap "Instructions" → `ExerciseDetail`
+  (image + steps + cues + mistakes + dosage). The "Instructions" CTA is gated on `hasRichContent`. TDD:
+  `drills.test.ts` asserts every drill carries rich content. `pnpm gate` green.
 - **Problem:** `drills.ts` gives each drill a one-line `description` + a few `cues[]`, and `/drills`
   lists them flat. The PO wants drills that "have instructions, can go into detail, have images." No
   step-by-step, no common-mistakes, no imagery, no detail view.

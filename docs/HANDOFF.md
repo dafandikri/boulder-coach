@@ -24,6 +24,23 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-46 + BC-49 shipped — exercise content model + drills, last touched by: Claude Opus 4.8)
+
+- **BC-46 + BC-49 DONE (PR #30) — the shared exercise content model + the first consumer (drills).**
+  A foundation with no consumer is dead code knip rejects, so BC-46 landed _with_ BC-49 (its first user).
+  - **BC-46:** pure `src/domain/exerciseContent.ts` (`ExerciseContent` shape:
+    steps/cues/commonMistakes/dosage?/imageId?; `imagePathFor` → `public/exercises/<id>.svg` with a
+    `_placeholder.svg` fallback — never a broken `<img>`; `hasRichContent`). Presentational
+    `src/app/components/ExerciseDetail.tsx` renders it. Assets/convention in `public/exercises/`.
+  - **BC-49:** `Drill extends ExerciseContent`; every drill has real `steps`/`commonMistakes`/`imageId`.
+    `/drills` is now list → "Instructions" → `ExerciseDetail`. CTA gated on `hasRichContent`.
+- **Reuse path for the rest:** **BC-50** (prehab/off-wall) and **BC-47** (session blocks) now just adopt
+  the same `ExerciseContent` shape + render `ExerciseDetail` — don't re-implement. Then **BC-48**
+  (program week variation + clickable program) and **BC-51** (Insights summary). 4 of 8 PO-feedback PBIs
+  shipped (BC-44/45/46/49).
+- **Note:** several drill `imageId`s (deadpoint, smear, ecu-pronation, tendon-glide) have no SVG yet and
+  fall back to the placeholder by design — add art under `public/exercises/` when available (BC-14-style).
+
 ## Current state — 2026-06-13 (BC-45 shipped — 1–7 sessions/week, last touched by: Claude Opus 4.8)
 
 - **BC-45 DONE (PR #29) — sessions/week is now 1–7 with frequency guidance.** `bootstrap` band is
