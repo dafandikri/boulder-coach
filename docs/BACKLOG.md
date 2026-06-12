@@ -539,9 +539,18 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     the additive-only invariant still asserted.
 - **Files:** `src/domain/offWallExercises.ts`, `src/app/exercises/page.tsx`
 
-### BC-51 · Personalised Insights analyser summary — `open`
+### BC-51 · Personalised Insights analyser summary — `done (PR #35)`
 
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-30
+- **Shipped (built over signals that exist today; BC-30 not required):** pure
+  `summariseInsights(insights, acwr, asOf)` in `src/domain/insights.ts` composes 1–4 prioritised,
+  supportive-coach sentences — **safety leads** (ACWR > 1.5 or a recent sharp-pain flag is the first
+  sentence, mirroring the rules-engine precedence), then a pyramid read (broad base → "ready to touch
+  V*n*"; top-heavy → "broaden the base"), then a consistency close. Cold start (no sessions) returns one
+  honest "log a few sessions" line — never a fake-confident claim or NaN. Insights renders a **"Coach's
+  read"** card above the charts. Deterministic, on-device — the sibling of the future LLM **BC-42**.
+  TDD: `insights.test.ts` covers every branch incl. safety-leads-first ordering and the empty state.
+  `pnpm gate` green. (Gets richer automatically once BC-30 pyramid gaps / BC-40 streak land.)
 - **Problem:** the PO wants Insights to be "a graph **with a personalised analyser summary**." **BC-38**
   delivers the graph; this PBI delivers the **plain-language read** over the same data — the
   deterministic, on-device sibling of the future AI review (**BC-42**). Today Insights shows numbers

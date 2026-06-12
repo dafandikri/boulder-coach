@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { computeLoadMetrics } from '@/domain/loadMetrics';
-import { computeInsights, type Insights } from '@/domain/insights';
+import { computeInsights, summariseInsights, type Insights } from '@/domain/insights';
 import { loadAdaptationLog } from '@/app/lib/bootstrap';
 import type { AdaptationLogEntry } from '@/domain/types';
 import { Card } from '@/app/components/Card';
@@ -46,6 +46,7 @@ export default function InsightsPage() {
 
   const tone = acwrTone(acwr);
   const maxCount = Math.max(1, ...insights.gradePyramid.map((e) => e.count));
+  const summary = summariseInsights(insights, acwr, new Date());
 
   return (
     <main className="space-y-4 p-5">
@@ -72,6 +73,19 @@ export default function InsightsPage() {
       <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-soft)', marginTop: -4 }}>
         ACWR target 0.8–1.3. Above 1.5 forces a deload.
       </p>
+
+      <Card accent="var(--brand)">
+        <div className="bc-eyebrow" style={{ marginBottom: 8 }}>
+          Coach’s read
+        </div>
+        <div className="space-y-2">
+          {summary.map((line, i) => (
+            <p key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--text)', lineHeight: 1.45 }}>
+              {line}
+            </p>
+          ))}
+        </div>
+      </Card>
 
       {insights.gradePyramid.length > 0 && (
         <Card>
