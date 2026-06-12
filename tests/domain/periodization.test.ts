@@ -122,6 +122,41 @@ describe('generateProgram', () => {
     expect(antagonist!.blocks.some((b) => b.category === 'main')).toBe(true);
   });
 
+  it('varies consecutive same-phase weeks in real content, not just ids (BC-48)', () => {
+    const p = generateProgram(profile, '2026-06-09');
+    expect(p.weeks[0]!.phase).toBe('hard');
+    expect(p.weeks[1]!.phase).toBe('hard');
+    // Compare the main blocks with ids stripped — real prescription must differ,
+    // not just the week-encoded session id.
+    const mainOf = (wi: number): unknown =>
+      p.weeks[wi]!.sessions.map((s) =>
+        s.blocks.filter((b) => b.category === 'main').map(({ id: _id, ...rest }) => rest),
+      );
+    expect(JSON.stringify(mainOf(0))).not.toBe(JSON.stringify(mainOf(1)));
+  });
+
+  it('progressively overloads across consecutive hard weeks (BC-48)', () => {
+    const p = generateProgram(profile, '2026-06-09');
+    const limitSets = (wi: number): number => {
+      const s = p.weeks[wi]!.sessions.find((x) => x.type === 'limit-boulder')!;
+      return s.blocks.filter((b) => b.category === 'main').reduce((n, b) => n + b.sets, 0);
+    };
+    // hard week 1 carries more main volume than hard week 0 (progressive overload).
+    expect(limitSets(1)).toBeGreaterThan(limitSets(0));
+  });
+
+  it('rotates the technique drill week-to-week in volume sessions (BC-48 absorbs BC-19)', () => {
+    const p = generateProgram(profile, '2026-06-09');
+    const drillNote = (wi: number): string => {
+      const v = p.weeks[wi]!.sessions.find((x) => x.type === 'volume-technique')!;
+      const main = v.blocks.find((b) => b.category === 'main')!;
+      return main.notes ?? '';
+    };
+    // week 0 and week 1 volume days name different deliberate drills.
+    expect(drillNote(0)).not.toBe(drillNote(1));
+    expect(drillNote(0).length).toBeGreaterThan(0);
+  });
+
   it('reduces main volume in deload weeks vs hard weeks', () => {
     const p = generateProgram(profile, '2026-06-09');
     const hardMain = p.weeks[0]!.sessions[0]!.blocks.filter((b) => b.category === 'main').reduce(

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { programPosition } from '@/domain/programClock';
 import { toOptionalLoadState, type OptionalLoadState } from '@/app/lib/loadState';
-import type { Program, PhaseKind } from '@/domain/types';
+import type { Program, PhaseKind, PlannedSession } from '@/domain/types';
+import { formatGrade } from '@/domain/grade';
+import { hasRichContent } from '@/domain/exerciseContent';
 import { Card } from '@/app/components/Card';
 import { Badge } from '@/app/components/Badge';
 import { Button } from '@/app/components/Button';
@@ -13,6 +15,7 @@ import { Callout } from '@/app/components/Callout';
 import { HoldMark } from '@/app/components/HoldMark';
 import { BackLink } from '@/app/components/BackLink';
 import { Spinner } from '@/app/components/Spinner';
+import { ExerciseDetail } from '@/app/components/ExerciseDetail';
 
 /** Phase → Badge tone (presentational): hard pushes, peak warns, deload recovers. */
 const PHASE_TONE: Record<PhaseKind, 'brand' | 'warning' | 'success'> = {
@@ -24,6 +27,8 @@ const PHASE_TONE: Record<PhaseKind, 'brand' | 'warning' | 'success'> = {
 export default function ProgramPage() {
   const [load, setLoad] = useState<OptionalLoadState<Program>>({ status: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  const [openWeek, setOpenWeek] = useState<number | null>(null);
+  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +88,33 @@ export default function ProgramPage() {
   const program = load.data;
   const currentWeekIndex = programPosition(program, new Date()).weekIndex;
 
+  // BC-48: session drill-down — tap a week's session to see its real blocks.
+  const openSession = openSessionId
+    ? program.weeks.flatMap((w) => w.sessions).find((s) => s.id === openSessionId)
+    : undefined;
+
+  if (openSession) {
+    return (
+      <main className="space-y-4 p-5">
+        <button
+          type="button"
+          onClick={() => {
+            setOpenSessionId(null);
+          }}
+          className="bc-eyebrow"
+          style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--brand-deep)' }}
+        >
+          ← Week {openSession.weekIndex + 1}
+        </button>
+        <header className="pt-1">
+          <div className="bc-eyebrow">Week {openSession.weekIndex + 1} session</div>
+          <h1 style={{ fontSize: 'var(--fs-xl)' }}>{openSession.type.replace('-', ' ')}</h1>
+        </header>
+        <SessionBlocks session={openSession} />
+      </main>
+    );
+  }
+
   return (
     <main className="space-y-4 p-5">
       <BackLink href="/" label="Today" />
@@ -96,6 +128,7 @@ export default function ProgramPage() {
       <div className="space-y-2.5">
         {program.weeks.map((w) => {
           const isCurrent = w.weekIndex === currentWeekIndex;
+          const expanded = openWeek === w.weekIndex;
           return (
             <Card
               key={w.weekIndex}
@@ -103,36 +136,106 @@ export default function ProgramPage() {
               accent={isCurrent ? 'var(--brand)' : undefined}
               padding="sm"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span style={{ fontWeight: 800, fontSize: 'var(--fs-base)' }}>
-                  Week {w.weekIndex + 1}
-                  {isCurrent && (
-                    <span
-                      className="bc-eyebrow"
-                      style={{ marginLeft: 8, color: 'var(--brand-deep)' }}
-                    >
-                      Now
-                    </span>
-                  )}
-                </span>
-                <Badge tone={PHASE_TONE[w.phase]} solid={isCurrent}>
-                  {w.phase}
-                </Badge>
-              </div>
-              <p
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenWeek(expanded ? null : w.weekIndex);
+                }}
                 style={{
-                  marginTop: 4,
-                  fontSize: 'var(--fs-xs)',
-                  color: 'var(--text-muted)',
-                  fontWeight: 600,
+                  width: '100%',
+                  textAlign: 'left',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
                 }}
               >
-                {w.sessions.map((s) => s.type.replace('-', ' ')).join(' · ')}
-              </p>
+                <div className="flex items-center justify-between gap-2">
+                  <span style={{ fontWeight: 800, fontSize: 'var(--fs-base)' }}>
+                    Week {w.weekIndex + 1}
+                    {isCurrent && (
+                      <span
+                        className="bc-eyebrow"
+                        style={{ marginLeft: 8, color: 'var(--brand-deep)' }}
+                      >
+                        Now
+                      </span>
+                    )}
+                  </span>
+                  <Badge tone={PHASE_TONE[w.phase]} solid={isCurrent}>
+                    {w.phase}
+                  </Badge>
+                </div>
+                <p
+                  style={{
+                    marginTop: 4,
+                    fontSize: 'var(--fs-xs)',
+                    color: 'var(--text-muted)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {w.sessions.map((s) => s.type.replace('-', ' ')).join(' · ')}
+                </p>
+              </button>
+
+              {expanded && (
+                <div className="space-y-2" style={{ marginTop: 10 }}>
+                  {w.sessions.map((s) => (
+                    <Button
+                      key={s.id}
+                      variant="secondary"
+                      size="sm"
+                      icon="arrow-right"
+                      fullWidth
+                      onClick={() => {
+                        setOpenSessionId(s.id);
+                      }}
+                    >
+                      {s.type.replace('-', ' ')}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </Card>
           );
         })}
       </div>
     </main>
+  );
+}
+
+/** Renders a planned session's blocks with targets + collapsible how-to (BC-48 reuses
+ *  the BC-46 ExerciseDetail). Read-only — this is the program preview, not the logger. */
+function SessionBlocks({ session }: { session: PlannedSession }) {
+  return (
+    <ol className="space-y-3">
+      {session.blocks.map((b) => (
+        <li key={b.id}>
+          <Card>
+            <div className="flex items-center justify-between gap-2">
+              <span style={{ fontWeight: 800, fontSize: 'var(--fs-md)' }}>{b.name}</span>
+              <Badge tone="neutral">{b.category}</Badge>
+            </div>
+            <p
+              style={{
+                marginTop: 4,
+                fontSize: 'var(--fs-xs)',
+                color: 'var(--text-muted)',
+                fontWeight: 600,
+              }}
+            >
+              {b.sets} × {b.grip}
+              {b.targetGrade !== undefined ? ` · ${formatGrade(b.targetGrade)}` : ''} · RPE{' '}
+              {b.targetRPE}
+            </p>
+            {b.content && hasRichContent(b.content) && (
+              <div style={{ marginTop: 10 }}>
+                <ExerciseDetail content={b.content} />
+              </div>
+            )}
+          </Card>
+        </li>
+      ))}
+    </ol>
   );
 }

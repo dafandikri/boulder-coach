@@ -24,6 +24,19 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-48 shipped — program variation + clickable program, last touched by: Claude Opus 4.8)
+
+- **BC-48 DONE (PR #34) — the program no longer reads the same every week, and you can click into it.**
+  `generateProgram` varies weeks within a phase: a `phaseRunOrdinal` drives progressive overload (each
+  later same-phase week adds main volume) and the volume day's technique drill rotates by `weekIndex`
+  (`drillForWeek` from `DRILLS` — **absorbs BC-19**, now also marked done). `/program` is clickable:
+  week → sessions → a read-only session view with each block's target + collapsible `ExerciseDetail`.
+  TDD: `periodization.test.ts` asserts real content variation, progressive overload, and deterministic
+  drill rotation. `pnpm gate` green.
+- **8 of 8 PO-feedback PBIs that touch code are now shipped (BC-44/45/46/47/48/49/50 + BC-19 absorbed).
+  Only BC-51 remains: Insights personalised analyser summary** (deterministic on-device read over the
+  existing signals; pairs with BC-38 charts). After BC-51 the PO's entire feedback list is delivered.
+
 ## Current state — 2026-06-13 (BC-47 shipped — rich session player, last touched by: Claude Opus 4.8)
 
 - **BC-47 DONE (PR #33) — tapping "Start" is no longer vague.** `Block` gained `content?: ExerciseContent`;
