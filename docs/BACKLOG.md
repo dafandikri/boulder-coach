@@ -213,7 +213,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 
 ## P2 — Polish & infrastructure that compounds
 
-### BC-11 · Shared app shell: bottom tab navigation — `open`
+### BC-11 · Shared app shell: bottom tab navigation — `done (ad7a4ce, 2026-06-12)`
 
 - **Type:** ux · **Priority:** P2 · **Complexity:** S
 - **Problem:** every page hand-rolls its own "← Today" link; the 2×2 nav grid exists only on
@@ -221,6 +221,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
 - **Acceptance criteria:** layout-level bottom nav on all pages, active-tab state, thumb-reachable;
   e2e nav smoke updated.
 - **Files:** `src/app/layout.tsx`, new nav component, pages lose their ad-hoc links.
+- **Closed by:** BC-23 (brand skin, bottom-nav substance) + nav smoke e2e (2026-06-12)
 
 ### BC-12 · Honest error/empty states — `done (21f6f7a, 2026-06-11)`
 
