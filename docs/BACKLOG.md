@@ -466,9 +466,17 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     instructions.
 - **Files:** `src/domain/types.ts`, `src/domain/periodization.ts`, `src/app/session/page.tsx`
 
-### BC-48 · Week-to-week program variation + clickable program detail — `open`
+### BC-48 · Week-to-week program variation + clickable program detail — `done (PR #34)`
 
 - **Type:** feature · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-46
+- **Shipped:** `generateProgram` now varies weeks within a phase — a `phaseRunOrdinal` (count of earlier
+  same-phase weeks) drives **progressive overload** (each successive hard/peak/deload week adds main
+  volume), and the volume day's **technique drill rotates by `weekIndex`** (`drillForWeek`, pulled from
+  `DRILLS` — absorbs BC-19). `/program` is now **clickable**: tap a week → its sessions → a read-only
+  session view rendering every block's target + collapsible `ExerciseDetail` (BC-46/47 reuse). Closes
+  both halves of "the program is the same every week / let me click into it." TDD: `periodization.test.ts`
+  asserts real week-to-week content variation, progressive overload, and deterministic drill rotation.
+  `pnpm gate` green.
 - **Problem:** **two real defects in one complaint** ("the program is still badly texted, every week is
   the same … my advice: click on the program and see what exercises/todos with instructions and
   images"). (1) `generateProgram` emits the **identical** `mainBlocksFor(...)` blocks for every week of
@@ -564,7 +572,7 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   Prereq: BC-10 (export gives a migration/backup path first).
 - **Files:** `docs/specs/cloud-sync-design.md`
 
-### BC-19 · Technique-drill rotation in volume sessions — `open` (folded into BC-48)
+### BC-19 · Technique-drill rotation in volume sessions — `done (PR #34, via BC-48)`
 
 - **Type:** feature · **Complexity:** M
 - **Note (2026-06-13):** the week-to-week drill rotation here is now part of **BC-48**'s scope (program

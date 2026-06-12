@@ -13,6 +13,7 @@ import type {
 import { generateWarmup } from './warmup';
 import { VB } from './grade';
 import type { ExerciseContent } from './exerciseContent';
+import { getDrillsByCategory } from './drills';
 
 export const PHASE_PATTERN: PhaseKind[] = ['hard', 'hard', 'deload', 'hard', 'peak', 'deload'];
 
@@ -179,9 +180,34 @@ function mainContentFor(type: SessionType): ExerciseContent {
   }
 }
 
-function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number): Block[] {
+/** BC-48: the deliberate technique drill for a volume day, rotated by week so
+ *  consecutive weeks differ (absorbs BC-19). Deterministic, pure. */
+function drillForWeek(weekIndex: number): { name: string; description: string } {
+  const techniqueDrills = getDrillsByCategory('technique');
+  const d = techniqueDrills[weekIndex % techniqueDrills.length];
+  // The library guarantees ≥1 technique drill (asserted by the drills gate), so
+  // the modulo always lands; fall back defensively without a dead branch.
+  return d ?? { name: 'silent feet', description: 'Place each foot precisely and quietly.' };
+}
+
+/**
+ * Main blocks for a session. BC-48 adds **week-to-week variation** so a phase no
+ * longer repeats the same week: `phaseRunOrdinal` (how many earlier weeks share
+ * this phase) drives a progressive-overload set bump, and the volume day's drill
+ * rotates by `weekIndex`. Still bounded by the phase volume multiplier and the
+ * VB grade floor (additive-safety preserved).
+ */
+function mainBlocksFor(
+  type: SessionType,
+  phase: PhaseKind,
+  currentGrade: number,
+  weekIndex: number,
+  phaseRunOrdinal: number,
+): Block[] {
   const vol = PHASE_VOLUME[phase];
   const round = (n: number): number => Math.max(1, Math.round(n));
+  // Progressive overload: each successive week within a phase run adds a little volume.
+  const overload = phaseRunOrdinal;
 
   switch (type) {
     case 'limit-boulder':
@@ -191,7 +217,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           name: 'Limit bouldering',
           category: 'main',
           grip: 'mixed',
-          sets: round(6 * vol),
+          sets: round(6 * vol) + overload,
           targetGrade: currentGrade + (phase === 'peak' ? 1 : 0),
           targetRPE: phase === 'deload' ? 6 : 9,
           notes: 'Few hard moves, long rest. Stop on form breakdown.',
@@ -205,27 +231,29 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           name: '4×4 power-endurance',
           category: 'main',
           grip: 'mixed',
-          sets: round(4 * vol),
+          sets: round(4 * vol) + overload,
           targetGrade: Math.max(VB, currentGrade - 1),
           targetRPE: phase === 'deload' ? 6 : 8,
           notes: '4 problems × 4 rounds at onsight grade.',
           content: mainContentFor(type),
         },
       ];
-    case 'volume-technique':
+    case 'volume-technique': {
+      const drill = drillForWeek(weekIndex);
       return [
         {
           id: 'main-volume',
           name: 'Volume + drill focus',
           category: 'main',
           grip: 'open-hand',
-          sets: round(12 * vol),
+          sets: round(12 * vol) + overload,
           targetGrade: Math.max(VB, currentGrade - 2),
           targetRPE: 6,
-          notes: 'Moderate grades, one deliberate drill (e.g. silent feet).',
+          notes: `Moderate grades. This week's drill: ${drill.name} — ${drill.description}`,
           content: mainContentFor(type),
         },
       ];
+    }
     case 'antagonist-prehab':
       return [
         {
@@ -233,7 +261,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           name: 'Antagonist + prehab circuit',
           category: 'main',
           grip: 'open-hand',
-          sets: round(3 * vol),
+          sets: round(3 * vol) + overload,
           targetRPE: 6,
           notes: 'Shoulder, wrist/TFCC (ECU), finger-extensor band work.',
           content: mainContentFor(type),
@@ -263,10 +291,11 @@ function buildSession(
   type: SessionType,
   phase: PhaseKind,
   currentGrade: number,
+  phaseRunOrdinal: number,
 ): PlannedSession {
   const blocks: Block[] = [
     ...generateWarmup({ injuryActive: false }),
-    ...mainBlocksFor(type, phase, currentGrade),
+    ...mainBlocksFor(type, phase, currentGrade, weekIndex, phaseRunOrdinal),
     cooldownPrehab(),
   ];
   return {
@@ -284,8 +313,18 @@ export function generateProgram(profile: UserProfile, startDate: string): Progra
   const rotation = sessionPlanFor(profile.sessionsPerWeek);
 
   const weeks: ProgramWeek[] = PHASE_PATTERN.map((phase, weekIndex) => {
+    // How many earlier weeks share this phase — drives progressive overload (BC-48).
+    const phaseRunOrdinal = PHASE_PATTERN.slice(0, weekIndex).filter((p) => p === phase).length;
     const sessions = rotation.map((type, dayIndex) =>
-      buildSession(programId, weekIndex, dayIndex, type, phase, profile.currentGrade),
+      buildSession(
+        programId,
+        weekIndex,
+        dayIndex,
+        type,
+        phase,
+        profile.currentGrade,
+        phaseRunOrdinal,
+      ),
     );
     return { weekIndex, phase, sessions };
   });
