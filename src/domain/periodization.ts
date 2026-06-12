@@ -12,6 +12,7 @@ import type {
 } from './types';
 import { generateWarmup } from './warmup';
 import { VB } from './grade';
+import type { ExerciseContent } from './exerciseContent';
 
 export const PHASE_PATTERN: PhaseKind[] = ['hard', 'hard', 'deload', 'hard', 'peak', 'deload'];
 
@@ -103,6 +104,81 @@ function sessionPlanFor(sessionsPerWeek: number): SessionType[] {
   return plan;
 }
 
+/** BC-47: cited how-to per main session type, shown in the session player so a
+ *  climber who's never run a 4×4 can execute it from the screen. (Sources in
+ *  docs/research/2026-06-13-indoor-bouldering-program-best-practices.md §3.) */
+function mainContentFor(type: SessionType): ExerciseContent {
+  switch (type) {
+    case 'limit-boulder':
+      return {
+        imageId: 'limit-boulder',
+        steps: [
+          'Warm up fully first — fatigue has no place in limit work.',
+          'Pick a problem of 3–5 moves at your absolute limit.',
+          'Give a focused attempt, then rest 3–5 minutes (shoes off) before the next go.',
+          'Stop the problem the moment form breaks down; switch to another at the same level.',
+        ],
+        cues: ['Max effort, full recovery', 'Quality over quantity', 'Stop on form breakdown'],
+        commonMistakes: [
+          'Short-resting between attempts (turns it into endurance)',
+          'Grinding a problem past form breakdown',
+          'Too much total volume — keep it low',
+        ],
+      };
+    case 'power-endurance':
+      return {
+        imageId: 'power-endurance-4x4',
+        dosage: '4 boulders × 4 rounds, 4 min rest between rounds',
+        steps: [
+          'Pick 4 boulders a touch below your flash grade.',
+          'Climb all 4 back-to-back with no rest — that is one round.',
+          'Rest 4 minutes, then repeat for 4 total rounds.',
+          'Rounds 3–4 should feel very pumped, but you should not be repeatedly falling.',
+        ],
+        cues: ['Back-to-back, no rest within a round', 'Pick the right grade', 'Keep moving'],
+        commonMistakes: [
+          'Choosing boulders too hard so you fall mid-round',
+          'Resting between problems within a round',
+          'Skipping the full warm-up before starting',
+        ],
+      };
+    case 'volume-technique':
+      return {
+        imageId: 'volume-technique',
+        steps: [
+          'Pick 10–20 boulders 3–4 grades below your flash level.',
+          'Choose 1–2 technique intentions for the session (e.g. silent feet, heel hooks).',
+          'Climb with those intentions front of mind, resting generously.',
+          'Keep it clean — the goal is skill, not fatigue.',
+        ],
+        cues: ['Lots of easy mileage', 'One or two focuses', "Don't build fatigue"],
+        commonMistakes: [
+          'Climbing too hard so technique falls apart',
+          'No clear intention — just mindless laps',
+          'Pumping out (this is a skill day, not endurance)',
+        ],
+      };
+    case 'antagonist-prehab':
+      return {
+        imageId: 'antagonist-prehab',
+        steps: [
+          'Push work to balance pulling: push-ups or band overhead press.',
+          'Wrist/TFCC: ECU pronation with a light band.',
+          'Finger-extensor band work + rotator-cuff and scapular control.',
+          'Keep it light and controlled — this is balance work, not a max effort.',
+        ],
+        cues: ['Controlled tempo', 'Full range', 'Light load'],
+        commonMistakes: [
+          'Going heavy and turning prehab into a hard workout',
+          'Rushing the reps',
+          'Skipping it because it is not climbing',
+        ],
+      };
+    default:
+      return { steps: [], cues: [], commonMistakes: [] };
+  }
+}
+
 function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number): Block[] {
   const vol = PHASE_VOLUME[phase];
   const round = (n: number): number => Math.max(1, Math.round(n));
@@ -119,6 +195,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           targetGrade: currentGrade + (phase === 'peak' ? 1 : 0),
           targetRPE: phase === 'deload' ? 6 : 9,
           notes: 'Few hard moves, long rest. Stop on form breakdown.',
+          content: mainContentFor(type),
         },
       ];
     case 'power-endurance':
@@ -132,6 +209,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           targetGrade: Math.max(VB, currentGrade - 1),
           targetRPE: phase === 'deload' ? 6 : 8,
           notes: '4 problems × 4 rounds at onsight grade.',
+          content: mainContentFor(type),
         },
       ];
     case 'volume-technique':
@@ -145,6 +223,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           targetGrade: Math.max(VB, currentGrade - 2),
           targetRPE: 6,
           notes: 'Moderate grades, one deliberate drill (e.g. silent feet).',
+          content: mainContentFor(type),
         },
       ];
     case 'antagonist-prehab':
@@ -157,6 +236,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           sets: round(3 * vol),
           targetRPE: 6,
           notes: 'Shoulder, wrist/TFCC (ECU), finger-extensor band work.',
+          content: mainContentFor(type),
         },
       ];
     default:

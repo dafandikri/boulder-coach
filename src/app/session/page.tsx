@@ -25,6 +25,8 @@ import { Callout } from '@/app/components/Callout';
 import { GradePill } from '@/app/components/GradePill';
 import { BackLink } from '@/app/components/BackLink';
 import { Spinner } from '@/app/components/Spinner';
+import { ExerciseDetail } from '@/app/components/ExerciseDetail';
+import { hasRichContent } from '@/domain/exerciseContent';
 
 /** Audible + haptic "rest over" cue. Lives in the (gate-blind) component because
  *  it touches browser-only APIs; all the *decisions* about WHEN to fire are the
@@ -81,7 +83,17 @@ export default function SessionPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [entries, setEntries] = useState<Record<string, BlockEntry>>({});
   const [warmupChecked, setWarmupChecked] = useState<Set<string>>(new Set());
+  const [openHowTo, setOpenHowTo] = useState<Set<string>>(new Set());
   const [durationMin, setDuration] = useState(60);
+
+  const toggleHowTo = useCallback((id: string): void => {
+    setOpenHowTo((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   // Rest timer: per block we store the wall-clock END timestamp (ms), or null when
   // idle. `now` re-derives the countdown from the clock each tick, so a screen-lock
@@ -293,6 +305,26 @@ export default function SessionPage() {
                   {b.targetGrade !== undefined ? ` · ${formatGrade(b.targetGrade)}` : ''} · RPE{' '}
                   {b.targetRPE}
                 </p>
+
+                {b.content && hasRichContent(b.content) && (
+                  <div style={{ marginTop: 10 }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={openHowTo.has(b.id) ? 'x' : 'info'}
+                      onClick={() => {
+                        toggleHowTo(b.id);
+                      }}
+                    >
+                      {openHowTo.has(b.id) ? 'Hide how-to' : 'How to do this'}
+                    </Button>
+                    {openHowTo.has(b.id) && (
+                      <div style={{ marginTop: 12 }}>
+                        <ExerciseDetail content={b.content} />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <label
                   className="flex items-center gap-2"

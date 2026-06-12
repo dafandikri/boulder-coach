@@ -87,6 +87,21 @@ describe('generateProgram', () => {
     }
   });
 
+  it('gives every main block detailed instructions + an image (BC-47)', () => {
+    const p = generateProgram(profile, '2026-06-09');
+    for (const w of p.weeks) {
+      for (const s of w.sessions) {
+        for (const b of s.blocks) {
+          if (b.category === 'main') {
+            expect(b.content).toBeDefined();
+            expect(b.content!.steps.length).toBeGreaterThan(0);
+            expect(b.content!.imageId).toBeTruthy();
+          }
+        }
+      }
+    }
+  });
+
   it('makes the single weekly session a limit day when sessionsPerWeek is 1', () => {
     const p = generateProgram({ ...profile, sessionsPerWeek: 1 }, '2026-06-09');
     expect(p.weeks[0]!.sessions.map((s) => s.type)).toEqual(['limit-boulder']);

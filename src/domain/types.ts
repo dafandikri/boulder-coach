@@ -1,3 +1,5 @@
+import type { ExerciseContent } from './exerciseContent';
+
 /** V-scale bouldering grade, e.g. 4 === V4. */
 export type VGrade = number;
 
@@ -24,6 +26,9 @@ export interface Block {
   targetGrade?: VGrade;
   targetRPE: number; // 1..10
   notes?: string;
+  /** BC-47: detailed how-to (steps/cues/mistakes/image) shown in the session player,
+   *  so tapping "Start" gives a self-guiding session, not just a one-line note. */
+  content?: ExerciseContent;
 }
 
 export interface PlannedSession {
