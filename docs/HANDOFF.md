@@ -26,16 +26,26 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Current state — 2026-06-12 (last touched by: Claude Opus 4.8)
 
-- **BC-23 — Boulder Coach Design System adopted (full frontend reskin). Gate green, awaiting commit.**
+- **BC-23 follow-up (this session) — prod-only brand-font regression fixed.** After BC-23 merged, the
+  app looked "bland / just HTML" **in production only**: the three brand webfonts weren't loading, so
+  prod fell back to system fonts (colors were fine). Root cause + fix in **LEARNINGS 2026-06-12** — the
+  fonts now load via a `<link>` in `layout.tsx` (was a CSS `@import` the prod optimizer dropped), Geist
+  was removed, and a Tier-1 guard blocks the pattern. Gate green; working tree holds this fix, awaiting
+  commit. Diagnosis was empirical (prod build + Playwright screenshots), not dev — `next dev` masked it.
+- **BC-23 — Boulder Coach Design System adopted (full frontend reskin). Merged (PRs #17/#18).**
   The plain Tailwind/Geist grayscale UI is now the bright climbing-gym brand: warm chalk surfaces,
   basalt ink, the climbing-hold rainbow, coral brand, chunky Baloo 2 / Nunito / Space Mono type, pebble
   radii, and the signature "sticker pop" on buttons/feature cards. **Also closes BC-11** (bottom nav).
   - **Tokens + fonts:** all design tokens are CSS custom properties in `src/app/globals.css`. The 3
-    webfonts load via a runtime CSS `@import` (browser fetch — NOT `next/font/google`, which broke the
-    offline `build` gate step; LEARNINGS 2026-06-10). **Gotcha fixed:** the font `@import` MUST sit
-    **before** `@import 'tailwindcss'` — Tailwind expands into real rules, and a bare `@import` is only
-    valid before any rule, so after it the CSS optimizer warns and can **drop the font import** (killing
-    the webfonts). Order is now font-first.
+    webfonts (Baloo 2 / Nunito / Space Mono) load via a real `<link rel="stylesheet">` in `layout.tsx`
+    (React 19 hoists it to `<head>`) — **NOT** a CSS `@import`, and **NOT** `next/font/google`. Why:
+    `next/font/google` fetches at build time and flaked the offline `build` gate (LEARNINGS 2026-06-10);
+    a CSS `@import` is dropped by the production optimizer once it's bundled behind any `@font-face`, so
+    prod silently fell back to system fonts (the "bland in prod" bug — **LEARNINGS 2026-06-12**). A
+    `<link>` is a runtime browser fetch (deterministic build) that CSS bundling can't touch. The unused
+    Geist `next/font` was removed (it was the `@font-face` jammed ahead of the import). Guard:
+    `tests/build/deterministic-fonts.test.ts` (Tier-1) now bans remote `@import url(http…)` in src CSS
+    and requires the font `<link>` in `layout.tsx`.
   - **14 TS primitives** under `src/app/components/` (presentational only, no `any`, gate-blind by
     design — they're outside the coverage `include` globs, so they carry no logic): `Button`, `Card`,
     `SessionCard`, `Badge`, `GradePill`, `Chip`, `Callout`, `ProgressBar`, `StatCard`, `Icon`,

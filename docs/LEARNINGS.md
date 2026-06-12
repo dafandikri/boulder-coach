@@ -30,6 +30,34 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-12 — src/app/globals.css + layout.tsx — runtime (prod-only, gate-blind)
+
+- **Task:** BC-23 follow-up — user reported the shipped app looks "bland, dark, not bright… I suspect
+  only HTML." Dev looked correct; the regression was production-only.
+- **What failed:** In the **production** build the three brand webfonts (Baloo 2 / Nunito / Space Mono)
+  did not load — the app fell back to system fonts and lost its chunky, playful character (read as
+  "bland / just HTML"). Colors/background were fine; only the type was wrong. Invisible in `next dev`.
+- **Root cause:** The fonts were loaded with a CSS `@import url('…googleapis…')` at the top of
+  `globals.css`. A CSS `@import` is only valid **before all other rules**. `layout.tsx` also pulled in
+  Geist via `next/font` (leftover create-next-app scaffolding, unused by the brand), whose `@font-face`
+  rules get **concatenated ahead of** globals.css in the bundled chunk. With a real rule now in front
+  of it, the production CSS optimizer silently **drops the `@import`** — and the webfonts with it. The
+  prior "put the @import first in globals.css" fix was defeated because the ordering that matters is in
+  the _bundled_ chunk, not the source file. Confirmed by grep: prod CSS bundle had **0** occurrences of
+  `fonts.googleapis.com` and started with `@font-face{font-family:GeistSans…}`.
+- **Fix:** (1) Removed Geist `next/font` from `layout.tsx` entirely (unused + the cause) and dropped the
+  `geist` dependency. (2) Load the brand webfonts with a real `<link rel="stylesheet">` (+ preconnects)
+  in `layout.tsx` — React 19 hoists it to `<head>`. A `<link>` is a runtime browser fetch (build stays
+  deterministic, same property the `@import` had) but is **immune to CSS bundling**, so it can't be
+  dropped. (3) Removed the now-redundant `@import` from `globals.css`. Verified in a real prod build +
+  Playwright: `document.fonts` now carries 62 brand faces and headings render in Baloo 2.
+- **Prevention:** **2nd occurrence of "brand fonts don't reach production" → promoted to Tier-1.**
+  Extended `tests/build/deterministic-fonts.test.ts`: (a) no src CSS may use a remote `@import url(http…)`
+  (the prod optimizer drops it), and (b) `layout.tsx` must load the fonts via `<link rel="stylesheet">`
+  to `fonts.googleapis.com`. Either broken pattern now fails the gate. Also added `.playwright-mcp/` to
+  `.gitignore` + `.prettierignore` (MCP scratch snapshots were tripping `format:check`).
+- **Attempts to green:** 1 (diagnosis via prod build grep + prod-server screenshot; fix verified same way).
+
 ## 2026-06-11 — scripts/crew/adapters/claude.sh — runtime (live crew run, gate-blind)
 
 - **Task:** First live `pnpm crew start` (parallel workers on BC-06/08/09).
