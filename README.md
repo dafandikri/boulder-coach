@@ -28,6 +28,29 @@ Before editing a file, pull its relevant lessons with `pnpm learnings <file-or-k
 is long-term memory you **retrieve from on demand**, not read whole each session. Context lives in the
 repo and is enforced, so a memoryless agent picks up exactly where the last left off.
 
+## Live deployment
+
+**Production: https://boulder-coach-gamma.vercel.app** — installable PWA over HTTPS.
+
+Hosted on Vercel (project `erdafas-projects/boulder-coach`), zero-config: Vercel auto-detects the
+Next.js framework and pnpm. The app is fully client-side (Dexie/IndexedDB) so there are **no
+environment variables and no `vercel.json`/`vercel.ts`** to maintain. The service worker is
+network-first for navigations, so a new deploy reaches online users immediately — only bump `CACHE`
+in `public/sw.js` on a release that must force-purge the cached app shell.
+
+```bash
+# First time only — authenticate the CLI (interactive, GitHub OAuth):
+pnpm dlx vercel@latest login
+
+# Deploy the current tree to production:
+pnpm dlx vercel@latest link --yes --project boulder-coach   # writes .vercel/ (gitignored)
+pnpm dlx vercel@latest deploy --prod --yes
+```
+
+The Vercel project is connected to this GitHub repo, so pushes to the connected branch can also
+auto-deploy. (The Vercel **MCP** OAuth token authorizes read/manage tools only — it cannot upload a
+local build; use the CLI or git push to publish.)
+
 ## System architecture
 
 Layered, with pure domain logic decoupled from storage and UI:

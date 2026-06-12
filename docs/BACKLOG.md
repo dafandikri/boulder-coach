@@ -251,7 +251,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   `tests/pwa/manifest.test.ts` extended to require the maskable purpose + both sizes.
 - **Files:** `public/manifest.webmanifest`, `tests/pwa/manifest.test.ts`
 
-### BC-15 · Deploy to Vercel (production URL) — `open`
+### BC-15 · Deploy to Vercel (production URL) — `done (badc81f + docs, 2026-06-12)`
 
 - **Type:** infra · **Priority:** P2 · **Complexity:** S
 - **Problem:** the app only exists on localhost; "installable PWA at the gym" requires HTTPS
@@ -260,6 +260,11 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   repo — agents must not push); README documents the URL + deploy flow; service-worker update path
   verified once on the live origin (bump `CACHE` checklist noted in HANDOFF).
 - **Files:** `README.md`, `docs/HANDOFF.md`
+- **Done:** live at **https://boulder-coach-gamma.vercel.app** (project `erdafas-projects/boulder-coach`,
+  git-connected). Zero-config (Next.js + pnpm auto-detected, no env vars, no `vercel.json`). Human
+  authenticated the CLI (`vercel login`); deploy ran via `vercel link --yes` → `vercel deploy --prod`.
+  README "Live deployment" documents the URL + flow; SW network-first update path verified (HTTP 200 on
+  `/`, `/manifest.webmanifest`, `/sw.js`). Deploy gotcha (MCP token ≠ CLI token) in LEARNINGS 2026-06-12.
 
 ### BC-16 · Installability + offline e2e in CI (carried from HANDOFF) — `open`
 
