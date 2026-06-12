@@ -26,12 +26,15 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ## Current state — 2026-06-12 (last touched by: Claude Opus 4.8)
 
-- **BC-23 follow-up (this session) — prod-only brand-font regression fixed.** After BC-23 merged, the
-  app looked "bland / just HTML" **in production only**: the three brand webfonts weren't loading, so
-  prod fell back to system fonts (colors were fine). Root cause + fix in **LEARNINGS 2026-06-12** — the
-  fonts now load via a `<link>` in `layout.tsx` (was a CSS `@import` the prod optimizer dropped), Geist
-  was removed, and a Tier-1 guard blocks the pattern. Gate green; working tree holds this fix, awaiting
-  commit. Diagnosis was empirical (prod build + Playwright screenshots), not dev — `next dev` masked it.
+- **BC-23 follow-up (this session) — prod-only brand-font regression fixed and committed.** After
+  BC-23 merged, the app looked "bland / just HTML" **in production only**: the three brand webfonts
+  weren't loading, so prod fell back to system fonts (colors were fine). Root cause + fix in
+  **LEARNINGS 2026-06-12** — the fonts now load via a `<link>` in `layout.tsx` (was a CSS `@import`
+  the prod optimizer dropped), Geist was removed, and a Tier-1 guard blocks the pattern. The fix
+  was committed (ec49628), the branch `agents/install-chromium-for-playwright` was pushed, and a PR
+  was opened: https://github.com/dafandikri/boulder-coach/pull/20. The new e2e nav smoke test
+  `e2e/nav.spec.ts` was added and passes locally (Playwright). Local `pnpm gate` is green; CI's
+  required "quality" check is running on the PR.
 - **BC-23 — Boulder Coach Design System adopted (full frontend reskin). Merged (PRs #17/#18).**
   The plain Tailwind/Geist grayscale UI is now the bright climbing-gym brand: warm chalk surfaces,
   basalt ink, the climbing-hold rainbow, coral brand, chunky Baloo 2 / Nunito / Space Mono type, pebble
@@ -62,13 +65,13 @@ file is the live position** — update it as the LAST step of any session (see "
     span, like `HoldMark` — no `<img>`); hold pebbles decorate the other headers/empty states.
   - **One deliberate YAGNI deviation from BC-23's criteria** (documented in the PBI): `Eyebrow` is the
     `.bc-eyebrow` utility class, not a component — pure presentation used inline on every screen.
-- **Next actions:** (1) **commit** BC-23 (`feat(ui): adopt Boulder Coach Design System (BC-23, closes
-BC-11)`) — not yet committed; the working tree holds the reskin. (2) Optional follow-up still open
-  from BC-22: Today has no link to `/exercises` (direct-URL only) — the new bottom nav does **not**
-  cover it either, so fold an entry point in. (3) **BC-25 (dark mode)** is now unblocked — the light
-  token layer it extends is in place.
-- **Verify before commit:** `git status` shows only the intended reskin files; `pnpm gate` is green
-  (re-run after `git worktree prune` if any agent worktrees linger). Was last run green on 2026-06-12.
+- **Next actions:** (1) Wait for the PR's required "quality" CI check to complete; once it is green,
+  merge the PR (it will be merged automatically on a green `quality` check). (2) Optional follow-up
+  still open from BC-22: Today has no link to `/exercises` (direct-URL only) — the new bottom nav
+  does **not** cover it either, so fold an entry point in. (3) **BC-25 (dark mode)** is now unblocked
+  — the light token layer it extends is in place.
+- **Verify before finishing:** `pnpm gate` is green locally; CI will run the same gate on the PR. If
+  anything in CI fails, append a LEARNINGS entry and update HANDOFF.md in the same commit.
 
 ## Current state — 2026-06-11 (last touched by: Claude Opus 4.8)
 
