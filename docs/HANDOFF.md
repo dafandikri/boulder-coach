@@ -24,6 +24,23 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-51 shipped — PO feedback COMPLETE, last touched by: Claude Opus 4.8)
+
+- **BC-51 DONE (PR #35) — Insights now has a personalised "Coach's read".** Pure
+  `summariseInsights(insights, acwr, asOf)` composes 1–4 prioritised supportive-coach sentences:
+  **safety leads** (ACWR > 1.5 or recent sharp pain first), then a pyramid read (broad base → ready to
+  push; top-heavy → broaden), then a consistency close. Cold start → one honest "log a few sessions"
+  line, never NaN/fake-confidence. Renders as a "Coach's read" card above the charts. Deterministic,
+  on-device (sibling of the future LLM BC-42). TDD: `insights.test.ts` covers every branch + the
+  safety-first ordering + empty state. `pnpm gate` green.
+- **🎉 The entire PO hands-on-feedback list is now delivered.** All 8 code PBIs shipped to `main`
+  (BC-44 VB/V0 · BC-45 1–7 sessions · BC-46 content model · BC-47 rich session player · BC-48 program
+  variation + clickable · BC-49 drills detail · BC-50 prehab detail · BC-51 Insights summary) + BC-19
+  absorbed. Each via TDD → green gate → PR → CI → rebase-merge.
+- **Open backlog is getting large again** — consider condensing BC-44…BC-51 into the Shipped log next
+  grooming pass (keep them as `### … done` headers per the Crew-scheduler rule). Remaining open work is
+  unrelated P2/P3 (data-safety BC-31/32/33/34, harness BC-26/35/36/37, charts BC-38, etc.).
+
 ## Current state — 2026-06-13 (BC-48 shipped — program variation + clickable program, last touched by: Claude Opus 4.8)
 
 - **BC-48 DONE (PR #34) — the program no longer reads the same every week, and you can click into it.**
