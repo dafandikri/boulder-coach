@@ -6,6 +6,7 @@ import {
   type ExercisePurpose,
 } from '../../src/domain/offWallExercises';
 import type { SessionType, PhaseKind } from '../../src/domain/types';
+import { hasRichContent } from '../../src/domain/exerciseContent';
 
 const ALL_SESSION_TYPES: SessionType[] = [
   'limit-boulder',
@@ -40,6 +41,16 @@ describe('off-wall exercise library', () => {
   it('exercise ids are unique', () => {
     const ids = OFF_WALL_EXERCISES.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('every exercise carries dosage + rich detail content (BC-50)', () => {
+    for (const ex of OFF_WALL_EXERCISES) {
+      expect(ex.dosage).toBeTruthy(); // sets × reps prescription
+      expect(ex.steps.length).toBeGreaterThan(0);
+      expect(Array.isArray(ex.commonMistakes)).toBe(true);
+      expect(ex.imageId).toBeTruthy();
+      expect(hasRichContent(ex)).toBe(true);
+    }
   });
 
   it('filters by purpose', () => {

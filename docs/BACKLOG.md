@@ -501,9 +501,15 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     resolver returns the right drill.
 - **Files:** `src/domain/drills.ts`, `src/app/drills/page.tsx`
 
-### BC-50 · Prehab / off-wall — dosage, how-to steps & images + detail view — `open`
+### BC-50 · Prehab / off-wall — dosage, how-to steps & images + detail view — `done (PR #32)`
 
 - **Type:** ux/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-46, BC-22
+- **Shipped:** `OffWallExercise extends ExerciseContent`; every exercise now has a concrete `dosage`
+  (sets × reps), `steps`, `commonMistakes`, and an `imageId`. `/exercises` shows the dosage in the
+  list and is now list → "Instructions" → `ExerciseDetail`. **Additive-only safety contract preserved**
+  — content is instructional text only, with no path into `adaptation.ts`/`loadMetrics.ts`; the
+  `prescribeOffWall` additive invariants are unchanged and still green. TDD: `offWallExercises.test.ts`
+  asserts every exercise carries dosage + rich content. `pnpm gate` green.
 - **Problem:** `offWallExercises.ts` gives each exercise a one-line `description` and no **dosage**
   (sets × reps), no how-to steps, no images; `/exercises` lists them flat. The PO wants prehab to
   "have instructions, go into detail, have images — same as drills."
