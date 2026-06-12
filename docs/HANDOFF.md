@@ -24,6 +24,21 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-50 shipped — prehab/off-wall detail, last touched by: Claude Opus 4.8)
+
+- **BC-50 DONE (PR #32) — prehab/off-wall exercises now have dosage + step-by-step + images.**
+  `OffWallExercise extends ExerciseContent`; every exercise carries a concrete `dosage` (sets × reps),
+  `steps`, `commonMistakes`, `imageId`. `/exercises` shows dosage in the list and is now list →
+  "Instructions" → `ExerciseDetail`. **Additive-only safety contract preserved** (content is text only,
+  no path into the load engine; `prescribeOffWall` invariants unchanged + green). TDD:
+  `offWallExercises.test.ts` asserts dosage + rich content per exercise. `pnpm gate` green.
+- **6 of 8 PO-feedback PBIs shipped (BC-44/45/46/49/50). Remaining: BC-47** (session-block instructions
+  — reuse `ExerciseContent`/`ExerciseDetail`), **BC-48** (program week variation + clickable program),
+  **BC-51** (Insights personalised summary).
+- **Concurrency note:** a parallel CV-research session has a local-only `main` commit (`b728c91` →
+  rebased) with the CV feasibility doc + BC-24 spec; it's unpushed and docs-only. I base feature branches
+  on `origin/main` to keep PRs clean of it.
+
 ## Current state — 2026-06-13 (BC-46 + BC-49 shipped — exercise content model + drills, last touched by: Claude Opus 4.8)
 
 - **BC-46 + BC-49 DONE (PR #30) — the shared exercise content model + the first consumer (drills).**

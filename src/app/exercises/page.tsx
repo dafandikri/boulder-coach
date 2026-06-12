@@ -8,9 +8,11 @@ import { prescribeOffWall, type OffWallPrescription } from '@/domain/offWallExer
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
 import { Card } from '@/app/components/Card';
 import { Badge } from '@/app/components/Badge';
+import { Button } from '@/app/components/Button';
 import { Callout } from '@/app/components/Callout';
 import { BackLink } from '@/app/components/BackLink';
 import { Spinner } from '@/app/components/Spinner';
+import { ExerciseDetail } from '@/app/components/ExerciseDetail';
 
 // BC-22: off-wall work is ADDITIVE ONLY — supplementary balance/mobility, never
 // a climbing-load increase. This page ONLY renders; the prescription (which
@@ -19,6 +21,7 @@ import { Spinner } from '@/app/components/Spinner';
 
 export default function ExercisesPage() {
   const [load, setLoad] = useState<LoadState<OffWallPrescription>>({ status: 'loading' });
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +58,31 @@ export default function ExercisesPage() {
   }
 
   const { purposes, exercises } = load.data;
+  const open = exercises.find((e) => e.id === openId);
+
+  // Detail view — dosage + step-by-step + image (BC-46/BC-50).
+  if (open) {
+    return (
+      <main className="space-y-4 p-5">
+        <button
+          type="button"
+          onClick={() => {
+            setOpenId(null);
+          }}
+          className="bc-eyebrow"
+          style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--brand-deep)' }}
+        >
+          ← All off-wall work
+        </button>
+        <div className="flex items-center gap-2">
+          <Badge tone="grape">{open.purpose}</Badge>
+        </div>
+        <Card>
+          <ExerciseDetail title={open.name} content={open} />
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="space-y-4 p-5">
@@ -79,6 +107,30 @@ export default function ExercisesPage() {
             <p style={{ marginTop: 4, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
               {ex.description}
             </p>
+            {ex.dosage ? (
+              <p
+                style={{
+                  marginTop: 6,
+                  fontSize: 'var(--fs-xs)',
+                  color: 'var(--text-soft)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {ex.dosage}
+              </p>
+            ) : null}
+            <div style={{ marginTop: 12 }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="arrow-right"
+                onClick={() => {
+                  setOpenId(ex.id);
+                }}
+              >
+                Instructions
+              </Button>
+            </div>
           </Card>
         ))}
       </div>
