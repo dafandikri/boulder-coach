@@ -438,9 +438,16 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Tested: `imagePathFor` (present/missing), the content-shape builders.
 - **Files:** `src/domain/exerciseContent.ts`, `src/app/components/ExerciseDetail.tsx`, `public/exercises/README.md`
 
-### BC-47 · Rich session player — detailed todos, instructions & images per block — `open`
+### BC-47 · Rich session player — detailed todos, instructions & images per block — `done (PR #33)`
 
 - **Type:** ux/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-46, BC-04
+- **Shipped:** `Block` gained an optional `content?: ExerciseContent` (BC-46 shape). `periodization`'s
+  new `mainContentFor(type)` populates every main block with cited specifics (limit = 3–5 moves + long
+  rest; 4×4 = 4 boulders × 4 rounds × 4-min rest; volume = 10–20 climbs 3–4 below flash + 1–2 drill
+  intentions; antagonist circuit). The session player shows a collapsible **"How to do this"** →
+  `ExerciseDetail` (image + steps + cues + mistakes) per block — closing "tapping Start is vague".
+  Session-type illustrations added under `public/exercises/`. TDD: `periodization.test.ts` asserts
+  every main block carries steps + an image. `pnpm gate` green.
 - **Problem:** the home page tells the climber _what_ to do, but tapping **Start** drops them into a
   session where each block is just a name + `target: N × grip · Vx · RPE`. There are **no step-by-step
   instructions, no form cues, no images** — the "vague after Start" complaint. `Block.notes` is a

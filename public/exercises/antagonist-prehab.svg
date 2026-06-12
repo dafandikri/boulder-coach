@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" role="img" aria-label="Antagonist and prehab circuit: push and band work">
+  <rect width="320" height="200" fill="#f3eefb"/>
+  <path d="M80 110 q80 -40 160 0" fill="none" stroke="#b79be0" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="80" cy="110" r="11" fill="#7a4fc0"/>
+  <circle cx="240" cy="110" r="11" fill="#7a4fc0"/>
+  <text x="160" y="165" text-anchor="middle" font-family="monospace" font-size="12" fill="#7a4fc0">push · band · prehab — light &amp; controlled</text>
+</svg>

@@ -24,6 +24,19 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-47 shipped — rich session player, last touched by: Claude Opus 4.8)
+
+- **BC-47 DONE (PR #33) — tapping "Start" is no longer vague.** `Block` gained `content?: ExerciseContent`;
+  `periodization`'s `mainContentFor(type)` populates every main block with cited how-to (limit = 3–5
+  moves + long rest; 4×4 = 4 boulders × 4 rounds × 4-min rest; volume = 10–20 climbs + 1–2 intentions;
+  antagonist circuit). The session player shows a collapsible **"How to do this"** → `ExerciseDetail`
+  (image + steps + cues + mistakes) per block. Session-type SVGs added. TDD: `periodization.test.ts`
+  asserts every main block carries steps + an image. `pnpm gate` green.
+- **7 of 8 PO-feedback PBIs shipped (BC-44/45/46/47/49/50). Remaining: BC-48** (program week variation +
+  clickable program drill-down) and **BC-51** (Insights personalised summary).
+- **Note (BC-13 dep cycle avoided):** `types.ts` now imports a type from `exerciseContent.ts`, which
+  imports nothing — acyclic, depcruise green.
+
 ## Current state — 2026-06-13 (BC-50 shipped — prehab/off-wall detail, last touched by: Claude Opus 4.8)
 
 - **BC-50 DONE (PR #32) — prehab/off-wall exercises now have dosage + step-by-step + images.**
