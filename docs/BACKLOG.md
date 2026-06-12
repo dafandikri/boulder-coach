@@ -299,7 +299,9 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   signal is _trend_: load over weeks, ACWR trajectory toward/away from the red band, soreness frequency
   by body part. None of it is plotted.
 - **Value:** the climber _sees_ the story (ramping too fast, plateauing, a recurring sore finger)
-  instead of reading one number.
+  instead of reading one number. Pairs with **BC-51** (the plain-language summary that reads the same
+  chart out loud) — the PO asked for "a graph with a personalised analyser summary"; BC-38 is the
+  graph, BC-51 the summary.
 - **Acceptance criteria:**
   - Pure series-builders in `src/domain/insights.ts` (`loadSeries`, `acwrSeries`, `sorenessFrequency`) —
     `asOf`-windowed, tested; the page only renders.
@@ -338,6 +340,176 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Pure, `asOf`-driven, tested incl. the streak-break boundary.
 - **Files:** `src/domain/consistency.ts`, `src/app/page.tsx`
 
+> **Backlog extended 2026-06-13 (Claude Opus 4.8, PO hands-on-feedback session):** BC-44…BC-51 added
+> from direct use of the live app, each verified a real gap against the code and grounded in
+> [`research/2026-06-13-indoor-bouldering-program-best-practices.md`](research/2026-06-13-indoor-bouldering-program-best-practices.md)
+> (cited coaching sources). Theme: **content depth & onboarding fidelity** — the app prescribes the
+> right _shape_ but the text is thin, the floor excludes beginners, frequency is too narrow, and the
+> program reads the same every week.
+
+> **— Content depth & onboarding fidelity (the PO's hands-on feedback) —**
+
+### BC-44 · Extend the grade scale down to VB / V0 — `open`
+
+- **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-06
+- **Problem:** the V-scale's beginner floor is **VB (V-Basic) and V0** — where most new climbers
+  actually live — but `src/app/lib/bootstrap.ts` sets `MIN_GRADE = 1`, `validateProfile` rejects
+  anything below V1, and `periodization.ts` / `session/page.tsx` floor every target with
+  `Math.max(1, …)`. A genuine beginner can't even enter their grade, and `GradePill` only renders
+  `` `V${n}` `` (no "VB"). (Research §1.)
+- **Value:** the app can finally onboard and program for true beginners — the largest under-served
+  segment — without faking them up to V1.
+- **Acceptance criteria:**
+  - A pure `src/domain/grade.ts` owns the scale: `MIN_GRADE = -1` (VB) / `V0 = 0`, a
+    `formatGrade(g) → g < 0 ? 'VB' : 'V'+g`, and `isValidGrade`. `VGrade`'s doc comment documents the
+    `VB=-1, V0=0` encoding.
+  - `GradePill` and every `` `V${…}` `` call site render via `formatGrade` (so VB/V0 show correctly,
+    incl. the hold-color map). `bootstrap.ts` validation + the `Math.max(1, …)` floors in
+    `periodization.ts` read `MIN_GRADE`, not the literal `1`.
+  - Onboarding/profile expose VB & V0 as selectable grades; goal-grade validation still requires
+    `goal ≥ current`.
+  - Tested: `formatGrade` for VB/V0/V5; validation accepts VB/V0 and still rejects sub-VB; a VB profile
+    generates a program whose floored targets never throw / never render `V-1`.
+- **Files:** `src/domain/grade.ts`, `src/domain/periodization.ts`, `src/app/lib/bootstrap.ts`, `src/app/components/GradePill.tsx`, `src/app/profile/page.tsx`
+
+### BC-45 · Sessions/week range 1–7 with frequency guidance + load notes — `open`
+
+- **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-06
+- **Problem:** `sessionsPerWeek` is clamped **2..4** (`MIN_SESSIONS`/`MAX_SESSIONS` in `bootstrap.ts`)
+  and `sessionPlanFor` only has cases for 2/3/4. A once-a-week climber and a near-daily climber both
+  exist; the PO asked for "**1x or even 7x, but with notes of course**." High frequency without a
+  warning is an injury-load footgun. (Research §3 weekly-mix.)
+- **Value:** serves the realistic range of schedules and _teaches_ load awareness instead of silently
+  capping it.
+- **Acceptance criteria:**
+  - `MIN_SESSIONS = 1`, `MAX_SESSIONS = 7`; `sessionPlanFor` returns a sensible rotation for **1–7**
+    (1 = one quality session; high counts fill with volume/technique + recovery, **never** stacking
+    limit days — never two limit/PE days back-to-back, per the DUP tenet).
+  - A pure `src/domain/frequencyNotes.ts` returns guidance per frequency (e.g. 1× = "make it your
+    quality session"; ≥5× = an explicit **load-management caution** + a rest-day reminder). Surfaced on
+    the profile/onboarding frequency control.
+  - Additive-safety: raising frequency must not raise per-session intensity beyond the existing rules;
+    extra sessions skew to lower-intensity volume/skill/recovery.
+  - Tested: rotation for each of 1..7; the note text per band; the no-back-to-back-limit invariant.
+- **Files:** `src/domain/periodization.ts`, `src/domain/frequencyNotes.ts`, `src/app/lib/bootstrap.ts`, `src/app/profile/page.tsx`
+
+### BC-46 · Exercise content model — structured steps, dosage & image convention (foundation) — `open`
+
+- **Type:** infra/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** —
+- **Problem:** every exercise surface (session blocks, drills, prehab/off-wall) carries only a one-line
+  string. The PO wants **detailed todos, instructions, and images** across all of them. Building that
+  three separate times would diverge — this PBI is the **shared foundation** (the repo's "use the
+  tested helper, don't re-implement" rule). (Research §3, §6.)
+- **Value:** one content model + one detail component that BC-47/48/49/50 reuse — consistent,
+  testable, image-ready.
+- **Acceptance criteria:**
+  - A pure `src/domain/exerciseContent.ts` defines a reusable shape: `steps: string[]` (ordered
+    how-to), `cues: string[]` (form), `commonMistakes: string[]`, `dosage?` (sets×reps×rest),
+    `imageId?`, and a pure `imagePathFor(imageId)` resolving to a `public/exercises/<id>.*` convention
+    (feature-detect/placeholder when an asset is missing — no broken `<img>`).
+  - A presentational `src/app/components/ExerciseDetail.tsx` renders that shape (image + steps + cues +
+    mistakes + dosage), brand-consistent and a11y-labelled (pairs with BC-37). It's gate-blind by
+    design, so **all selection/format logic stays in `exerciseContent.ts`** (covered).
+  - At least a couple of real assets land under `public/exercises/` to prove the path convention;
+    missing-asset path renders a tasteful placeholder, tested via `imagePathFor`.
+  - Tested: `imagePathFor` (present/missing), the content-shape builders.
+- **Files:** `src/domain/exerciseContent.ts`, `src/app/components/ExerciseDetail.tsx`, `public/exercises/README.md`
+
+### BC-47 · Rich session player — detailed todos, instructions & images per block — `open`
+
+- **Type:** ux/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-46, BC-04
+- **Problem:** the home page tells the climber _what_ to do, but tapping **Start** drops them into a
+  session where each block is just a name + `target: N × grip · Vx · RPE`. There are **no step-by-step
+  instructions, no form cues, no images** — the "vague after Start" complaint. `Block.notes` is a
+  single sentence. (Research §3 has the concrete per-type parameters to show.)
+- **Value:** the session becomes self-guiding — a climber who's never done a 4×4 can execute it
+  correctly from the screen.
+- **Acceptance criteria:**
+  - `Block` gains optional structured content (reuse BC-46's shape: `steps`/`cues`/`imageId`/`dosage`);
+    `periodization.ts` populates each generated block with the cited specifics (limit = 3–5 moves, long
+    rest; 4×4 = 4 boulders × 4 rounds, 4-min rest; volume = 10–20 climbs 3–4 below flash, 1–2 drill
+    intentions; warm-up steps).
+  - The session player renders `ExerciseDetail` per block (collapsible to stay thumb-friendly) — the
+    logging controls are unchanged.
+  - Logic (which content for which block) lives in the covered domain layer, not the gate-blind page.
+  - Tested: generated blocks carry the right content per `SessionType`/phase; no block ships with empty
+    instructions.
+- **Files:** `src/domain/types.ts`, `src/domain/periodization.ts`, `src/app/session/page.tsx`
+
+### BC-48 · Week-to-week program variation + clickable program detail — `open`
+
+- **Type:** feature · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-46
+- **Problem:** **two real defects in one complaint** ("the program is still badly texted, every week is
+  the same … my advice: click on the program and see what exercises/todos with instructions and
+  images"). (1) `generateProgram` emits the **identical** `mainBlocksFor(...)` blocks for every week of
+  a phase — only `PHASE_VOLUME` scales the set count — so progressive overload is absent and weeks read
+  the same (Research §2). (2) `/program` lists weeks/phases but you can't **drill into** a week to see
+  the actual prescribed blocks with their (BC-47) instructions/images.
+- **Value:** the program _progresses_ (and _looks_ like it does), and becomes explorable instead of an
+  opaque phase list.
+- **Acceptance criteria:**
+  - `weekIndex` becomes a real input to block generation: within a phase, ramp intensity/volume
+    week-on-week (progressive overload) and **rotate** the technique-drill and prehab focus so
+    consecutive weeks differ (closes/absorbs the open **BC-19** drill-rotation idea — cross-ref it).
+    Stays pure + `asOf`-free; the safety contract (no back-to-back limit, additive-only) holds.
+  - `/program` gains a tap-through: week → session → the real blocks rendered with BC-47/BC-46
+    `ExerciseDetail` (instructions + images). Reuse the session-detail rendering; don't fork it.
+  - Tested: two weeks of the same phase are **not** byte-identical (different drill/progression);
+    the drill rotation cycles deterministically; clickable detail resolves a real session.
+- **Files:** `src/domain/periodization.ts`, `src/app/program/page.tsx`
+
+### BC-49 · Drills — step-by-step instructions, common mistakes & images + detail view — `open`
+
+- **Type:** ux/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-46
+- **Problem:** `drills.ts` gives each drill a one-line `description` + a few `cues[]`, and `/drills`
+  lists them flat. The PO wants drills that "have instructions, can go into detail, have images." No
+  step-by-step, no common-mistakes, no imagery, no detail view.
+- **Value:** the drill library becomes a real coaching reference, not a glossary.
+- **Acceptance criteria:**
+  - Each `Drill` adopts BC-46's content shape (`steps`, `commonMistakes`, `imageId`) alongside the
+    existing `cues`; the data is filled for every drill with accurate, sourced content.
+  - `/drills` becomes list → tap → `ExerciseDetail` (image + steps + cues + mistakes).
+  - Tested: every drill has non-empty `steps`; `getDrill`/category filters still hold; the detail
+    resolver returns the right drill.
+- **Files:** `src/domain/drills.ts`, `src/app/drills/page.tsx`
+
+### BC-50 · Prehab / off-wall — dosage, how-to steps & images + detail view — `open`
+
+- **Type:** ux/feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-46, BC-22
+- **Problem:** `offWallExercises.ts` gives each exercise a one-line `description` and no **dosage**
+  (sets × reps), no how-to steps, no images; `/exercises` lists them flat. The PO wants prehab to
+  "have instructions, go into detail, have images — same as drills."
+- **Value:** prehab/antagonist work becomes executable from the screen (correct dosage + form), which
+  is exactly where injury-prevention adherence is won or lost.
+- **Acceptance criteria:**
+  - Each `OffWallExercise` adopts BC-46's content shape incl. a concrete `dosage` (e.g. "3 × 12, slow
+    eccentric"); content filled for every exercise. **Additive-only safety contract preserved** — this
+    module still must never raise climbing load and stays out of `adaptation.ts`/`loadMetrics.ts`.
+  - `/exercises` becomes list → tap → `ExerciseDetail`.
+  - Tested: every exercise has dosage + non-empty steps; `prescribeOffWall` / purpose filters unchanged;
+    the additive-only invariant still asserted.
+- **Files:** `src/domain/offWallExercises.ts`, `src/app/exercises/page.tsx`
+
+### BC-51 · Personalised Insights analyser summary — `open`
+
+- **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-30
+- **Problem:** the PO wants Insights to be "a graph **with a personalised analyser summary**." **BC-38**
+  delivers the graph; this PBI delivers the **plain-language read** over the same data — the
+  deterministic, on-device sibling of the future AI review (**BC-42**). Today Insights shows numbers
+  with no narrative ("what does this mean for me?"). (Research §5.)
+- **Value:** the climber gets a coach's one-paragraph takeaway ("V4 base is broad — start touching V6;
+  load is climbing, keep a rest day") instead of decoding stats.
+- **Acceptance criteria:**
+  - A pure `summariseInsights(...)` in `src/domain/insights.ts` composes 2–4 prioritised, templated
+    sentences from existing signals (pyramid gaps BC-30, load/ACWR band, soreness frequency, streak) —
+    `asOf`-driven, **deterministic** (no LLM), supportive-coach voice, safety-aware (an ACWR-red or
+    sharp-pain signal leads the summary).
+  - Cold-start (sparse data) yields an honest "log a few sessions and I'll read the trend," never NaN
+    or a fake-confident claim.
+  - Insights renders the paragraph above/below the BC-38 chart; logic stays in the covered domain layer.
+  - Tested: each sentence-trigger branch incl. the safety-leads-first ordering and the empty state.
+- **Files:** `src/domain/insights.ts`, `src/app/insights/page.tsx`
+
 ---
 
 ## P3 — Future bets (design-first; do not start while a P0 is open)
@@ -351,9 +523,12 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   Prereq: BC-10 (export gives a migration/backup path first).
 - **Files:** `docs/specs/cloud-sync-design.md`
 
-### BC-19 · Technique-drill rotation in volume sessions — `open`
+### BC-19 · Technique-drill rotation in volume sessions — `open` (folded into BC-48)
 
 - **Type:** feature · **Complexity:** M
+- **Note (2026-06-13):** the week-to-week drill rotation here is now part of **BC-48**'s scope (program
+  variation). Keep this only if BC-48 ships without it; otherwise close it alongside BC-48. Don't build
+  both — they edit the same `periodization.ts` rotation.
 - Volume/technique sessions say "one deliberate drill (e.g. silent feet)" but never pick one. Pull
   from `src/domain/drills.ts`, rotate week-to-week, and show the drill card inline in the session
   player. Closes the "no technique development" original problem beyond a passive library.
@@ -435,14 +610,18 @@ The P0→P1 core chain is shipped (Shipped log). Remaining open work, suggested 
 ```
 Data safety first (cheap, high-leverage):   BC-31 → BC-33 → BC-32 → BC-34
 Harness compounding (run anytime, solo):     BC-26 · BC-35 (safety mutation) · BC-36 (bundle) · BC-37 (a11y) · BC-16 (offline e2e)
-Coach intelligence:                          BC-28 → BC-30 → BC-27 → BC-29 (BC-29 = safety protocol)
+Onboarding fidelity (PO feedback, cheap):    BC-44 (VB/V0) · BC-45 (1–7 sessions)  [both touch periodization.ts + bootstrap.ts + profile → run SEQUENTIALLY]
+Content depth (PO feedback, foundation 1st): BC-46 → then BC-47 · BC-49 · BC-50 (reuse it) → BC-48 (week variation + clickable program)
+Coach intelligence:                          BC-28 → BC-30 → BC-51 (Insights summary) → BC-27 → BC-29 (BC-29 = safety protocol)
 Polish (after BC-14 icons / brand settled):  BC-14 → BC-38 → BC-40 → BC-39 · BC-25 (dark mode)
-P3 design specs, when a milestone schedules them: BC-18 · BC-19 · BC-20 · BC-21 · BC-24 · BC-41 · BC-42 · BC-43
+P3 design specs, when a milestone schedules them: BC-18 · BC-20 · BC-21 · BC-24 · BC-41 · BC-42 · BC-43   (BC-19 absorbed by BC-48)
 ```
 
 > Good disjoint pairs for parallel Crew runs (no shared `Files:`): **BC-35 + BC-30**,
-> **BC-36 + BC-28**, **BC-37 + BC-32**. Anything touching `src/app/page.tsx` (BC-27/28/31/34/39/40)
-> must run **sequentially** — they share the Today page.
+> **BC-36 + BC-28**, **BC-37 + BC-32**. Once **BC-46** lands, **BC-49** (`drills.ts`/`/drills`) +
+> **BC-50** (`offWallExercises.ts`/`/exercises`) are a clean disjoint pair. Anything touching
+> `src/app/page.tsx` (BC-27/28/31/34/39/40) must run **sequentially**; likewise everything that edits
+> `src/domain/periodization.ts` (BC-44/45/47/48) and `src/app/insights/page.tsx` (BC-30/38/51).
 
 ## Shipped log
 

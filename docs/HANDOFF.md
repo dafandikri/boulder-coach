@@ -24,6 +24,36 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (PO hands-on-feedback session, last touched by: Claude Opus 4.8)
+
+- **Backlog extended with 8 PBIs (BC-44…BC-51) from real use of the live app**, grounded in new
+  research: **`docs/research/2026-06-13-indoor-bouldering-program-best-practices.md`** (cited coaching
+  sources — V-scale, periodization/DUP, session protocols). Theme: **content depth & onboarding
+  fidelity**. Each was verified a real gap against the code:
+  - **BC-44** — extend grade scale to **VB/V0** (today `MIN_GRADE = 1` + `Math.max(1,…)` floors +
+    `GradePill` `` `V${n}` `` exclude beginners). New pure `src/domain/grade.ts` (`formatGrade`, `MIN_GRADE=-1`).
+  - **BC-45** — **sessions/week 1–7** with frequency guidance/load-notes (today clamped 2..4;
+    `sessionPlanFor` only has 2/3/4). New pure `src/domain/frequencyNotes.ts`.
+  - **BC-46** — **shared exercise content model** (steps/dosage/images + `ExerciseDetail`) — the
+    foundation BC-47/48/49/50 reuse (don't re-implement 4×).
+  - **BC-47** — rich session player (detailed todos/instructions/images per block) — closes "tapping
+    **Start** is vague": `Block.notes` is one line today.
+  - **BC-48** — **week-to-week program variation** (progressive overload + drill/prehab rotation) +
+    **clickable program** drill-down. Closes "every week is the same": `generateProgram` emits
+    byte-identical blocks per phase week (only `PHASE_VOLUME` scales sets). **Absorbs open BC-19**
+    (drill rotation — annotated on BC-19).
+  - **BC-49 / BC-50** — drills & prehab/off-wall get step-by-step + common-mistakes + dosage + images +
+    detail views (today one-line `description`s, flat lists). Clean disjoint pair after BC-46.
+  - **BC-51** — **personalised Insights analyser summary** (deterministic, on-device) — the PO's "graph
+    with a personalised analyser summary": **BC-38** = the graph, BC-51 = the plain-language read; the
+    deterministic sibling of the future **BC-42** AI review.
+- **Verified:** `tests/crew/backlog-hygiene.test.ts` green (all open PBIs declare `Files:`, no dangling
+  deps; BC-44…BC-51 deps resolve to BC-04/06/22/30/46). Recommended-order + parallel-pairs guidance
+  updated (note: BC-44/45/47/48 all edit `periodization.ts` → run **sequentially**).
+- **Not yet pushed.** Local edits only: `docs/BACKLOG.md`, new `docs/research/…best-practices.md`, this
+  file. No code changed — backlog grooming. A supervised push/PR is the next step if the human wants it
+  recorded on `main`.
+
 ## Current state — 2026-06-12 (backlog-grooming session, last touched by: Claude Opus 4.8)
 
 - **Backlog extended + archived.** A brainstorming session added **17 new PBIs (BC-27…BC-43)** across
