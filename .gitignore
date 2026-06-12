@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# design-system source deliverable (the brand kit is adopted into the app; the
+# raw zip is a one-off input, not repo content — see BC-23)
+/Boulder Coach Design System.zip
+
 # debug
 npm-debug.log*
 yarn-debug.log*
