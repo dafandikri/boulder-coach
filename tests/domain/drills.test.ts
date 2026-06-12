@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DRILLS, getDrillsByCategory, getDrill } from '../../src/domain/drills';
+import { hasRichContent } from '../../src/domain/exerciseContent';
 
 describe('drills library', () => {
   it('has seeded drills', () => {
@@ -13,6 +14,15 @@ describe('drills library', () => {
       expect(d.category).toMatch(/^(technique|prehab)$/);
       expect(d.description).toBeTruthy();
       expect(Array.isArray(d.cues)).toBe(true);
+    }
+  });
+
+  it('every drill carries rich detail content (BC-49): step-by-step + an image', () => {
+    for (const d of DRILLS) {
+      expect(d.steps.length).toBeGreaterThan(0); // detailed how-to, not just a one-liner
+      expect(Array.isArray(d.commonMistakes)).toBe(true);
+      expect(d.imageId).toBeTruthy();
+      expect(hasRichContent(d)).toBe(true);
     }
   });
 

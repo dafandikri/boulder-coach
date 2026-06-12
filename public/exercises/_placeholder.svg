@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" role="img" aria-label="Exercise illustration placeholder">
+  <rect width="320" height="200" fill="#f4efe7" />
+  <circle cx="160" cy="86" r="34" fill="none" stroke="#c9bfb0" stroke-width="6" />
+  <path d="M132 150 q28 -26 56 0" fill="none" stroke="#c9bfb0" stroke-width="6" stroke-linecap="round" />
+  <text x="160" y="186" text-anchor="middle" font-family="monospace" font-size="13" fill="#9a8f7e">illustration coming soon</text>
+</svg>
