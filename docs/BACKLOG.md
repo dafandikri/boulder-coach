@@ -277,6 +277,22 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   build. This promotes the HANDOFF's top gate-blind risk to Tier-1.
 - **Files:** `e2e/`, `.github/workflows/ci.yml`, possibly `playwright.config.ts`.
 
+### BC-26 · Tier-1 guard: dev-only tooling must stay out of production `dependencies` — `open`
+
+- **Type:** ci/test · **Priority:** P2 · **Complexity:** S
+- **Problem:** the gate verifies a dependency is _used_, not that it sits in the _right_ section.
+  GitHub Copilot's BC-11 merge added `playwright` (the full browser package) to production
+  `dependencies`; `pnpm gate` stayed green because knip's Playwright plugin counts it "used"
+  regardless of section. Caught only by human review → fixed in `b6c4f5c`. This is the third "review
+  caught what the gate missed" class — promote it. (Root cause logged: LEARNINGS 2026-06-12.)
+- **Acceptance criteria:** a Vitest test reads `package.json` and asserts a denylist of known
+  dev-only tools (`playwright`, `@playwright/test`, `vitest`, `@vitest/*`, `eslint*`, `prettier`,
+  `type-coverage`, `knip`, `dependency-cruiser`, `husky`, `lint-staged`, `@types/*`,
+  `typescript-eslint`, `fake-indexeddb`) are absent from `dependencies` (devDependencies only).
+  Fails the gate (by name) if any leak into `dependencies`. Keep the list data-driven so adding a
+  dev tool is a one-line edit.
+- **Files:** `tests/harness/dependency-placement.test.ts`, `package.json` (read-only). New test file.
+
 ### BC-17 · CI speed: cache Playwright browsers — `done (c85d5a6, 2026-06-11)`
 
 - **Type:** ci/optimization · **Priority:** P2 · **Complexity:** S

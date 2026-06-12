@@ -267,10 +267,10 @@ review}.mjs`, adapters, prompts, `.crew/config.json`.
 - **Manifest icon _quality_** — presence is enforced; the actual art is not (BC-14).
 - **e2e/test tooling can hide in production `dependencies`** — knip's Playwright plugin counts
   `playwright` as "used" wherever it sits, so the gate did NOT flag Copilot putting it in prod `deps`
-  (fixed in `badc81f`). The gate verifies a dep is _used_, not that it's in the _right_ section. No
-  check enforces "dev-only tooling stays in `devDependencies`" yet — a candidate Tier-1 promotion
-  (e.g. assert known test/build tools are absent from `dependencies`). Until then, eyeball new entries
-  to `dependencies` in any review.
+  (fixed in `b6c4f5c`). The gate verifies a dep is _used_, not that it's in the _right_ section. No
+  check enforces "dev-only tooling stays in `devDependencies`" yet. **Tier-1 promotion tracked as
+  BC-26** (a Vitest test asserting known dev tools are absent from `dependencies`). Until it lands,
+  eyeball new entries to `dependencies` in any review.
 - **Cross-tool doc drift** — adding routes/modules without updating `README`/`AGENTS.md`. Mitigated by
   the Definition of Done, not yet by a check.
 
