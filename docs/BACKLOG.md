@@ -293,7 +293,7 @@ P2 = polish/infra that compounds. P3 = future bets, design-first.
   tested); the page only renders. No new injury risk: additive only, never raises climbing load.
 - **Files:** `src/domain/offWallExercises.ts`, `src/app/exercises/page.tsx`
 
-### BC-23 · Adopt the Boulder Coach Design System (bright & playful brand skin) — `done (7b23140, 2026-06-12)`
+### BC-23 · Adopt the Boulder Coach Design System (bright & playful brand skin) — `done (ad7a4ce, 2026-06-12)`
 
 - **Type:** ux/design · **Priority:** P2 · **Complexity:** L · **Depends on:** — · **Also closes:** BC-11 (shell/bottom-nav)
 - **Source of truth:** the delivered **Boulder Coach Design System** (`Boulder Coach Design System.zip`
