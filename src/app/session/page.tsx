@@ -17,6 +17,7 @@ import {
 } from '@/app/lib/restTimer';
 import { createSessionLog, type BlockActual } from '@/domain/sessionLog';
 import type { VGrade } from '@/domain/types';
+import { VB, formatGrade } from '@/domain/grade';
 import { Card } from '@/app/components/Card';
 import { Badge } from '@/app/components/Badge';
 import { Button } from '@/app/components/Button';
@@ -62,7 +63,7 @@ interface BlockEntry {
 
 /** A compact, thumb-sized grade range centred on the block's target. */
 function gradeChoices(targetGrade: VGrade | undefined): VGrade[] {
-  const lo = Math.max(1, (targetGrade ?? 4) - 2);
+  const lo = Math.max(VB, (targetGrade ?? 4) - 2);
   return [lo, lo + 1, lo + 2, lo + 3];
 }
 
@@ -289,7 +290,8 @@ export default function SessionPage() {
                   }}
                 >
                   target: {b.sets} × {b.grip}
-                  {b.targetGrade !== undefined ? ` · V${b.targetGrade}` : ''} · RPE {b.targetRPE}
+                  {b.targetGrade !== undefined ? ` · ${formatGrade(b.targetGrade)}` : ''} · RPE{' '}
+                  {b.targetRPE}
                 </p>
 
                 <label

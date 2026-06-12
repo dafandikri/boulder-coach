@@ -8,6 +8,7 @@ import type {
 } from '@/domain/types';
 import type { IClimbRepo } from '@/data/IClimbRepo';
 import { generateProgram } from '@/domain/periodization';
+import { VB, MAX_GRADE, formatGrade, isValidGrade } from '@/domain/grade';
 import { programPosition, type ProgramPosition } from '@/domain/programClock';
 import { pickDaySession } from '@/domain/schedule';
 import { computeLoadMetrics } from '@/domain/loadMetrics';
@@ -27,14 +28,8 @@ export const DEFAULT_PROFILE: UserProfile = {
  *  UserProfile, named to make the form's intent clear at call sites. */
 export type ProfileDraft = UserProfile;
 
-const MIN_GRADE = 1;
-const MAX_GRADE = 17; // V-scale ceiling
 const MIN_SESSIONS = 2;
 const MAX_SESSIONS = 4;
-
-function isWholeGrade(g: number): boolean {
-  return Number.isInteger(g) && g >= MIN_GRADE && g <= MAX_GRADE;
-}
 
 /**
  * Validate a profile draft from the onboarding/edit form. Returns the first
@@ -43,11 +38,11 @@ function isWholeGrade(g: number): boolean {
  * in field order so the message names the field the user just touched.
  */
 export function validateProfile(draft: ProfileDraft): string | null {
-  if (!isWholeGrade(draft.currentGrade)) {
-    return `Current grade must be a whole V-grade between V${MIN_GRADE} and V${MAX_GRADE}.`;
+  if (!isValidGrade(draft.currentGrade)) {
+    return `Current grade must be a whole V-grade between ${formatGrade(VB)} and ${formatGrade(MAX_GRADE)}.`;
   }
-  if (!isWholeGrade(draft.goalGrade)) {
-    return `Goal grade must be a whole V-grade between V${MIN_GRADE} and V${MAX_GRADE}.`;
+  if (!isValidGrade(draft.goalGrade)) {
+    return `Goal grade must be a whole V-grade between ${formatGrade(VB)} and ${formatGrade(MAX_GRADE)}.`;
   }
   if (draft.goalGrade < draft.currentGrade) {
     return "Goal grade can't be below your current grade.";

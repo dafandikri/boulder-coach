@@ -56,6 +56,22 @@ describe('generateProgram', () => {
     expect(mainBlock?.targetGrade).toBeGreaterThanOrEqual(profile.currentGrade);
   });
 
+  it('floors a VB beginner at the scale floor, never forcing easier days up to V1 (BC-44)', () => {
+    const vb = generateProgram({ ...profile, currentGrade: -1, goalGrade: 3 }, '2026-06-09');
+    for (const w of vb.weeks) {
+      for (const s of w.sessions) {
+        for (const b of s.blocks) {
+          if (b.targetGrade !== undefined) {
+            // never below the VB floor, and the easier (power-endurance/volume) days
+            // must not be floored UP past a VB climber's own grade.
+            expect(b.targetGrade).toBeGreaterThanOrEqual(-1);
+            expect(b.targetGrade).toBeLessThanOrEqual(0); // currentGrade(-1) + peak bump(+1)
+          }
+        }
+      }
+    }
+  });
+
   it('uses a 2-session rotation when sessionsPerWeek is 2', () => {
     const p = generateProgram({ ...profile, sessionsPerWeek: 2 }, '2026-06-09');
     expect(p.weeks[0]!.sessions).toHaveLength(2);

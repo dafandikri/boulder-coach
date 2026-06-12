@@ -11,6 +11,7 @@ import type {
   UserProfile,
 } from './types';
 import { generateWarmup } from './warmup';
+import { VB } from './grade';
 
 export const PHASE_PATTERN: PhaseKind[] = ['hard', 'hard', 'deload', 'hard', 'peak', 'deload'];
 
@@ -119,7 +120,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           category: 'main',
           grip: 'mixed',
           sets: round(4 * vol),
-          targetGrade: Math.max(1, currentGrade - 1),
+          targetGrade: Math.max(VB, currentGrade - 1),
           targetRPE: phase === 'deload' ? 6 : 8,
           notes: '4 problems × 4 rounds at onsight grade.',
         },
@@ -132,7 +133,7 @@ function mainBlocksFor(type: SessionType, phase: PhaseKind, currentGrade: number
           category: 'main',
           grip: 'open-hand',
           sets: round(12 * vol),
-          targetGrade: Math.max(1, currentGrade - 2),
+          targetGrade: Math.max(VB, currentGrade - 2),
           targetRPE: 6,
           notes: 'Moderate grades, one deliberate drill (e.g. silent feet).',
         },

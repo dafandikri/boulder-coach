@@ -24,6 +24,55 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-44 shipped — VB/V0 grades, last touched by: Claude Opus 4.8)
+
+- **BC-44 DONE (PR #28) — the grade scale now reaches VB/V0**, so the app can finally onboard real
+  beginners. New pure `src/domain/grade.ts` is the single source of truth: `VB=-1`, `V0=0`, `MAX_GRADE=17`,
+  `formatGrade` (renders "VB" for sub-zero, never "V-1"), `isValidGrade`. Consumers: `bootstrap`
+  validation + `periodization`/`session` grade floors read `VB`; `GradePill`, the profile grade selects,
+  and the session player render via `formatGrade`. Profile now offers VB…V17.
+  - **Safety file `adaptation.ts` touched (protocol followed).** The regression rule's
+    `Math.max(1, target-1)` floor was a latent bug once grades went below V1: a V0 climber missing
+    targets got floored **up** to V1. Fixed to `Math.max(VB, target-1)` (additive-safe — only lowers) +
+    `formatGrade` in the reason strings. **`safety-rule-reviewer`: PASS**; the invariants fuzzer is
+    unchanged and green; `pnpm test:safety` 25/25. See LEARNINGS 2026-06-13 (×2: the knip
+    duplicate-export gotcha and the regression-floor bug).
+  - **TDD throughout:** `tests/domain/grade.test.ts` (new), extended `profile.test.ts` (VB/V0 accepted,
+    sub-VB rejected), `periodization.test.ts` (VB floor), `adaptation.test.ts` (V0→VB easing). `pnpm gate`
+    green.
+- **Next PO-feedback PBIs, in order:** BC-45 (sessions 1–7 — also edits `periodization.ts`/`bootstrap.ts`/
+  `profile`, so it follows BC-44 sequentially) → BC-46 (content-model foundation) → BC-47/49/50 → BC-48 →
+  BC-51. The autonomous run is working down this list.
+
+## Current state — 2026-06-13 (CV-feasibility research session, last touched by: Claude Opus 4.8)
+
+- **Computer-vision "analyze your climb → technique advice" feature researched for feasibility + as an
+  undergrad thesis topic.** Findings doc:
+  **`docs/research/2026-06-13-computer-vision-climb-analysis-feasibility.md`** (9 sources cited:
+  Belay.ai, ClimbingCoach, Roboflow BoulderVision, Plymouth Student Scientist undergrad paper,
+  PMC10574944 six-error iPad system, PMC11881084 survey, The Way Up dataset arXiv 2505.12854).
+- **Conclusion — feasible at MVP scope, not as a general "optimal technique" coach.** Markerless pose
+  (MediaPipe / YOLOv8-pose / ViTPose) from a phone is solved; the hard parts are **occlusion** (hands
+  behind torso — footwork/CoM reliable, fine hand technique not from one camera), **hold-detector
+  generalisation** across gyms, and **honest validation of advice quality**. Recommended app shape:
+  **Option A — on-device in-browser MediaPipe**, capture glue in `src/app/**`, analysis as a **pure
+  `src/domain/technique.ts`** (keypoint arrays → rule-based flags + CoM path; testable to per-file
+  coverage with JSON fixtures, no video in CI). Reuse PMC10574944's six geometric beginner-error rules,
+  scoped to the occlusion-robust subset (hip-to-wall, weight-shift, both-feet-set, tempo/rest).
+- **`BC-24 · CV/ML technique coach` design spec drafted** —
+  **`docs/specs/cv-technique-coach-design.md`** (BC-24's design-only deliverable). Scope = MVP **L
+  slice** (on-device in-browser MediaPipe + pure `src/domain/technique.ts` → six-error occlusion-robust
+  flags + CoM path + angular-velocity move segmentation, visibility-gated); "optimal technique" +
+  hold-awareness are the XL tail, explicitly out of scope. Optional LLM narration = BC-42. **Pending PO
+  review; still no app code** until a milestone schedules it (PO said focus P1/P2 first). BC-24 backlog
+  entry updated to "design spec drafted".
+- **Thesis verdict: strong/ideal** — the Plymouth paper proves the scope fits an undergrad; pick ONE
+  narrow measurable question (recommended: re-implement the six-error rules on monocular MediaPipe vs
+  the iPad+LiDAR original and quantify the accuracy loss). The trap to avoid is promising "optimal
+  technique" (unfalsifiable). The thesis evaluation _is_ the feature's otherwise-missing validation.
+- **No app code changed — research + design docs only.** `pnpm gate` green. Local edits: new research
+  doc, new `docs/specs/cv-technique-coach-design.md`, `docs/BACKLOG.md` (BC-24), this file.
+
 ## Current state — 2026-06-13 (PO hands-on-feedback session, last touched by: Claude Opus 4.8)
 
 - **Backlog extended with 8 PBIs (BC-44…BC-51) from real use of the live app**, grounded in new

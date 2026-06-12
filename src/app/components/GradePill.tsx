@@ -1,6 +1,9 @@
+import { formatGrade } from '@/domain/grade';
+
 // V-grade → hold color. Cycles through the rainbow so each grade reads distinctly.
+// VB (-1) clamps to the same lime as V0/V1 (colorFor floors the index at 0).
 const GRADE_COLORS = [
-  'var(--hold-lime)', // V0/V1
+  'var(--hold-lime)', // VB/V0/V1
   'var(--hold-lime)',
   'var(--hold-teal)', // V2
   'var(--hold-sky)', // V3
@@ -52,7 +55,7 @@ export function GradePill({
         ...skin,
       }}
     >
-      V{grade}
+      {formatGrade(grade)}
     </span>
   );
 }

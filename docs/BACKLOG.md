@@ -349,9 +349,19 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
 
 > **— Content depth & onboarding fidelity (the PO's hands-on feedback) —**
 
-### BC-44 · Extend the grade scale down to VB / V0 — `open`
+### BC-44 · Extend the grade scale down to VB / V0 — `done (PR #28)`
 
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-06
+- **Shipped:** new pure `src/domain/grade.ts` (`VB=-1`, `V0=0`, `MAX_GRADE`, `formatGrade`, `isValidGrade`).
+  `bootstrap` validation + `periodization`/`session` floors read `VB`; `GradePill`, profile select, and
+  the session player render via `formatGrade`. **Safety file touched:** `adaptation.ts` regression floor
+  `Math.max(1, target-1)` → `Math.max(VB, target-1)` — a V0/VB climber missing targets now eases toward
+  VB instead of being floored UP to V1 (the old code raised a beginner's grade on a regression), plus
+  reason strings via `formatGrade` (never "V-1"). `safety-rule-reviewer`: **PASS**; the invariants
+  fuzzer is unchanged and green.
+- **Files:** `src/domain/grade.ts`, `src/domain/periodization.ts`, `src/domain/adaptation.ts` (safety),
+  `src/app/lib/bootstrap.ts`, `src/app/components/GradePill.tsx`, `src/app/profile/page.tsx`,
+  `src/app/session/page.tsx`
 - **Problem:** the V-scale's beginner floor is **VB (V-Basic) and V0** — where most new climbers
   actually live — but `src/app/lib/bootstrap.ts` sets `MIN_GRADE = 1`, `validateProfile` rejects
   anything below V1, and `periodization.ts` / `session/page.tsx` floor every target with
@@ -370,7 +380,6 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     `goal ≥ current`.
   - Tested: `formatGrade` for VB/V0/V5; validation accepts VB/V0 and still rejects sub-VB; a VB profile
     generates a program whose floored targets never throw / never render `V-1`.
-- **Files:** `src/domain/grade.ts`, `src/domain/periodization.ts`, `src/app/lib/bootstrap.ts`, `src/app/components/GradePill.tsx`, `src/app/profile/page.tsx`
 
 ### BC-45 · Sessions/week range 1–7 with frequency guidance + load notes — `open`
 
@@ -549,7 +558,7 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   leave-it-better refactor; fold into another PBI's commit if convenient.
 - **Files:** `src/data/repoInstance.ts`
 
-### BC-24 · CV/ML technique coach — `open` (FUTURE; design only, do not start now)
+### BC-24 · CV/ML technique coach — `open` (FUTURE; **design spec drafted 2026-06-13**, no app code until scheduled)
 
 - **Type:** system-design/ml · **Priority:** P3 · **Complexity:** XL · **Depends on:** —
 - **Vision (explicitly future — PO said focus on current P1/P2 first):** analyze a climbing video with
@@ -559,6 +568,22 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   on-device vs cloud inference (privacy default: video never leaves the device), a pose-estimation
   approach (e.g. MediaPipe/TF.js), how a "technique score" maps onto the current `feel`/insights model,
   and the UX of capturing/reviewing a clip. **No app code** until a future milestone schedules it.
+- **Research done (2026-06-13):** feasibility + landscape in
+  `docs/research/2026-06-13-computer-vision-climb-analysis-feasibility.md` (9 sources). Key findings to
+  bake into the spec: (1) **MVP is an L slice of this XL** — on-device in-browser **MediaPipe** pose,
+  capture glue in `src/app/**`, analysis as a **pure `src/domain/technique.ts`** (keypoint arrays →
+  rule-based flags + CoM path; tested with JSON keypoint fixtures, no video in CI → clears the per-file
+  coverage bar). (2) Reuse **PMC10574944's six geometric beginner-error rules** (decoupling,
+  hand-support >1s, weight-shift, both-feet-set, hip >5cm off wall, shoulder-relax), scoped to the
+  **occlusion-robust subset** (hip/foot/CoM — _not_ fine hand technique, unreliable from one camera).
+  (3) **Out of scope (says why):** general "optimal technique" coaching (unfalsifiable, no ground
+  truth) and hold-aware features (per-gym detector generalisation = the XL tail). (4) Optional LLM
+  narration is **BC-42**, layered only on the numeric findings — never inventing advice. When a
+  milestone schedules this, consider splitting the MVP slice into its own PBI sibling to BC-41/42/43.
+- **Design spec drafted (2026-06-13):** [`docs/specs/cv-technique-coach-design.md`](specs/cv-technique-coach-design.md)
+  — the design-only deliverable above is now written (scope, on-device MediaPipe decision, pure
+  `src/domain/technique.ts` shape, occlusion-robust flag subset, evaluation plan). **Pending PO review;
+  still no app code** until a milestone schedules it.
 - **Files:** `docs/specs/cv-technique-coach-design.md`
 
 ### BC-41 · Health-data import → auto-fill check-in — `open` (design only)
