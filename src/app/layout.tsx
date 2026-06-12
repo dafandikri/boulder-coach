@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { BottomNav } from './components/BottomNav';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: 'Boulder Coach',
@@ -37,6 +38,7 @@ export default function RootLayout({
         <div className="mx-auto flex min-h-dvh w-full max-w-[28rem] flex-col pb-24">{children}</div>
         <BottomNav />
         <SpeedInsights />
+        <Analytics />
         <script
           dangerouslySetInnerHTML={{
             __html: `if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}`,
