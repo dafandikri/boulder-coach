@@ -4,15 +4,13 @@
    rainbow, chunky rounded type, big pebble corners, and a signature "sticker
    pop" on the hero/interactive thing on a screen.
 
-   Webfonts load via a runtime CSS @import (browser fetch) — NOT next/font/google,
-   which fetches at build time and made `next build` (the gate's last step) flaky
-   on any network blip. See docs/LEARNINGS.md 2026-06-10.
-
-   The font @import MUST precede `@import 'tailwindcss'` — Tailwind expands into
-   real rules, and a bare @import is only valid before any rule, so placing it
-   after would let the CSS optimizer drop it (and the webfonts with it).
+   Webfonts (Baloo 2 / Nunito / Space Mono) are loaded with a real <link> in
+   `src/app/layout.tsx`, NOT a CSS @import here. A CSS @import is only valid before
+   all other rules, so once Next bundles this file behind another package's
+   @font-face the production optimizer DROPS it and the brand type silently falls
+   back to system fonts (the BC-23 "bland in prod" bug). A <link> can't be dropped.
+   See docs/LEARNINGS.md 2026-06-12.
    =========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700&family=Space+Mono:wght@400;700&display=swap');
 @import 'tailwindcss';
 
 :root {
