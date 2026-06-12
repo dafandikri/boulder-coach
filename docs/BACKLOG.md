@@ -381,9 +381,16 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Tested: `formatGrade` for VB/V0/V5; validation accepts VB/V0 and still rejects sub-VB; a VB profile
     generates a program whose floored targets never throw / never render `V-1`.
 
-### BC-45 · Sessions/week range 1–7 with frequency guidance + load notes — `open`
+### BC-45 · Sessions/week range 1–7 with frequency guidance + load notes — `done (PR #29)`
 
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-06
+- **Shipped:** `MIN_SESSIONS=1`/`MAX_SESSIONS=7`; `sessionPlanFor` returns a safe rotation for 1–7
+  (one limit day + one PE day max; extras are low-intensity volume/technique + antagonist-prehab —
+  additive-safety, never more max-effort climbing). New pure `src/domain/frequencyNotes.ts`
+  (`frequencyGuidance(n) → { caution, text }`): 1× = "make it your quality day", ≥5× = a
+  load-management caution (rest/sleep/tweak). Profile offers 1×…7× and renders the note in a
+  `Callout` (info/warning by `caution`). TDD: `frequencyNotes.test.ts` (new) + extended
+  `periodization.test.ts` (1..7 invariant) + `profile.test.ts` (1..7 band). `pnpm gate` green.
 - **Problem:** `sessionsPerWeek` is clamped **2..4** (`MIN_SESSIONS`/`MAX_SESSIONS` in `bootstrap.ts`)
   and `sessionPlanFor` only has cases for 2/3/4. A once-a-week climber and a near-daily climber both
   exist; the PO asked for "**1x or even 7x, but with notes of course**." High frequency without a

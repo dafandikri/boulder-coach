@@ -17,6 +17,7 @@ import { Callout } from '@/app/components/Callout';
 import { HoldMark } from '@/app/components/HoldMark';
 import { Spinner } from '@/app/components/Spinner';
 import { VB, MAX_GRADE, formatGrade } from '@/domain/grade';
+import { frequencyGuidance } from '@/domain/frequencyNotes';
 import type { CSSProperties } from 'react';
 
 const WEEKDAYS: { n: number; label: string }[] = [
@@ -31,7 +32,7 @@ const WEEKDAYS: { n: number; label: string }[] = [
 
 // VB(-1), V0, V1 … V17 — the beginner floor (BC-44) is selectable.
 const GRADES: number[] = Array.from({ length: MAX_GRADE - VB + 1 }, (_, i) => VB + i);
-const SESSION_OPTIONS: number[] = [2, 3, 4];
+const SESSION_OPTIONS: number[] = [1, 2, 3, 4, 5, 6, 7]; // BC-45: 1×…7×/week
 
 const SELECT_STYLE: CSSProperties = {
   width: '100%',
@@ -202,6 +203,10 @@ export default function ProfilePage() {
                 </option>
               ))}
             </select>
+            {(() => {
+              const g = frequencyGuidance(draft.sessionsPerWeek);
+              return <Callout tone={g.caution ? 'warning' : 'info'}>{g.text}</Callout>;
+            })()}
           </label>
 
           <fieldset className="space-y-2" style={{ border: 'none', padding: 0, margin: 0 }}>
