@@ -24,9 +24,29 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
-## Current state — 2026-06-12 (last touched by: Claude Opus 4.8)
+## Current state — 2026-06-12 (deploy session, last touched by: Claude Opus 4.8)
 
-- **BC-23 follow-up (this session) — prod-only brand-font regression fixed and committed.** After
+- **BC-15 DONE — the app is LIVE in production.** First production deploy to Vercel:
+  **https://boulder-coach-gamma.vercel.app** (verified: `/`, `/manifest.webmanifest`, `/sw.js` all
+  HTTP 200; deployment `READY`, target production). Project `erdafas-projects/boulder-coach`, connected
+  to the GitHub repo. **Zero-config** — Vercel auto-detects Next.js + pnpm; no env vars (client-side
+  Dexie), no `vercel.json`/`vercel.ts`. Deploy flow documented in `README.md` → "Live deployment".
+  Service-worker update path: SW is network-first for navigations so new deploys reach users
+  immediately; bump `CACHE` in `public/sw.js` only to force-purge the shell.
+  - **Deploy gotcha (LEARNINGS 2026-06-12):** the Vercel **MCP** OAuth token authorizes read/manage
+    tools only — `deploy_to_vercel` is advisory and the MCP cannot upload a local build. Publishing a
+    local tree needs the **CLI** (`vercel login` is a separate, interactive token) or a git push to the
+    connected project. CLI installed on-demand via `pnpm dlx vercel@latest` (no global bin configured).
+- **Copilot-merge review (this session) — one real bug found and fixed.** While the primary agent was
+  rate-limited, GitHub Copilot merged PR #20 (BC-11 nav e2e). A two-agent parallel review (isolated
+  worktrees) of that merge found **`playwright` (the full browser package) was added to production
+  `dependencies`** — e2e tooling must never ship to prod, and it's redundant (every spec imports
+  `@playwright/test`, already a devDep). Removed it → commit **`badc81f`**
+  `fix(deps): remove redundant playwright from production dependencies`. The gate did NOT catch this
+  (knip's Playwright plugin saw the dep as "used"), so it's a **new gate-blind risk** — see the
+  open-threads list. `e2e/nav.spec.ts` itself was verified correct against the real `BottomNav.tsx`
+  (passes vs the prod build). Local `pnpm gate` green after the fix.
+- **BC-23 follow-up — prod-only brand-font regression fixed and committed.** After
   BC-23 merged, the app looked "bland / just HTML" **in production only**: the three brand webfonts
   weren't loading, so prod fell back to system fonts (colors were fine). Root cause + fix in
   **LEARNINGS 2026-06-12** — the fonts now load via a `<link>` in `layout.tsx` (was a CSS `@import`
@@ -245,6 +265,12 @@ review}.mjs`, adapters, prompts, `.crew/config.json`.
   behavior is only verifiable in a browser. Bump `CACHE` in `public/sw.js` on any shell-breaking
   release. (Tier-1 promotion tracked as BC-16.)
 - **Manifest icon _quality_** — presence is enforced; the actual art is not (BC-14).
+- **e2e/test tooling can hide in production `dependencies`** — knip's Playwright plugin counts
+  `playwright` as "used" wherever it sits, so the gate did NOT flag Copilot putting it in prod `deps`
+  (fixed in `badc81f`). The gate verifies a dep is _used_, not that it's in the _right_ section. No
+  check enforces "dev-only tooling stays in `devDependencies`" yet — a candidate Tier-1 promotion
+  (e.g. assert known test/build tools are absent from `dependencies`). Until then, eyeball new entries
+  to `dependencies` in any review.
 - **Cross-tool doc drift** — adding routes/modules without updating `README`/`AGENTS.md`. Mitigated by
   the Definition of Done, not yet by a check.
 

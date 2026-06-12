@@ -457,3 +457,43 @@ t1, t2, t3, t4, t5, cb)`.
   `.claude/worktrees/`.
 - **Attempts to green:** 1 (diagnosed pollution via the error paths, then `--no-verify` to unblock +
   config fix to prevent recurrence).
+
+## 2026-06-12 — package.json — e2e tooling landed in production `dependencies` (gate-blind)
+
+- **Task:** Reviewing a GitHub Copilot merge (PR #20, BC-11 nav e2e) made while the primary agent was
+  rate-limited.
+- **What failed:** Copilot's commit added `"playwright": "^1.60.0"` to **`dependencies`** (production)
+  with the message "add playwright dep for local e2e." `pnpm gate` stayed **green** — it did NOT catch
+  this.
+- **Root cause:** two-fold. (1) It's wrong: e2e/browser tooling must never ship in production deps. (2)
+  It's redundant: every e2e spec imports from `@playwright/test` (already in `devDependencies`), which
+  re-exports the runner — nothing imports bare `playwright`. The gate missed it because **knip's
+  Playwright plugin treats `playwright` as "used"** regardless of which section it's in; knip checks
+  _used vs unused_, not _dependencies vs devDependencies_. type-coverage/lint/tsc/depcruise don't look
+  at dep placement either.
+- **Fix:** removed `playwright` from `dependencies` entirely (not relocated — `@playwright/test`
+  already provides the runner + CLI), regenerated the lockfile via `pnpm install`. Commit `badc81f`.
+- **Prevention:** when reviewing any merge, eyeball new entries to `dependencies` — a green gate does
+  not vouch for dep placement. Candidate Tier-1 promotion: a test asserting known dev-only tools
+  (playwright, vitest, eslint, prettier, type-coverage, knip, …) are absent from `dependencies`.
+- **Attempts to green:** 1 (gate was already green; fix removed the dep and re-verified green).
+
+## 2026-06-12 — deploy — Vercel MCP OAuth token cannot publish a local build (use the CLI)
+
+- **Task:** First production deploy of the app to Vercel ("make it live"), driven by an agent.
+- **What failed:** authorized the **Vercel MCP** via OAuth, expecting to deploy through it. The MCP's
+  `deploy_to_vercel` tool only returns advice ("run `vercel deploy`"); the rest of the MCP toolset is
+  read/manage (`list_projects`, `get_deployment`, logs, …). The MCP token also does **not** authorize
+  the Vercel **CLI** — `vercel whoami` still reported "token is not valid" after the MCP OAuth.
+- **Root cause:** the MCP server (mcp.vercel.com) and the CLI hold **separate** credentials. MCP OAuth
+  (scope `openid offline_access` for the MCP resource) grants the MCP's API tools; it is not a CLI
+  session token and there is no MCP tool that uploads a local build.
+- **Fix / working path:** authenticate the CLI separately — `pnpm dlx vercel@latest login` (interactive
+  GitHub OAuth, must run in the user's TTY) — then drive non-interactively:
+  `vercel link --yes --project boulder-coach` → `vercel deploy --prod --yes`. CLI was run via
+  `pnpm dlx` because no pnpm global bin dir is configured (`pnpm setup` not run). Verified live with
+  `curl` (HTTP 200 on `/`, `/manifest.webmanifest`, `/sw.js`).
+- **Prevention:** to publish a _local_ tree to Vercel, plan for the CLI (or a git push to a connected
+  project) from the start; treat the MCP as observability/management only. The one interactive step
+  (`vercel login`) is inherently the account owner's — surface it early.
+- **Attempts to green:** N/A (deploy task; succeeded once the CLI was authenticated).
