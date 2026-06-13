@@ -18,9 +18,7 @@ const DEV_ONLY_DENYLIST: readonly string[] = [
   '@playwright/test',
   'vitest',
   '@vitest/*',
-  'eslint',
-  'eslint-config-next',
-  'eslint-config-prettier',
+  'eslint*', // eslint, eslint-config-next, eslint-config-prettier, eslint-plugin-*
   'prettier',
   'type-coverage',
   'knip',
@@ -58,9 +56,18 @@ describe('BC-26 — dev-only tooling stays out of production dependencies', () =
     expect(misplacedDevTools(leaked)).toEqual(['playwright']);
   });
 
-  it('matches scoped wildcard tools (e.g. @vitest/coverage-v8, @types/node)', () => {
-    const leaked = { react: '19.2.4', '@vitest/coverage-v8': '^4', '@types/node': '^20' };
-    expect(misplacedDevTools(leaked).sort()).toEqual(['@types/node', '@vitest/coverage-v8']);
+  it('matches wildcard tool families (@vitest/*, @types/*, eslint*)', () => {
+    const leaked = {
+      react: '19.2.4',
+      '@vitest/coverage-v8': '^4',
+      '@types/node': '^20',
+      'eslint-config-next': '^16',
+    };
+    expect(misplacedDevTools(leaked).sort()).toEqual([
+      '@types/node',
+      '@vitest/coverage-v8',
+      'eslint-config-next',
+    ]);
   });
 
   it('passes clean runtime-only dependencies (no false positives)', () => {
