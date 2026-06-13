@@ -30,6 +30,25 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-13 — src/domain/insights.ts — typecheck (type)
+
+- **Task:** BC-30 — `pyramidTarget` built the target pyramid with a `for` loop indexing a tuple
+  (`TARGET_COUNTS[goalGrade - grade]`).
+- **What failed:** `tsc --noEmit` → `TS2322: Type 'number | undefined' is not assignable to type 'number'`
+  on the `count` field, even though the index is provably in `0..MAX_DEPTH` by construction.
+- **Root cause:** `noUncheckedIndexedAccess` (this repo's strict tsconfig) types _every_ indexed access
+  as `T | undefined` — it cannot prove a computed numeric index is in-bounds, no matter the surrounding
+  guards. A `?? 0` "fix" would be an unreachable branch → per-file coverage failure (the gate's #1 bug
+  class), so that's not an option either.
+- **Fix:** stopped indexing. Build the levels by `TARGET_COUNTS.slice(0, depth + 1).map((count, offset)
+=> …)` — `.map`'s element binding is the array's element type (`number`), never `undefined`, so the
+  value is provably defined without a dead fallback branch. (Same trap bit the test file: `arr[i]` in
+  assertions is `T | undefined` — assert with full-array `toEqual`/`toContainEqual`, not `arr[0].x`.)
+- **Prevention:** under `noUncheckedIndexedAccess`, derive array values via `.map`/iteration, not
+  computed-index access, when you need the element typed non-optional without a fallback. This is the
+  same lesson as the schedule.ts "no unreachable defensive branch" rule — restructure, don't `?? 0`.
+- **Attempts to green:** 2 (prettier reflow of the new code, then the tuple-index typecheck fix).
+
 ## 2026-06-13 — src/domain/grade.ts — dead-code (knip)
 
 - **Task:** BC-44 — extend the grade scale to VB/V0.
