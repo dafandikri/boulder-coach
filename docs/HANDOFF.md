@@ -24,6 +24,31 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-53 copy fix + BC-28 readiness + BC-40 consistency — PR #37, last touched by: Claude Opus 4.8)
+
+- **PO feedback on BC-53's program copy — fixed.** The old line "Build 1 · base volume · focus: Silent
+  feet" mislabelled the volume-day's rotating drill as the whole week's focus. Replaced
+  `weekHeadline(week): string` with **`weekSummary(week): { title, detail }`** — `title` ("Build 1" /
+  "Deload" / "Peak") becomes the week Badge; `detail` is an honest "what to do this week + why" sentence
+  (no drill mislabel). Builds 1/2/3 and the two deloads (mid-cycle vs end-of-cycle) all read distinctly.
+  Program card renders title-as-badge + the detail sentence. Tests updated; `periodization.ts` branch
+  coverage back ≥90%.
+- **BC-28 (Readiness on Today) — done.** Pure `computeReadiness(checkIn, metrics) → { score, band,
+drivers }` in `src/domain/readiness.ts`; safety bias (sharp pain or ACWR > 1.5 → `red`, mirroring
+  adaptation rules 1 & 3). `getTodaySession` surfaces it on `TodayResult` from the **real** check-in
+  only (neutral day → `null`, no fake green; rest day → `null`). New gate-blind `ReadinessCard` renders
+  band/score/bar + top 2 drivers.
+- **BC-40 (Consistency/streak on Today) — done.** Pure `computeConsistency(logs, profile, asOf)` →
+  this-week count vs target + a streak of consecutive weeks meeting target (the in-progress current week
+  never breaks it). Rendered on Today as "X / Y sessions" + a `ProgressBar` + a supportive 🔥 streak line.
+- **TDD throughout:** new `readiness.test.ts` (9) + `consistency.test.ts` (8) + extended
+  `bootstrap.test.ts` (readiness null-on-neutral / real-on-checkin, rest-day) + rewritten BC-53 tests.
+  `pnpm gate` green (294 tests, build OK). Coverage note: removed an unreachable defensive branch in
+  `consistency.ts` (`isoDayStart` now parses via a local-midnight string, no `??` fallbacks).
+- **Shipped via PR #37** — `weekHeadline`→`weekSummary` is a public-API rename in `periodization.ts`
+  (consumed by `program/page.tsx`); BACKLOG marks BC-28/BC-40 `done (PR #37)`. Reviewed + merged once
+  CI green.
+
 ## Current state — 2026-06-13 (BC-52/53/54 shipped — content-fidelity defects fixed, PR #36, last touched by: Claude Opus 4.8)
 
 - **The three PO-round-2 defect PBIs are fixed and shipped via PR #36** (squashed commit `0723747`,

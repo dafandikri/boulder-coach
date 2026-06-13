@@ -8,8 +8,11 @@ import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { Button } from '@/app/components/Button';
 import { BlockSummary } from '@/app/components/BlockSummary';
 import { Callout } from '@/app/components/Callout';
+import { Card } from '@/app/components/Card';
 import { GradePill } from '@/app/components/GradePill';
 import { HoldMark } from '@/app/components/HoldMark';
+import { ProgressBar } from '@/app/components/ProgressBar';
+import { ReadinessCard } from '@/app/components/ReadinessCard';
 import { SessionCard } from '@/app/components/SessionCard';
 import { Spinner } from '@/app/components/Spinner';
 
@@ -59,8 +62,9 @@ export default function TodayPage() {
   }
   if (!today) return <Spinner label="Loading today's session…" />;
 
-  const { session, changes, warmupMandatory, neutralAssumed } = today;
+  const { session, changes, warmupMandatory, neutralAssumed, readiness, consistency } = today;
   const isRest = session.type === 'rest';
+  const streak = consistency.currentStreakWeeks;
 
   return (
     <main className="space-y-4 p-5">
@@ -109,6 +113,35 @@ export default function TodayPage() {
           </div>
         )}
       </SessionCard>
+
+      {/* BC-28: today's readiness read-out (only on a training day with a real
+          check-in; a neutral day shows the check-in prompt below instead). */}
+      {!isRest && readiness && <ReadinessCard readiness={readiness} />}
+
+      {/* BC-40: this week's consistency — progress vs target + a supportive streak. */}
+      <Card padding="sm">
+        <div className="flex items-center justify-between gap-2">
+          <span className="bc-eyebrow">This week</span>
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800 }}>
+            {consistency.weekDoneCount} / {consistency.weekTarget} sessions
+          </span>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <ProgressBar value={consistency.weekDoneCount} max={consistency.weekTarget} />
+        </div>
+        {streak > 0 && (
+          <p
+            style={{
+              marginTop: 8,
+              fontSize: 'var(--fs-xs)',
+              color: 'var(--text-muted)',
+              fontWeight: 600,
+            }}
+          >
+            🔥 {streak}-week streak — nice and consistent.
+          </p>
+        )}
+      </Card>
 
       {warmupMandatory && (
         <Callout tone="warning" title="Warm-up is mandatory today.">

@@ -354,32 +354,58 @@ export function generateProgram(profile: UserProfile, startDate: string): Progra
   };
 }
 
-const PHASE_LABEL: Record<PhaseKind, string> = {
-  hard: 'Build',
-  peak: 'Peak',
-  deload: 'Deload',
-};
+/** A program week's plain-language plan: a short differentiating title + an honest
+ *  sentence of what to do this week and why. */
+export interface WeekSummary {
+  /** Short label, e.g. "Build 1" / "Deload" / "Peak". Differs across same-phase weeks. */
+  title: string;
+  /** One supportive-coach sentence: what to do this week and the reason behind it. */
+  detail: string;
+}
 
 /**
- * BC-53: a *differentiating* one-line summary for a program week, so the program
- * list no longer reads identically week to week. Two weeks of the same phase get
- * different headlines because the build ordinal (progressive overload, mirroring
- * `phaseRunOrdinal`) and the rotating technique focus (`drillForWeek`) both change.
- * Pure + `asOf`-free; the page only renders the string. Derived from the canonical
- * `PHASE_PATTERN`, so it agrees with the blocks `generateProgram` actually built.
+ * BC-53: a *differentiating* plain-language summary for a program week, so the
+ * program list no longer reads identically week to week — and, unlike the old
+ * version, it describes **what to do and why** instead of mislabelling the volume
+ * day's rotating drill as the whole week's "focus". Two weeks of the same phase get
+ * different copy because the build ordinal (progressive overload) advances and the
+ * deload role (mid-cycle vs end-of-cycle) changes. Pure + `asOf`-free; derived from
+ * the canonical `PHASE_PATTERN`, so it agrees with the blocks `generateProgram` built.
  */
-export function weekHeadline(week: ProgramWeek): string {
+export function weekSummary(week: ProgramWeek): WeekSummary {
   const ordinal = PHASE_PATTERN.slice(0, week.weekIndex).filter((p) => p === week.phase).length;
-  // Within a phase run the later weeks carry +ordinal extra main sets (overload).
-  const phasePart =
-    week.phase === 'deload' ? PHASE_LABEL.deload : `${PHASE_LABEL[week.phase]} ${ordinal + 1}`;
-  const loadCue =
-    week.phase === 'deload'
-      ? 'recover'
-      : ordinal > 0
-        ? `+${ordinal} set${ordinal > 1 ? 's' : ''}`
-        : 'base volume';
-  const hasVolume = week.sessions.some((s) => s.type === 'volume-technique');
-  const focus = hasVolume ? ` · focus: ${drillForWeek(week.weekIndex).name}` : '';
-  return `${phasePart} · ${loadCue}${focus}`;
+
+  if (week.phase === 'peak') {
+    return {
+      title: 'Peak',
+      detail:
+        'Realise your fitness: fewer, fresher attempts at your limit. Rest fully between goes, ' +
+        'prioritise quality over quantity, and go for a personal best.',
+    };
+  }
+  if (week.phase === 'deload') {
+    return ordinal === 0
+      ? {
+          title: 'Deload',
+          detail:
+            'Back right off — about half the usual volume, easy climbing only. This lets tendons, ' +
+            'skin and energy recover so the hard weeks actually stick.',
+        }
+      : {
+          title: 'Deload',
+          detail:
+            'Cycle complete — recover fully, sleep well, and reassess your grade before the next block.',
+        };
+  }
+
+  // hard / build phase
+  const build = ordinal + 1;
+  const detail =
+    ordinal === 0
+      ? 'Lay your base: repeatable quality volume across limit, power-endurance and technique. ' +
+        'Climb hard but leave a rep in reserve — clean form beats grinding.'
+      : `Progressive overload: a little more main volume than last week (+${ordinal} set${
+          ordinal > 1 ? 's' : ''
+        }). Same quality, slightly more work, so you adapt without overreaching.`;
+  return { title: `Build ${build}`, detail };
 }

@@ -61,6 +61,40 @@ describe('getTodaySession', () => {
     }
   });
 
+  it('returns null readiness on a neutral-assumed day, never a fake green (BC-28)', async () => {
+    const repo = new DexieClimbRepo(`boot-ready-neutral-${Math.random()}`);
+    const r = await getTodaySession(repo, new Date(2026, 5, 1, 8)); // Mon, training, no check-in
+    expect(r.neutralAssumed).toBe(true);
+    expect(r.readiness).toBeNull();
+    expect(r.consistency.weekTarget).toBe(DEFAULT_PROFILE.sessionsPerWeek);
+  });
+
+  it('computes a readiness read-out when a real check-in exists (BC-28)', async () => {
+    const repo = new DexieClimbRepo(`boot-ready-real-${Math.random()}`);
+    await getTodaySession(repo, new Date(2026, 5, 1, 8)); // seed program
+    await repo.saveCheckIn({
+      date: '2026-06-01',
+      sleepQuality: 5,
+      overallFatigue: 1,
+      soreness: {},
+      pain: {},
+      motivation: 5,
+    });
+    const r = await getTodaySession(repo, new Date(2026, 5, 1, 8));
+    expect(r.readiness).not.toBeNull();
+    expect(r.readiness!.band).toBe('green');
+    expect(r.readiness!.drivers.length).toBeGreaterThan(0);
+  });
+
+  it('reports null readiness but real consistency on a rest day (BC-28/BC-40)', async () => {
+    const repo = new DexieClimbRepo(`boot-rest-ready-${Math.random()}`);
+    await getTodaySession(repo, new Date(2026, 5, 1, 8)); // seed
+    const rest = await getTodaySession(repo, new Date(2026, 5, 2, 8)); // Tue = rest
+    expect(rest.session.type).toBe('rest');
+    expect(rest.readiness).toBeNull();
+    expect(rest.consistency.weekTarget).toBe(DEFAULT_PROFILE.sessionsPerWeek);
+  });
+
   it('flags neutral when no check-in exists for the day (BC-07)', async () => {
     const repo = new DexieClimbRepo(`boot-neutral-${Math.random()}`);
     const r = await getTodaySession(repo, new Date(2026, 5, 1, 8)); // Mon, training day

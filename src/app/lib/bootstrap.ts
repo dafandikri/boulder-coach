@@ -13,6 +13,8 @@ import { programPosition, type ProgramPosition } from '@/domain/programClock';
 import { pickDaySession } from '@/domain/schedule';
 import { computeLoadMetrics } from '@/domain/loadMetrics';
 import { adapt } from '@/domain/adaptation';
+import { computeReadiness, type ReadinessResult } from '@/domain/readiness';
+import { computeConsistency, type ConsistencyResult } from '@/domain/consistency';
 import { localDateIso } from './date';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -104,6 +106,12 @@ export interface TodayResult {
   /** True when no check-in existed for today, so the engine assumed neutral.
    *  Drives the "No check-in today — assuming you feel normal" banner (BC-07). */
   neutralAssumed: boolean;
+  /** BC-28: today's readiness read-out. Null on a rest day, or when no real check-in
+   *  exists (a neutral-assumed day shows a "check in to see readiness" prompt, never a
+   *  fake green). */
+  readiness: ReadinessResult | null;
+  /** BC-40: this week's session progress + the consistency streak (always present). */
+  consistency: ConsistencyResult;
 }
 
 function neutralCheckIn(dateIso: string): CheckIn {
@@ -161,25 +169,47 @@ export async function getTodaySession(
   if (!week) throw new Error('program has no weeks');
   const planned = pickDaySession(week, profile.availableWeekdays, asOf);
 
+  // BC-40: the consistency read is independent of today's prescription — compute it
+  // once from the logs so it shows on training AND rest days.
+  const logs = await repo.getLogs();
+  const consistency = computeConsistency(logs, profile, asOf);
+
   // BC-03: a rest day is an explicit recovery prescription — no adaptation noise.
   if (planned.type === 'rest') {
-    return { session: planned, changes: [], warmupMandatory: false, neutralAssumed: false };
+    return {
+      session: planned,
+      changes: [],
+      warmupMandatory: false,
+      neutralAssumed: false,
+      readiness: null,
+      consistency,
+    };
   }
 
   const dateIso = localDateIso(asOf);
   const storedCheckIn = await repo.getCheckIn(dateIso);
   const neutralAssumed = storedCheckIn === undefined;
   const checkIn = storedCheckIn ?? neutralCheckIn(dateIso);
-  const logs = await repo.getLogs();
   const metrics = computeLoadMetrics(logs, asOf);
 
   const { adjustedSession, changes, warmupMandatory } = adapt(planned, checkIn, logs, metrics);
+
+  // BC-28: a readiness read-out from the REAL check-in only — a neutral-assumed day
+  // can't honestly report readiness, so it's null (the page prompts a check-in).
+  const readiness = neutralAssumed ? null : computeReadiness(checkIn, metrics);
 
   // BC-07: persist the "why" log idempotently per local date — re-rendering the
   // same day overwrites the entry (keyed by date) rather than duplicating it.
   await repo.saveAdaptationLogEntry({ date: dateIso, changes, neutralAssumed });
 
-  return { session: adjustedSession, changes, warmupMandatory, neutralAssumed };
+  return {
+    session: adjustedSession,
+    changes,
+    warmupMandatory,
+    neutralAssumed,
+    readiness,
+    consistency,
+  };
 }
 
 /**
