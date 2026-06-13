@@ -578,7 +578,7 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
 
 > **— Content-fidelity defects (PO feedback round 2) —**
 
-### BC-52 · Warm-up & cooldown detail vanishes when you tap "Start" — `done (pending commit)`
+### BC-52 · Warm-up & cooldown detail vanishes when you tap "Start" — `done (PR #36)`
 
 - **Shipped:** `generateWarmup()` (every warm-up block), `cooldownPrehab()`, and the rest-day
   `recoveryBlock()` (`schedule.ts`) now carry BC-46 `ExerciseContent` (`steps`/`cues`/`commonMistakes`
@@ -632,7 +632,7 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   `src/app/session/page.tsx`, `src/app/program/page.tsx`, `tests/domain/warmup.test.ts`,
   `public/exercises/README.md`
 
-### BC-53 · The 6-week program reads identically every week (variation is invisible) — `done (pending commit)`
+### BC-53 · The 6-week program reads identically every week (variation is invisible) — `done (PR #36)`
 
 - **Shipped:** pure `weekHeadline(week)` in `periodization.ts` composes a **differentiating** one-line
   summary from real data — build ordinal + progressive-overload cue (`base volume` / `+1 set` /
@@ -671,7 +671,7 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     "weeks are not byte-identical" fixture.)
 - **Files:** `src/domain/periodization.ts`, `src/app/program/page.tsx`, `tests/domain/periodization.test.ts`
 
-### BC-54 · Shared `BlockSummary` component — kill the three-surface render drift — `done (pending commit)`
+### BC-54 · Shared `BlockSummary` component — kill the three-surface render drift — `done (PR #36)`
 
 - **Shipped:** presentational `src/app/components/BlockSummary.tsx` (gate-blind, no business logic) is
   now the single source of truth for a block's descriptive header — name + category badge + target line

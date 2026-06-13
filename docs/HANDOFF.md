@@ -24,10 +24,11 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
-## Current state — 2026-06-13 (BC-52/53/54 implemented — content-fidelity defects fixed, last touched by: Claude Opus 4.8)
+## Current state — 2026-06-13 (BC-52/53/54 shipped — content-fidelity defects fixed, PR #36, last touched by: Claude Opus 4.8)
 
-- **The three PO-round-2 defect PBIs are now fixed (gate green, NOT yet committed/pushed).** Done as
-  one cohesive change set (BC-54 depends on BC-52; BC-53 relies on BC-52's notes rendering):
+- **The three PO-round-2 defect PBIs are fixed and shipped via PR #36** (squashed commit `0723747`,
+  CI `quality` + GitGuardian + Vercel all green). Done as one cohesive change set (BC-54 depends on
+  BC-52; BC-53 relies on BC-52's notes rendering):
   - **BC-52 (P1)** — warm-up (`generateWarmup`), cooldown (`cooldownPrehab`), and rest-day
     (`recoveryBlock` in `schedule.ts`) blocks now carry BC-46 `ExerciseContent` (`steps`/`cues`/
     `commonMistakes` + `imageId`) at `mainContentFor` quality, so the player's "How to do this" →
@@ -48,8 +49,12 @@ file is the live position** — update it as the LAST step of any session (see "
   an explicit test (week 1 = 2nd hard week) to keep `periodization.ts` ≥90% branch — it's there.
   The two unreachable `default` returns in `mainContentFor`/`mainBlocksFor` (lines ~179/271) remain
   the only uncovered branches; the file still clears 90%.
-- **`pnpm gate` green** (272 tests, build OK). **Not committed** — a supervised commit/PR is the next
-  step. BACKLOG entries marked `done (pending commit)`; replace with the SHA on commit.
+- **`pnpm gate` green** (272 tests, build OK); CI green on PR #36. Reviewed (diff scrutinised:
+  faithful to the implementation, no stray edits, no `any`, all three surfaces routed through
+  `BlockSummary`) and merged to `main`. BACKLOG entries marked `done (PR #36)`.
+- **Next open work** is unrelated P2/P3: data-safety (BC-31/32/33/34), harness (BC-26/35/36/37),
+  Insights charts (BC-38), training depth (BC-27/28/29/30/40), dark mode (BC-25), PWA polish
+  (BC-14/16/39). Consider condensing BC-44…BC-54 into the Shipped log next grooming pass.
 
 ## Current state — 2026-06-13 (PO feedback round 2 — 3 defect PBIs filed, last touched by: Claude Opus 4.8)
 
