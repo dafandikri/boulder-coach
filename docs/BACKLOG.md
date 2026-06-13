@@ -283,7 +283,13 @@ sessionsSinceExport)` fires when there is meaningful un-backed-up data (≥`NUDG
 
 ### BC-35 · Mutation testing on the safety files (Stryker) — `open`
 
-- **Type:** ci/test · **Priority:** P2 · **Complexity:** M · **Depends on:** —
+> **Re-prioritized 2026-06-13 (P2 → P1):** a review of proposed test-quality upgrades (SAST/DAST/
+> API-schema/BDD/load-test/mutation) confirmed mutation testing is the only one that fits a
+> backendless IndexedDB PWA — the rest target a server surface this app doesn't have. Coverage is
+> 100% branch on the safety files but assertion strength is unproven; this PBI closes that gap and is
+> now the top harness-compounding item.
+
+- **Type:** ci/test · **Priority:** P1 · **Complexity:** M · **Depends on:** —
 - **Problem:** `adaptation.ts`/`loadMetrics.ts` are 100% _branch-covered_, but coverage proves lines
   _ran_, not that a wrong rule would be _caught_. The invariant fuzz test
   (`adaptation.invariants.test.ts`) is the real guard — mutation testing is how we prove it actually
@@ -869,7 +875,7 @@ The P0→P1 core chain is shipped (Shipped log). Remaining open work, suggested 
 
 ```
 Data safety first (cheap, high-leverage):   BC-31 → BC-33 → BC-32 → BC-34
-Harness compounding (run anytime, solo):     BC-26 · BC-35 (safety mutation) · BC-36 (bundle) · BC-37 (a11y) · BC-16 (offline e2e)
+Harness compounding (run anytime, solo):     BC-35 (safety mutation, P1 — do first) · BC-26 · BC-36 (bundle) · BC-37 (a11y) · BC-16 (offline e2e)
 Onboarding fidelity (PO feedback, cheap):    BC-44 (VB/V0) · BC-45 (1–7 sessions)  [both touch periodization.ts + bootstrap.ts + profile → run SEQUENTIALLY]
 Content depth (PO feedback, foundation 1st): BC-46 → then BC-47 · BC-49 · BC-50 (reuse it) → BC-48 (week variation + clickable program)
 Content-fidelity fixes (PO round 2, do next): BC-52 (warm-up/cooldown detail) → BC-54 (shared BlockSummary) · BC-53 (program week differs)  [BC-52/54 + BC-53 both edit program/page.tsx + periodization.ts → run SEQUENTIALLY]
