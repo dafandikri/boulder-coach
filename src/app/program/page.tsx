@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { programPosition } from '@/domain/programClock';
-import { weekHeadline } from '@/domain/periodization';
+import { weekSummary } from '@/domain/periodization';
 import { toOptionalLoadState, type OptionalLoadState } from '@/app/lib/loadState';
 import type { Program, PhaseKind, PlannedSession } from '@/domain/types';
 import { hasRichContent } from '@/domain/exerciseContent';
@@ -130,6 +130,7 @@ export default function ProgramPage() {
         {program.weeks.map((w) => {
           const isCurrent = w.weekIndex === currentWeekIndex;
           const expanded = openWeek === w.weekIndex;
+          const summary = weekSummary(w);
           return (
             <Card
               key={w.weekIndex}
@@ -163,22 +164,25 @@ export default function ProgramPage() {
                       </span>
                     )}
                   </span>
+                  {/* BC-53: the week's short label (Build 1 / Deload / Peak) — phase
+                      tone, but differentiating across same-phase weeks. */}
                   <Badge tone={PHASE_TONE[w.phase]} solid={isCurrent}>
-                    {w.phase}
+                    {summary.title}
                   </Badge>
                 </div>
-                {/* BC-53: a differentiating headline (build ordinal + overload + drill
-                    focus) so same-phase weeks no longer read identically. The session
-                    rotation is still reachable by expanding the week below. */}
+                {/* BC-53: an honest plain-language plan — what to do this week and why
+                    (no misleading "focus: <drill>"). The session rotation is still
+                    reachable by expanding the week below. */}
                 <p
                   style={{
                     marginTop: 4,
                     fontSize: 'var(--fs-xs)',
                     color: 'var(--text-muted)',
-                    fontWeight: 600,
+                    fontWeight: 500,
+                    lineHeight: 1.45,
                   }}
                 >
-                  {weekHeadline(w)}
+                  {summary.detail}
                 </p>
               </button>
 

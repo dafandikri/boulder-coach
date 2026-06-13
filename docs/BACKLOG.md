@@ -124,8 +124,17 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
   - Tested: synthetic logs → measured grade incl. the not-enough-data and tie cases.
 - **Files:** `src/domain/assessment.ts`, `src/app/lib/bootstrap.ts`, `src/app/page.tsx`
 
-### BC-28 · Readiness score on Today — `open`
+### BC-28 · Readiness score on Today — `done (pending commit)`
 
+- **Shipped:** pure `computeReadiness(checkIn, metrics) → { score: 0..100, band, drivers }` in
+  `src/domain/readiness.ts` — docks points for poor sleep/fatigue/soreness/pain + high ACWR, with the
+  **safety bias baked in** (any sharp pain or ACWR > 1.5 forces `red`, mirroring adaptation rules 1 & 3;
+  1.3–1.5 is a caution driver). Drivers are prioritised, most-significant-first. `getTodaySession`
+  surfaces `readiness` on `TodayResult` from the **real** check-in only — a neutral-assumed day returns
+  `null` (Today shows the existing check-in prompt, never a fake green); rest days return `null` too.
+  New gate-blind `ReadinessCard` renders the band/score/bar + top 2 drivers. TDD: `readiness.test.ts`
+  covers green/amber/red, both safety overrides, the caution band, clamp, and the empty-driver fallback;
+  `bootstrap.test.ts` covers null-on-neutral / real-on-checkin. `pnpm gate` green.
 - **Type:** feature · **Priority:** P2 · **Complexity:** S · **Depends on:** —
 - **Problem:** the check-in captures sleep, fatigue, soreness, motivation and the engine computes ACWR,
   but the user never sees a single "how ready am I today" signal — the adaptation reasons explain _what
@@ -325,8 +334,16 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     (supported / unsupported / dismissed) with a mocked event.
 - **Files:** `src/app/lib/install.ts`, `src/app/page.tsx`
 
-### BC-40 · Training streak / consistency on Today — `open`
+### BC-40 · Training streak / consistency on Today — `done (pending commit)`
 
+- **Shipped:** pure `computeConsistency(logs, profile, asOf) → { weekDoneCount, weekTarget,
+currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the current rolling 7-day
+  window and walks back over completed weeks for the streak. The **current week joins the streak only
+  once it meets target, and never breaks it while in progress** (an unfinished week doesn't reset to 0).
+  Future-dated logs ignored; TZ-stable local-day windows. Surfaced on `TodayResult` (training AND rest
+  days) and rendered on Today as "X / Y sessions" + a `ProgressBar` + a supportive 🔥 streak line (no
+  guilt-trip copy). TDD: `consistency.test.ts` covers empty, window inclusion/exclusion, future logs,
+  in-progress-week-doesn't-break, multi-week extension, and the streak-break boundary. `pnpm gate` green.
 - **Type:** ux/feature · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-03
 - **Problem:** consistency is the strongest predictor of progress, yet the app surfaces nothing about it
   — no streak, no "sessions this week vs target," no gentle nudge when a planned day is slipping.
@@ -642,6 +659,13 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   renders each block's `notes` (via `BlockSummary`), so the rotating drill + progression are visible
   after clicking in. Pure, `asOf`-free, derived from canonical `PHASE_PATTERN`. TDD:
   `periodization.test.ts` asserts same-phase weeks differ + the overload/phase labels. `pnpm gate` green.
+- **Follow-up (PO feedback, pending commit):** the first cut read "Build 1 · base volume · focus:
+  Silent feet" — the PO objected that the volume-day's rotating drill ("Silent feet") was mislabelled
+  as the **whole week's** focus when it isn't. Replaced `weekHeadline` (string) with
+  `weekSummary(week) → { title, detail }`: the `title` ("Build 1"/"Deload"/"Peak") is the week's
+  Badge; the `detail` is an honest supportive-coach sentence of **what to do this week and why** (no
+  drill mislabel) — e.g. "Build 1 — Lay your base: repeatable quality volume… leave a rep in reserve."
+  Builds 1/2/3 + the two deloads (mid-cycle vs end-of-cycle) all read distinctly. Tests updated.
 - **Type:** bug/ux · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-48
 - **Problem (verified):** the PO reports "the 6-week program section, the description is all the same
   from week 1 all the way to week 6 — _hard · limit boulder · power endurance · volume technique ·
