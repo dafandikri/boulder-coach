@@ -5,6 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
+import {
+  shouldNudgeBackup,
+  countSessionsSince,
+  isSnoozed,
+  snoozeUntilIso,
+  LAST_EXPORT_KEY,
+  NUDGE_SNOOZE_KEY,
+} from '@/app/lib/backupReminder';
 import { Button } from '@/app/components/Button';
 import { BlockSummary } from '@/app/components/BlockSummary';
 import { Callout } from '@/app/components/Callout';
@@ -32,6 +40,7 @@ export default function TodayPage() {
   const router = useRouter();
   const [today, setToday] = useState<TodayResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [backupNudge, setBackupNudge] = useState(false);
 
   useEffect(() => {
     const repo = new DexieClimbRepo();
@@ -50,6 +59,27 @@ export default function TodayPage() {
         setError(e instanceof Error ? e.message : 'Failed to load session');
       });
   }, [router]);
+
+  // BC-34: decide whether to surface the "back up your data" nudge. The decision
+  // is the covered, tested domain rule; the page only reads logs + localStorage.
+  useEffect(() => {
+    const repo = new DexieClimbRepo();
+    void repo.getLogs().then((logs) => {
+      const now = new Date();
+      const lastExport = localStorage.getItem(LAST_EXPORT_KEY);
+      const snooze = localStorage.getItem(NUDGE_SNOOZE_KEY);
+      const since = countSessionsSince(
+        logs.map((l) => l.date),
+        lastExport,
+      );
+      setBackupNudge(shouldNudgeBackup(lastExport, now, since) && !isSnoozed(snooze, now));
+    });
+  }, []);
+
+  function dismissBackupNudge(): void {
+    localStorage.setItem(NUDGE_SNOOZE_KEY, snoozeUntilIso(new Date()));
+    setBackupNudge(false);
+  }
 
   if (error) {
     return (
@@ -142,6 +172,25 @@ export default function TodayPage() {
           </p>
         )}
       </Card>
+
+      {/* BC-34: gentle, dismissible reminder to export before evictable storage
+          (IndexedDB) can lose the training history. Decision is domain-tested. */}
+      {backupNudge && (
+        <Callout tone="info" title="Back up your training data" icon="download">
+          <p style={{ marginBottom: 8 }}>
+            Your history lives on this device only. Export a backup so a cleared browser can’t wipe
+            it.
+          </p>
+          <div className="flex gap-2.5">
+            <Link href="/profile" className="bc-btn bc-btn--secondary">
+              Export now
+            </Link>
+            <button type="button" className="bc-btn bc-btn--ghost" onClick={dismissBackupNudge}>
+              Remind me later
+            </button>
+          </div>
+        </Callout>
+      )}
 
       {warmupMandatory && (
         <Callout tone="warning" title="Warm-up is mandatory today.">
