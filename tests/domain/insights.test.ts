@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { computeInsights, summariseInsights, type Insights } from '../../src/domain/insights';
+import {
+  computeInsights,
+  summariseInsights,
+  pyramidTarget,
+  pyramidGaps,
+  biggestPyramidGap,
+  describePyramidGap,
+  type Insights,
+  type GradePyramidEntry,
+} from '../../src/domain/insights';
 import type { SessionLog, CheckIn } from '../../src/domain/types';
 
 // BC-51 — a deterministic, on-device coaching read over the same Insights data.
@@ -82,6 +91,122 @@ describe('summariseInsights (BC-51)', () => {
     );
     expect(s.length).toBeLessThanOrEqual(4);
     expect(s.join(' ')).toMatch(/sessions|consistency/i);
+  });
+});
+
+describe('pyramidTarget (BC-30)', () => {
+  it('tops out at the goal grade with a single send and broadens downward', () => {
+    // ascending by grade, fewest at the top (goal), more toward the base
+    expect(pyramidTarget(5, 5)).toEqual([
+      { grade: 3, count: 6 },
+      { grade: 4, count: 3 },
+      { grade: 5, count: 1 },
+    ]);
+  });
+
+  it('caps the pyramid depth at five levels when the goal is far above current', () => {
+    const t = pyramidTarget(2, 12); // a 10-grade reach
+    expect(t).toHaveLength(5); // base no deeper than goal - 4
+    expect(t.map((e) => e.grade)).toEqual([8, 9, 10, 11, 12]);
+  });
+
+  it('lets the current grade broaden the base below current when the goal is close', () => {
+    expect(pyramidTarget(6, 7)).toEqual([
+      { grade: 4, count: 10 }, // base = current - 2 = 4
+      { grade: 5, count: 6 },
+      { grade: 6, count: 3 },
+      { grade: 7, count: 1 },
+    ]);
+  });
+
+  it('never floors the base below VB (-1) for a beginner goal', () => {
+    const t = pyramidTarget(0, 0); // V0 goal, base would be -2 → clamped to VB
+    expect(t.map((e) => e.grade)).toEqual([-1, 0]); // VB, V0
+    expect(t.every((e) => e.grade >= -1)).toBe(true);
+  });
+});
+
+describe('pyramidGaps (BC-30)', () => {
+  const target: GradePyramidEntry[] = [
+    { grade: 3, count: 6 },
+    { grade: 4, count: 3 },
+    { grade: 5, count: 1 },
+  ];
+
+  it('computes the per-grade shortfall of actual against target', () => {
+    const actual: GradePyramidEntry[] = [
+      { grade: 3, count: 2 },
+      { grade: 5, count: 1 },
+    ];
+    expect(pyramidGaps(actual, target)).toEqual([
+      { grade: 3, actual: 2, target: 6, shortfall: 4 },
+      { grade: 4, actual: 0, target: 3, shortfall: 3 },
+      { grade: 5, actual: 1, target: 1, shortfall: 0 },
+    ]);
+  });
+
+  it('clamps shortfall at zero when actual exceeds target (no negative gaps)', () => {
+    const actual: GradePyramidEntry[] = [{ grade: 3, count: 99 }];
+    expect(pyramidGaps(actual, target)).toContainEqual({
+      grade: 3,
+      actual: 99,
+      target: 6,
+      shortfall: 0,
+    });
+  });
+});
+
+describe('biggestPyramidGap (BC-30)', () => {
+  it('returns the grade with the largest shortfall', () => {
+    const gaps = pyramidGaps(
+      [{ grade: 5, count: 1 }],
+      [
+        { grade: 3, count: 6 },
+        { grade: 4, count: 3 },
+        { grade: 5, count: 1 },
+      ],
+    );
+    expect(biggestPyramidGap(gaps)?.grade).toBe(3); // shortfall 6 > 3 > 0
+  });
+
+  it('breaks ties toward the lower grade — broaden the base first', () => {
+    const gaps = [
+      { grade: 4, actual: 0, target: 3, shortfall: 3 },
+      { grade: 3, actual: 3, target: 6, shortfall: 3 },
+    ];
+    expect(biggestPyramidGap(gaps)?.grade).toBe(3);
+  });
+
+  it('returns null when every grade meets its target', () => {
+    const gaps = [{ grade: 3, actual: 6, target: 6, shortfall: 0 }];
+    expect(biggestPyramidGap(gaps)).toBeNull();
+  });
+});
+
+describe('describePyramidGap (BC-30)', () => {
+  it('cold start (no sends) returns an honest "log some sessions" line, never NaN', () => {
+    const s = describePyramidGap([], 4, 6);
+    expect(s).toMatch(/log/i);
+    expect(s).not.toMatch(/NaN/);
+  });
+
+  it('names the biggest gap grade when the base is thin', () => {
+    const actual: GradePyramidEntry[] = [
+      { grade: 6, count: 1 },
+      { grade: 5, count: 1 },
+    ];
+    const s = describePyramidGap(actual, 6, 6);
+    expect(s).toMatch(/V4|broaden|base/i);
+  });
+
+  it('affirms a complete pyramid when every target is met', () => {
+    const actual: GradePyramidEntry[] = [
+      { grade: 3, count: 9 },
+      { grade: 4, count: 5 },
+      { grade: 5, count: 2 },
+    ];
+    const s = describePyramidGap(actual, 5, 5);
+    expect(s).toMatch(/solid|broad|ready/i);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { SessionLog, CheckIn, VGrade, BodyPart } from './types';
-import { formatGrade } from './grade';
+import { formatGrade, VB } from './grade';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -88,6 +88,86 @@ export function summariseInsights(insights: Insights, acwr: number, asOf: Date):
   );
 
   return out.slice(0, 4);
+}
+
+/** A target send-count per grade (BC-30): how full a healthy pyramid level is. */
+export interface PyramidGap {
+  grade: VGrade;
+  actual: number;
+  target: number;
+  /** target − actual, floored at 0 (a level that's over-target is not a gap). */
+  shortfall: number;
+}
+
+// Coaching model: a healthy send pyramid narrows to a single send at the goal and
+// broadens by roughly the triangular numbers as you descend. Index = grades below
+// the goal; the pyramid is capped at 5 levels deep (offset 0..4) so a far-off goal
+// targets a base around `goal − 4`, not an unrealistic 2^n explosion.
+const TARGET_COUNTS = [1, 3, 6, 10, 15] as const;
+const MAX_DEPTH = TARGET_COUNTS.length - 1; // 4 grades below the goal
+
+/**
+ * BC-30 — the healthy target pyramid for a climber at `currentGrade` chasing
+ * `goalGrade`: a single send at the goal, broadening downward. The base sits at the
+ * broader of "two below current" (consolidate where you are) and "four below goal"
+ * (cap the depth), never below VB. Pure, deterministic. Ascending by grade.
+ */
+export function pyramidTarget(currentGrade: VGrade, goalGrade: VGrade): GradePyramidEntry[] {
+  // Depth = how many grades below the goal the base reaches: capped at MAX_DEPTH,
+  // and pulled up to "two below current" so a close goal still broadens the base.
+  // Mapping over a slice keeps every `count` provably defined (no tuple-index undef).
+  const depth = Math.min(MAX_DEPTH, goalGrade - Math.max(VB, currentGrade - 2));
+  return TARGET_COUNTS.slice(0, depth + 1)
+    .map((count, offset) => ({ grade: goalGrade - offset, count }))
+    .reverse(); // ascending by grade
+}
+
+/** BC-30 — the per-grade shortfall of an actual pyramid against a target. */
+export function pyramidGaps(
+  actual: GradePyramidEntry[],
+  target: GradePyramidEntry[],
+): PyramidGap[] {
+  const have = new Map(actual.map((e) => [e.grade, e.count]));
+  return target.map((t) => {
+    const got = have.get(t.grade) ?? 0;
+    return { grade: t.grade, actual: got, target: t.count, shortfall: Math.max(0, t.count - got) };
+  });
+}
+
+/** BC-30 — the grade most under target (ties broaden the base: lower grade wins). */
+export function biggestPyramidGap(gaps: PyramidGap[]): PyramidGap | null {
+  let worst: PyramidGap | null = null;
+  for (const g of gaps) {
+    if (g.shortfall === 0) continue;
+    if (
+      !worst ||
+      g.shortfall > worst.shortfall ||
+      (g.shortfall === worst.shortfall && g.grade < worst.grade)
+    ) {
+      worst = g;
+    }
+  }
+  return worst;
+}
+
+/**
+ * BC-30 — a one-line plain-language read of the climber's pyramid vs the target for
+ * their goal. Cold start (no sends) is honest, never NaN. When the base is thin it
+ * names the grade to broaden; a complete pyramid is affirmed.
+ */
+export function describePyramidGap(
+  actual: GradePyramidEntry[],
+  currentGrade: VGrade,
+  goalGrade: VGrade,
+): string {
+  if (actual.length === 0) {
+    return 'Log a few sessions and I’ll read your send pyramid against your goal.';
+  }
+  const worst = biggestPyramidGap(pyramidGaps(actual, pyramidTarget(currentGrade, goalGrade)));
+  if (!worst) {
+    return `Your pyramid is solid all the way up to ${formatGrade(goalGrade)} — you’re ready to push the ceiling.`;
+  }
+  return `Your ${formatGrade(worst.grade)} base is thin (${worst.actual} of a target ${worst.target}) — broaden it before chasing ${formatGrade(goalGrade)}.`;
 }
 
 function buildGradePyramid(logs: SessionLog[]): GradePyramidEntry[] {
