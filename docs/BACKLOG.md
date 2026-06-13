@@ -568,6 +568,139 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Tested: each sentence-trigger branch incl. the safety-leads-first ordering and the empty state.
 - **Files:** `src/domain/insights.ts`, `src/app/insights/page.tsx`
 
+> **Backlog extended 2026-06-13 (Claude Opus 4.8, PO hands-on-feedback session #2):** BC-52…BC-54
+> added from continued use of the live app. **These are verified defects/gaps in already-`done` PBIs
+> (BC-47, BC-48)** — the right _shape_ shipped, but the detail the home page promises is dropped the
+> moment you tap **Start**, and the 6-week program still _reads_ identical week to week even though
+> BC-48 made the underlying blocks vary. Each was traced to an exact line, not assumed. Root smell:
+> three surfaces (Today `page.tsx`, the session player, the program preview) each render a `Block`
+> differently — `notes` is shown in one and silently dropped in the other two.
+
+> **— Content-fidelity defects (PO feedback round 2) —**
+
+### BC-52 · Warm-up & cooldown detail vanishes when you tap "Start" — `done (pending commit)`
+
+- **Shipped:** `generateWarmup()` (every warm-up block), `cooldownPrehab()`, and the rest-day
+  `recoveryBlock()` (`schedule.ts`) now carry BC-46 `ExerciseContent` (`steps`/`cues`/`commonMistakes`
+  - an `imageId`) at `mainContentFor` quality, so the player's "How to do this" → `ExerciseDetail` now
+    appears for warm-up/cooldown/rest too. New SVGs: `warmup-raise`, `warmup-mobilize`,
+    `warmup-potentiate`, `cooldown-prehab`, `active-recovery`. The session player **and** program preview
+    now render each block's one-line summary via BC-54's shared `BlockSummary`, so they never show
+    **less** than Today. TDD: `warmup.test.ts` / `schedule.test.ts` / `periodization.test.ts` assert that
+    **every** block in a generated session carries `hasRichContent` content (mirrors BC-47's main-block
+    invariant — no block ships detail-less). `pnpm gate` green.
+- **Type:** bug/ux · **Priority:** P1 · **Complexity:** M · **Depends on:** BC-46, BC-47
+- **Problem (verified, two linked defects):** the home page shows a real per-block plan — e.g.
+  "Raise: light cardio — _5–10 min jog / row / skip to raise heart rate_", "Activate & Mobilize —
+  _arm circles, wrist rotations, finger tendon glides_" — by rendering `Block.notes`
+  (`src/app/page.tsx:160-164`). But tapping **Start** drops you into a session where **none of that
+  detail exists**:
+  1. **The session player never renders `b.notes`.** `src/app/session/page.tsx` renders the name +
+     `target: sets × grip · RPE` (lines 292-307) and a collapsible "How to do this" **only when**
+     `b.content && hasRichContent(b.content)` (line 309) — it never prints `notes`. So the one-line
+     warm-up text the home page shows is silently dropped.
+  2. **Warm-up & cooldown blocks carry no `content`.** BC-47's `mainContentFor()` only populated
+     `category: 'main'` blocks; `generateWarmup()` (`src/domain/warmup.ts`) and `cooldownPrehab()`
+     (`src/domain/periodization.ts:275-285`) set **only `notes`, no `ExerciseContent`**. So warm-up
+     and cooldown fail the `hasRichContent` guard → no "How to do this" button either. Net: the
+     climber sees "Raise: light cardio · 1 × open-hand · RPE 3" with **zero guidance** — exactly the
+     PO's "when I start and log session it doesn't exist and doesn't go into detail."
+  - The same gap exists in the program preview (`SessionBlocks`, `src/app/program/page.tsx:209-241`):
+    it also doesn't render `notes`, and warm-up/cooldown have no `content`, so those blocks are blank
+    there too.
+- **Value:** closes BC-47's actual promise ("tapping Start is self-guiding") for the **warm-up** — the
+  one part of every session the app insists is mandatory (`warmupMandatory`) yet currently explains
+  the least. A climber who doesn't know what "potentiate" or "tendon glides" means gets actionable
+  steps + an image instead of a bare label.
+- **Acceptance criteria:**
+  - Warm-up blocks (`generateWarmup`) and the cooldown block(s) (`cooldownPrehab`, and the
+    `schedule.ts` rest-day cooldown) adopt BC-46's `ExerciseContent` (real `steps`/`cues`/
+    `commonMistakes` + an `imageId`, matching the existing `mainContentFor` quality), so the
+    "How to do this" → `ExerciseDetail` appears for them in the session player **and** the program
+    preview. The how-to text must agree with the existing `notes` summary (no contradiction).
+  - **Nothing the home page shows is dropped after Start:** the session player and the program preview
+    render the block's one-line summary (`notes`, or its `ExerciseContent` equivalent) so the three
+    surfaces are consistent. (Prevention belongs in BC-54's shared component, but BC-52 must not leave
+    the player showing _less_ than Today.)
+  - Content-selection logic stays in the **covered domain layer** (`warmup.ts` / `periodization.ts`),
+    never inline in the gate-blind pages.
+  - Tested: every warm-up block and every cooldown block carries `hasRichContent` content (a
+    `periodization.test.ts` / `warmup.test.ts` invariant — _no_ block in a generated session ships
+    detail-less, mirroring BC-47's "no main block has empty instructions" test). New warm-up/cooldown
+    SVGs land under `public/exercises/` or fall back to the placeholder (no broken `<img>`).
+- **Files:** `src/domain/warmup.ts`, `src/domain/periodization.ts`, `src/domain/schedule.ts`,
+  `src/app/session/page.tsx`, `src/app/program/page.tsx`, `tests/domain/warmup.test.ts`,
+  `public/exercises/README.md`
+
+### BC-53 · The 6-week program reads identically every week (variation is invisible) — `done (pending commit)`
+
+- **Shipped:** pure `weekHeadline(week)` in `periodization.ts` composes a **differentiating** one-line
+  summary from real data — build ordinal + progressive-overload cue (`base volume` / `+1 set` /
+  `+2 sets` / `recover`) + the week's rotating drill focus — so two same-phase weeks (e.g. week 0 vs
+  week 3, both `hard`) read **differently**. The program week card renders it instead of the constant
+  session-type rotation (still reachable by expanding the week). The drill-down `SessionBlocks` now
+  renders each block's `notes` (via `BlockSummary`), so the rotating drill + progression are visible
+  after clicking in. Pure, `asOf`-free, derived from canonical `PHASE_PATTERN`. TDD:
+  `periodization.test.ts` asserts same-phase weeks differ + the overload/phase labels. `pnpm gate` green.
+- **Type:** bug/ux · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-48
+- **Problem (verified):** the PO reports "the 6-week program section, the description is all the same
+  from week 1 all the way to week 6 — _hard · limit boulder · power endurance · volume technique ·
+  antagonist prehab_." True at the list level: the week summary renders only
+  `w.sessions.map((s) => s.type.replace('-', ' ')).join(' · ')` (`src/app/program/page.tsx:177`) —
+  the session-type **rotation is constant for all 6 weeks**, and three of the six weeks share the
+  `hard` phase badge. BC-48 _did_ add genuine week-to-week variation (progressive-overload set bumps
+  via `phaseRunOrdinal`, and a technique drill that rotates by `weekIndex` — `drillForWeek`), **but
+  none of it is surfaced at the week level**, so every card looks identical. Worse, the one place the
+  rotating drill lives is `Block.notes` (`periodization.ts:252`), and the program drill-down
+  `SessionBlocks` (`program/page.tsx:209-241`) **doesn't render `notes`** — so even after you click
+  in, the week-distinguishing detail is invisible.
+- **Value:** the program _looks_ like the progressive, varied plan BC-48 actually built — the climber
+  can see week 4 is heavier than week 1 and that this week's technique focus is "silent feet" vs next
+  week's "heel hooks," instead of six identical-looking rows.
+- **Acceptance criteria:**
+  - A pure, tested helper (e.g. `weekHeadline(week)` in `src/domain/periodization.ts`) composes a
+    **differentiating** one-line summary per week from the real data: phase intent + a progression cue
+    (e.g. "Build 2 · +1 set" / "Peak" / "Deload") + the week's drill focus where relevant — so two
+    weeks of the same phase produce **different** summaries. `asOf`-free, deterministic; the page only
+    renders it (logic-in-covered-layers rule).
+  - The week card surfaces that summary instead of (or alongside) the constant rotation list.
+  - The program drill-down (`SessionBlocks`) renders each block's `notes`/summary so the rotating
+    drill + progression are visible after clicking in (pairs with BC-52's "don't drop `notes`" fix).
+  - Tested: `weekHeadline` differs for two same-phase weeks (e.g. week 0 vs week 3, both `hard`); the
+    deterministic drill/progression labels match the generated blocks. (Reuses BC-48's existing
+    "weeks are not byte-identical" fixture.)
+- **Files:** `src/domain/periodization.ts`, `src/app/program/page.tsx`, `tests/domain/periodization.test.ts`
+
+### BC-54 · Shared `BlockSummary` component — kill the three-surface render drift — `done (pending commit)`
+
+- **Shipped:** presentational `src/app/components/BlockSummary.tsx` (gate-blind, no business logic) is
+  now the single source of truth for a block's descriptive header — name + category badge + target line
+  - one-line `notes` summary + an optional `children` slot (the player's collapsible how-to / the
+    program's `ExerciseDetail`). All three surfaces (Today, session player, program preview) render
+    through it; `leading` carries the warm-up checkbox, `showGrade={false}` lets Today keep its
+    `GradePill`. This removes the divergence that caused BC-52 — a surface can no longer show **less**
+    than another. `Badge`/`formatGrade` imports dropped from the pages now that the component owns them.
+    `pnpm gate` green (knip: used by all three).
+- **Type:** refactor/infra · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-52
+- **Problem:** a `Block` is rendered **three different ways** today — Today (`src/app/page.tsx:137-168`,
+  shows `notes`), the session player (`src/app/session/page.tsx:292-327`, drops `notes`, shows
+  `content`), and the program preview (`src/app/program/page.tsx:209-241`, drops `notes`, shows
+  `content`). This divergence is the **root cause** of BC-52 (the home page promised detail the player
+  dropped). Without one component, the next surface will drift again. This is a clean
+  leave-it-better-than-you-found-it consolidation (< 100 lines).
+- **Value:** one presentational source of truth for "render a block's name + target + summary +
+  optional how-to" means a surface can never again show _less_ than another. Prevents BC-52 from
+  silently regressing.
+- **Acceptance criteria:**
+  - A presentational `src/app/components/BlockSummary.tsx` (gate-blind by design, **no logic** — it
+    carries no branches the coverage gate would need) renders name + category badge + `target` line +
+    `notes`/summary + the optional collapsible `ExerciseDetail`. Reused by all three surfaces.
+  - The three pages render via it; **no behavior change** beyond consistency (the logging controls in
+    the session player stay where they are — `BlockSummary` is the descriptive header, not the form).
+  - `pnpm gate` green (knip: the component must be _used_ by all three, not orphaned).
+- **Files:** `src/app/components/BlockSummary.tsx`, `src/app/page.tsx`, `src/app/session/page.tsx`,
+  `src/app/program/page.tsx`
+
 ---
 
 ## P3 — Future bets (design-first; do not start while a P0 is open)
@@ -686,6 +819,7 @@ Data safety first (cheap, high-leverage):   BC-31 → BC-33 → BC-32 → BC-34
 Harness compounding (run anytime, solo):     BC-26 · BC-35 (safety mutation) · BC-36 (bundle) · BC-37 (a11y) · BC-16 (offline e2e)
 Onboarding fidelity (PO feedback, cheap):    BC-44 (VB/V0) · BC-45 (1–7 sessions)  [both touch periodization.ts + bootstrap.ts + profile → run SEQUENTIALLY]
 Content depth (PO feedback, foundation 1st): BC-46 → then BC-47 · BC-49 · BC-50 (reuse it) → BC-48 (week variation + clickable program)
+Content-fidelity fixes (PO round 2, do next): BC-52 (warm-up/cooldown detail) → BC-54 (shared BlockSummary) · BC-53 (program week differs)  [BC-52/54 + BC-53 both edit program/page.tsx + periodization.ts → run SEQUENTIALLY]
 Coach intelligence:                          BC-28 → BC-30 → BC-51 (Insights summary) → BC-27 → BC-29 (BC-29 = safety protocol)
 Polish (after BC-14 icons / brand settled):  BC-14 → BC-38 → BC-40 → BC-39 · BC-25 (dark mode)
 P3 design specs, when a milestone schedules them: BC-18 · BC-20 · BC-21 · BC-24 · BC-41 · BC-42 · BC-43   (BC-19 absorbed by BC-48)

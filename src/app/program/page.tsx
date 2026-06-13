@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { programPosition } from '@/domain/programClock';
+import { weekHeadline } from '@/domain/periodization';
 import { toOptionalLoadState, type OptionalLoadState } from '@/app/lib/loadState';
 import type { Program, PhaseKind, PlannedSession } from '@/domain/types';
-import { formatGrade } from '@/domain/grade';
 import { hasRichContent } from '@/domain/exerciseContent';
 import { Card } from '@/app/components/Card';
 import { Badge } from '@/app/components/Badge';
@@ -16,6 +16,7 @@ import { HoldMark } from '@/app/components/HoldMark';
 import { BackLink } from '@/app/components/BackLink';
 import { Spinner } from '@/app/components/Spinner';
 import { ExerciseDetail } from '@/app/components/ExerciseDetail';
+import { BlockSummary } from '@/app/components/BlockSummary';
 
 /** Phase → Badge tone (presentational): hard pushes, peak warns, deload recovers. */
 const PHASE_TONE: Record<PhaseKind, 'brand' | 'warning' | 'success'> = {
@@ -166,6 +167,9 @@ export default function ProgramPage() {
                     {w.phase}
                   </Badge>
                 </div>
+                {/* BC-53: a differentiating headline (build ordinal + overload + drill
+                    focus) so same-phase weeks no longer read identically. The session
+                    rotation is still reachable by expanding the week below. */}
                 <p
                   style={{
                     marginTop: 4,
@@ -174,7 +178,7 @@ export default function ProgramPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {w.sessions.map((s) => s.type.replace('-', ' ')).join(' · ')}
+                  {weekHeadline(w)}
                 </p>
               </button>
 
@@ -204,35 +208,22 @@ export default function ProgramPage() {
   );
 }
 
-/** Renders a planned session's blocks with targets + collapsible how-to (BC-48 reuses
- *  the BC-46 ExerciseDetail). Read-only — this is the program preview, not the logger. */
+/** Renders a planned session's blocks with targets + the one-line summary + how-to
+ *  (BC-54 shares BlockSummary across all three surfaces; BC-48 reuses BC-46's
+ *  ExerciseDetail). Read-only — this is the program preview, not the logger. */
 function SessionBlocks({ session }: { session: PlannedSession }) {
   return (
     <ol className="space-y-3">
       {session.blocks.map((b) => (
         <li key={b.id}>
           <Card>
-            <div className="flex items-center justify-between gap-2">
-              <span style={{ fontWeight: 800, fontSize: 'var(--fs-md)' }}>{b.name}</span>
-              <Badge tone="neutral">{b.category}</Badge>
-            </div>
-            <p
-              style={{
-                marginTop: 4,
-                fontSize: 'var(--fs-xs)',
-                color: 'var(--text-muted)',
-                fontWeight: 600,
-              }}
-            >
-              {b.sets} × {b.grip}
-              {b.targetGrade !== undefined ? ` · ${formatGrade(b.targetGrade)}` : ''} · RPE{' '}
-              {b.targetRPE}
-            </p>
-            {b.content && hasRichContent(b.content) && (
-              <div style={{ marginTop: 10 }}>
-                <ExerciseDetail content={b.content} />
-              </div>
-            )}
+            <BlockSummary block={b}>
+              {b.content && hasRichContent(b.content) && (
+                <div style={{ marginTop: 10 }}>
+                  <ExerciseDetail content={b.content} />
+                </div>
+              )}
+            </BlockSummary>
           </Card>
         </li>
       ))}

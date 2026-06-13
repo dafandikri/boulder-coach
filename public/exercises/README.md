@@ -17,5 +17,9 @@ asset is missing, the UI shows `_placeholder.svg` — never a broken `<img>`.
 - `_placeholder.svg` — generic fallback (required; do not delete).
 - `silent-feet.svg` — footwork drill (BC-49 example).
 - `band-pull-apart.svg` — shoulder prehab (BC-50 example).
+- `limit-boulder.svg`, `power-endurance-4x4.svg`, `volume-technique.svg`,
+  `antagonist-prehab.svg` — main session-block illustrations (BC-47).
+- `warmup-raise.svg`, `warmup-mobilize.svg`, `warmup-potentiate.svg` — warm-up blocks (BC-52).
+- `cooldown-prehab.svg`, `active-recovery.svg` — cooldown / rest-day blocks (BC-52).
 
-Add more as BC-47/48/49/50 fill in real content; keep one SVG per `imageId`.
+Add more as later PBIs fill in real content; keep one SVG per `imageId`.

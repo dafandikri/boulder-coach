@@ -281,6 +281,23 @@ function cooldownPrehab(): Block {
     sets: 2,
     targetRPE: 4,
     notes: 'Rotator-cuff + wrist + finger-extensor maintenance.',
+    // BC-52: the cooldown is rich too, so the player's "How to do this" appears
+    // for it — the climber who doesn't know this routine gets the steps + image.
+    content: {
+      imageId: 'cooldown-prehab',
+      dosage: '2 rounds, controlled tempo',
+      steps: [
+        'Rotator-cuff: light band external rotations, elbow pinned to your side.',
+        'Wrist/forearm: gentle flexor and extensor stretches, then a few band curls.',
+        'Finger extensors: rubber-band openings to balance all the gripping.',
+        'Finish with easy breathing and any tight-area mobility.',
+      ],
+      cues: ['Light load', 'Slow and controlled', 'Balance the pulling you just did'],
+      commonMistakes: [
+        'Skipping it because the climbing is "done"',
+        'Going heavy — this is maintenance, not a workout',
+      ],
+    },
   };
 }
 
@@ -335,4 +352,34 @@ export function generateProgram(profile: UserProfile, startDate: string): Progra
     lengthWeeks: 6,
     weeks,
   };
+}
+
+const PHASE_LABEL: Record<PhaseKind, string> = {
+  hard: 'Build',
+  peak: 'Peak',
+  deload: 'Deload',
+};
+
+/**
+ * BC-53: a *differentiating* one-line summary for a program week, so the program
+ * list no longer reads identically week to week. Two weeks of the same phase get
+ * different headlines because the build ordinal (progressive overload, mirroring
+ * `phaseRunOrdinal`) and the rotating technique focus (`drillForWeek`) both change.
+ * Pure + `asOf`-free; the page only renders the string. Derived from the canonical
+ * `PHASE_PATTERN`, so it agrees with the blocks `generateProgram` actually built.
+ */
+export function weekHeadline(week: ProgramWeek): string {
+  const ordinal = PHASE_PATTERN.slice(0, week.weekIndex).filter((p) => p === week.phase).length;
+  // Within a phase run the later weeks carry +ordinal extra main sets (overload).
+  const phasePart =
+    week.phase === 'deload' ? PHASE_LABEL.deload : `${PHASE_LABEL[week.phase]} ${ordinal + 1}`;
+  const loadCue =
+    week.phase === 'deload'
+      ? 'recover'
+      : ordinal > 0
+        ? `+${ordinal} set${ordinal > 1 ? 's' : ''}`
+        : 'base volume';
+  const hasVolume = week.sessions.some((s) => s.type === 'volume-technique');
+  const focus = hasVolume ? ` · focus: ${drillForWeek(week.weekIndex).name}` : '';
+  return `${phasePart} · ${loadCue}${focus}`;
 }

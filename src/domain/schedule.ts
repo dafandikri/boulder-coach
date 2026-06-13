@@ -10,6 +10,22 @@ function recoveryBlock(): Block {
     sets: 1,
     targetRPE: 2,
     notes: 'Rest day — light mobility, antagonist/prehab, sleep. No climbing load.',
+    // BC-52: the rest-day card is rich too, so "How to do this" gives a real
+    // recovery routine instead of a bare label. No climbing load — recovery only.
+    content: {
+      imageId: 'active-recovery',
+      steps: [
+        'Light mobility: gentle full-body movement, no loading the fingers.',
+        'A short antagonist/prehab round (band pulls, finger extensors) if you feel fresh.',
+        'Easy walk or stretch; keep it well below any climbing effort.',
+        'Prioritise sleep and food — this is where the adaptation happens.',
+      ],
+      cues: ['No climbing load', 'Move easy', 'Sleep is the real training'],
+      commonMistakes: [
+        'Sneaking in a "quick" hard session and skipping the rest',
+        'Doing nothing at all when light movement aids recovery',
+      ],
+    },
   };
 }
 

@@ -5,7 +5,9 @@ import {
   LAYOFF_GAP_DAYS,
   PHASE_PATTERN,
   reEntryReRamp,
+  weekHeadline,
 } from '../../src/domain/periodization';
+import { hasRichContent } from '../../src/domain/exerciseContent';
 import type { PlannedSession, SessionLog, UserProfile } from '../../src/domain/types';
 
 const profile: UserProfile = {
@@ -102,6 +104,20 @@ describe('generateProgram', () => {
     }
   });
 
+  it('gives every block — warm-up, main AND cooldown — rich how-to content (BC-52)', () => {
+    // BC-52: nothing in a generated session may ship detail-less. The home page
+    // promised a per-block plan; tapping "Start" must never show less.
+    const p = generateProgram(profile, '2026-06-09');
+    for (const w of p.weeks) {
+      for (const s of w.sessions) {
+        for (const b of s.blocks) {
+          expect(b.content, `block ${b.id} missing content`).toBeDefined();
+          expect(hasRichContent(b.content!), `block ${b.id} not rich`).toBe(true);
+        }
+      }
+    }
+  });
+
   it('makes the single weekly session a limit day when sessionsPerWeek is 1', () => {
     const p = generateProgram({ ...profile, sessionsPerWeek: 1 }, '2026-06-09');
     expect(p.weeks[0]!.sessions.map((s) => s.type)).toEqual(['limit-boulder']);
@@ -155,6 +171,32 @@ describe('generateProgram', () => {
     // week 0 and week 1 volume days name different deliberate drills.
     expect(drillNote(0)).not.toBe(drillNote(1));
     expect(drillNote(0).length).toBeGreaterThan(0);
+  });
+
+  it('reads differently for two same-phase weeks via weekHeadline (BC-53)', () => {
+    const p = generateProgram(profile, '2026-06-09');
+    // weeks 0 and 3 are both `hard` but must NOT produce the same one-line summary.
+    expect(p.weeks[0]!.phase).toBe('hard');
+    expect(p.weeks[3]!.phase).toBe('hard');
+    expect(weekHeadline(p.weeks[0]!)).not.toBe(weekHeadline(p.weeks[3]!));
+    expect(weekHeadline(p.weeks[0]!).length).toBeGreaterThan(0);
+  });
+
+  it('weekHeadline names the deload and peak phases distinctly (BC-53)', () => {
+    const p = generateProgram(profile, '2026-06-09');
+    // PHASE_PATTERN = hard, hard, deload, hard, peak, deload
+    expect(weekHeadline(p.weeks[2]!).toLowerCase()).toContain('deload');
+    expect(weekHeadline(p.weeks[4]!).toLowerCase()).toContain('peak');
+  });
+
+  it('weekHeadline reads the progressive overload cue per build week (BC-53)', () => {
+    const p = generateProgram(profile, '2026-06-09');
+    // week 0 = first hard week (base), week 1 = second hard week (+1 set, singular),
+    // week 3 = third hard week (+2 sets, plural). All three must read differently.
+    expect(weekHeadline(p.weeks[0]!)).toContain('base volume');
+    expect(weekHeadline(p.weeks[1]!)).toContain('+1 set');
+    expect(weekHeadline(p.weeks[1]!)).not.toContain('+1 sets');
+    expect(weekHeadline(p.weeks[3]!)).toContain('+2 sets');
   });
 
   it('reduces main volume in deload weeks vs hard weeks', () => {

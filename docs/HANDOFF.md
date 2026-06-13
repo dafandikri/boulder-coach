@@ -24,6 +24,58 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-52/53/54 implemented — content-fidelity defects fixed, last touched by: Claude Opus 4.8)
+
+- **The three PO-round-2 defect PBIs are now fixed (gate green, NOT yet committed/pushed).** Done as
+  one cohesive change set (BC-54 depends on BC-52; BC-53 relies on BC-52's notes rendering):
+  - **BC-52 (P1)** — warm-up (`generateWarmup`), cooldown (`cooldownPrehab`), and rest-day
+    (`recoveryBlock` in `schedule.ts`) blocks now carry BC-46 `ExerciseContent` (`steps`/`cues`/
+    `commonMistakes` + `imageId`) at `mainContentFor` quality, so the player's "How to do this" →
+    `ExerciseDetail` appears for them. New SVGs: `warmup-{raise,mobilize,potentiate}`,
+    `cooldown-prehab`, `active-recovery`. Invariant tests now assert **every** block in a generated
+    session is `hasRichContent` (no block ships detail-less).
+  - **BC-53 (P2)** — pure `weekHeadline(week)` in `periodization.ts` gives each program week a
+    **differentiating** one-liner (build ordinal + overload cue `base volume`/`+1 set`/`+2 sets`/
+    `recover` + rotating drill focus); the week card renders it instead of the constant session-type
+    rotation. Same-phase weeks (0 vs 3) now read differently. Drill-down renders `notes` via
+    `BlockSummary`.
+  - **BC-54 (P2/S)** — new presentational `src/app/components/BlockSummary.tsx` (name + badge +
+    target + `notes` + optional how-to slot) is now the single render path for all three surfaces
+    (Today / session player / program preview), killing the drift that caused BC-52. `leading` =
+    warm-up checkbox; `showGrade={false}` keeps Today's `GradePill`.
+- **Also fixed the stale nit:** `UserProfile.sessionsPerWeek` comment `// 2..4` → `// 1..7 (BC-45)`.
+- **Coverage note:** `weekHeadline`'s singular-vs-plural overload branch (`+1 set` vs `+2 sets`) needs
+  an explicit test (week 1 = 2nd hard week) to keep `periodization.ts` ≥90% branch — it's there.
+  The two unreachable `default` returns in `mainContentFor`/`mainBlocksFor` (lines ~179/271) remain
+  the only uncovered branches; the file still clears 90%.
+- **`pnpm gate` green** (272 tests, build OK). **Not committed** — a supervised commit/PR is the next
+  step. BACKLOG entries marked `done (pending commit)`; replace with the SHA on commit.
+
+## Current state — 2026-06-13 (PO feedback round 2 — 3 defect PBIs filed, last touched by: Claude Opus 4.8)
+
+- **Backlog grooming only (no code changed). Filed BC-52…BC-54 — verified defects in already-`done`
+  PBIs (BC-47, BC-48)** found from continued hands-on use. The right _shape_ shipped, but:
+  - **BC-52 (P1) — warm-up/cooldown detail vanishes on "Start".** Home page renders `Block.notes`
+    (`page.tsx:160`), but the **session player never renders `notes`** and BC-47's `mainContentFor`
+    only populated `category:'main'` blocks — `generateWarmup()`/`cooldownPrehab()` set no
+    `ExerciseContent`, so warm-up/cooldown fail the `hasRichContent` guard (`session/page.tsx:309`)
+    → bare label, no how-to, note dropped. Fix: give warm-up/cooldown real `ExerciseContent` +
+    render the summary so the player never shows less than Today.
+  - **BC-53 (P2) — the 6-week program reads identically every week.** The week summary renders only
+    the constant session-type rotation (`program/page.tsx:177`); BC-48's real variation (overload
+    set bumps + week-rotated drill) lives in block data + `notes`, neither surfaced at week level,
+    and `SessionBlocks` doesn't render `notes` either. Fix: a pure tested `weekHeadline(week)` that
+    differentiates same-phase weeks + render `notes` in the drill-down.
+  - **BC-54 (P2/S) — shared `BlockSummary` component** to kill the three-surface render drift
+    (Today shows `notes`, player + program drop it) that _caused_ BC-52. Prevention.
+- **Root smell:** a `Block` is rendered three different ways (Today / session player / program
+  preview); `notes` shown in one, silently dropped in two. BC-54 consolidates it.
+- **Minor nit (not filed):** `UserProfile.sessionsPerWeek` still comments `// 2..4` in
+  `src/domain/types.ts:63` — stale since BC-45 made it 1..7. Fold into the next `types.ts` touch.
+- **Verified:** `tests/crew/backlog-hygiene.test.ts` green (BC-52…54 declare `Files:`, deps resolve
+  to done BC-46/47/48, no dangling deps). **Not pushed** — local backlog/HANDOFF edits only; a
+  supervised push/PR is the next step if the human wants it recorded on `main`.
+
 ## Current state — 2026-06-13 (BC-51 shipped — PO feedback COMPLETE, last touched by: Claude Opus 4.8)
 
 - **BC-51 DONE (PR #35) — Insights now has a personalised "Coach's read".** Pure

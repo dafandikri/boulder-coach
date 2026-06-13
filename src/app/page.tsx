@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { Button } from '@/app/components/Button';
-import { Badge } from '@/app/components/Badge';
+import { BlockSummary } from '@/app/components/BlockSummary';
 import { Callout } from '@/app/components/Callout';
 import { GradePill } from '@/app/components/GradePill';
 import { HoldMark } from '@/app/components/HoldMark';
@@ -141,27 +141,13 @@ export default function TodayPage() {
             style={{ borderTop: '2px solid var(--border)' }}
           >
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', color: 'var(--text)' }}>
-                  {b.name}
-                </span>
-                <Badge tone="neutral">{CAT_LABEL[b.category] ?? b.category}</Badge>
-              </div>
-              <div
-                style={{
-                  marginTop: 3,
-                  fontSize: 'var(--fs-xs)',
-                  color: 'var(--text-muted)',
-                  fontWeight: 600,
-                }}
-              >
-                {b.sets} × {b.grip} · RPE {b.targetRPE}
-              </div>
-              {b.notes && (
-                <div style={{ marginTop: 3, fontSize: 'var(--fs-xs)', color: 'var(--text-soft)' }}>
-                  {b.notes}
-                </div>
-              )}
+              {/* BC-54: the shared block header (name + badge + target + notes), so
+                  Today, the session player, and the program preview can never drift. */}
+              <BlockSummary
+                block={b}
+                badgeLabel={CAT_LABEL[b.category] ?? b.category}
+                showGrade={false}
+              />
             </div>
             {b.targetGrade !== undefined ? <GradePill grade={b.targetGrade} size="sm" /> : null}
           </div>

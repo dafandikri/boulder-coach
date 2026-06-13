@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" role="img" aria-label="Active recovery: light mobility, walking and sleep — no climbing load">
+  <rect width="320" height="200" fill="#eef6f0" />
+  <!-- moon / rest -->
+  <path d="M236 52 a30 30 0 1 0 26 46 a24 24 0 1 1 -26 -46 z" fill="#a9cdb6" />
+  <!-- walking figure -->
+  <circle cx="96" cy="70" r="13" fill="#3f8f66" />
+  <path d="M96 83 l0 34" stroke="#3f8f66" stroke-width="8" stroke-linecap="round" />
+  <path d="M96 92 l-18 12 M96 92 l20 8" stroke="#3f8f66" stroke-width="8" stroke-linecap="round" />
+  <path d="M96 117 l-16 26 M96 117 l18 24" stroke="#2f6b4c" stroke-width="8" stroke-linecap="round" />
+  <text x="160" y="186" text-anchor="middle" font-family="monospace" font-size="12" fill="#3f8f66">move easy — sleep, no load</text>
+</svg>
