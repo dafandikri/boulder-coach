@@ -24,6 +24,35 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-26 dep-guard + BC-30 pyramid gaps + BC-34 backup nudge — local, last touched by: Claude Opus 4.8)
+
+- **Three file-disjoint P2 PBIs shipped this session, all TDD, `pnpm gate` green** (format → lint →
+  tsc → depcruise → type-coverage → tests+coverage → knip → build all pass). **Not yet committed/pushed**
+  — local working tree only; a supervised commit-per-PBI + push/PR is the next step if you want them on
+  `main`. BACKLOG marks all three `done`.
+  - **BC-26 (Tier-1 dep-placement guard)** — `tests/harness/dependency-placement.test.ts` fails the gate
+    by name if any data-driven denylist dev tool (`playwright`/`@playwright/test`/`vitest`/`@vitest/*`/
+    `eslint*`/`prettier`/`type-coverage`/`knip`/`dependency-cruiser`/`husky`/`lint-staged`/`@types/*`/
+    `typescript-eslint`/`fake-indexeddb`) leaks into production `dependencies`. Promotes the BC-11/Copilot
+    "review caught what the gate missed" class (LEARNINGS 2026-06-12) to executable. **Closes the
+    HANDOFF "e2e tooling can hide in production dependencies" gate-blind risk** (remove it from the open
+    list once pushed). Verified non-vacuous by injecting `knip` into prod deps → red.
+  - **BC-30 (grade-pyramid target & gaps)** — pure `pyramidTarget`/`pyramidGaps`/`biggestPyramidGap`/
+    `describePyramidGap` in `insights.ts` (100% branch); Insights renders a "Pyramid vs your goal"
+    overlay card (target-vs-actual bars + the biggest-gap sentence, cold-start safe). Enriches the
+    already-shipped BC-51 read.
+  - **BC-34 (backup-reminder nudge)** — pure `src/app/lib/backupReminder.ts` (`shouldNudgeBackup` +
+    `countSessionsSince` + `isSnoozed`/`snoozeUntilIso`, 100% branch/line); Today shows a dismissible
+    "back up your data" Callout, profile export stamps `LAST_EXPORT_KEY` + clears the snooze. Decisions
+    in the covered lib; pages do only the localStorage I/O.
+- **Gotcha logged (LEARNINGS 2026-06-13):** under `noUncheckedIndexedAccess`, a computed tuple index is
+  `T | undefined` regardless of guards — build values via `.map`/iteration, not `arr[i]` + a dead
+  `?? 0`. Hit once in `pyramidTarget` and in the test assertions; fixed by `slice().map()` and
+  full-array `toEqual`.
+- **Note on BC-34's declared `Files:`** — implementation also touched `src/app/profile/page.tsx` (the
+  export stamp), one file beyond the backlog's declared set; harmless now it's `done`, but a reminder
+  that the page wiring for a `lib`-centric PBI can spill one surface wider than declared.
+
 ## Current state — 2026-06-13 (BC-53 copy fix + BC-28 readiness + BC-40 consistency — PR #37, last touched by: Claude Opus 4.8)
 
 - **PO feedback on BC-53's program copy — fixed.** The old line "Build 1 · base volume · focus: Silent

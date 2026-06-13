@@ -80,8 +80,16 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
   owner before shipping.
 - **Files:** `src/app/globals.css`, `src/app/layout.tsx`, `src/app/lib/theme.ts`
 
-### BC-26 · Tier-1 guard: dev-only tooling must stay out of production `dependencies` — `open`
+### BC-26 · Tier-1 guard: dev-only tooling must stay out of production `dependencies` — `done`
 
+- **Shipped:** `tests/harness/dependency-placement.test.ts` reads `package.json` and fails the gate
+  (by name) if any of a data-driven denylist of dev-only tools (`playwright`, `@playwright/test`,
+  `vitest`, `@vitest/*`, `eslint*`, `prettier`, `type-coverage`, `knip`, `dependency-cruiser`,
+  `husky`, `lint-staged`, `@types/*`, `typescript-eslint`, `fake-indexeddb`) appears in production
+  `dependencies`. Wildcard (`prefix*`) + exact matching via pure `isDevOnly`/`misplacedDevTools`
+  helpers (mock-leak unit tests + the real-file assertion). Promotes the BC-11/Copilot "review caught
+  what the gate missed" regression class (LEARNINGS 2026-06-12) to Tier-1; adding a dev tool is a
+  one-line denylist edit. Verified non-vacuous: injecting `knip` into prod deps turns the gate red.
 - **Type:** ci/test · **Priority:** P2 · **Complexity:** S
 - **Problem:** the gate verifies a dependency is _used_, not that it sits in the _right_ section.
   GitHub Copilot's BC-11 merge added `playwright` (the full browser package) to production
@@ -171,8 +179,19 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Tested per body part, incl. the additive-only invariant (load never increases vs no-history).
 - **Files:** `src/domain/types.ts`, `src/domain/warmup.ts`, `src/app/profile/page.tsx`, `src/app/lib/backup.ts`
 
-### BC-30 · Grade-pyramid goal & gap tracking — `open`
+### BC-30 · Grade-pyramid goal & gap tracking — `done`
 
+- **Shipped:** pure additions to `src/domain/insights.ts` — `pyramidTarget(currentGrade, goalGrade)`
+  builds a healthy target send-pyramid (single send at the goal, broadening downward by the triangular
+  counts `[1,3,6,10,15]`, capped 5 levels deep so a far-off goal targets a base around `goal − 4`, and
+  pulled up to "two below current" so a close goal still broadens the base; floored at VB).
+  `pyramidGaps(actual, target)` returns the per-grade `{actual, target, shortfall}` (shortfall floored
+  at 0); `biggestPyramidGap` picks the largest shortfall (ties broaden the base — lower grade wins);
+  `describePyramidGap` is the cold-start-safe one-line read ("log a few sessions" → "your V4 base is
+  thin…" → "solid all the way up to V*n*"). Insights overlays target-vs-actual bars + the sentence in
+  a "Pyramid vs your goal" card (logic stays in the covered domain; the page only renders). TDD:
+  `insights.test.ts` covers the target shape, depth cap, current-broadening, VB floor, gap clamp,
+  tie-break, and the three sentence branches. `insights.ts` 100% branch. `pnpm gate` green.
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** —
 - **Problem:** Insights renders the climber's _actual_ send pyramid (BC-04 data) but shows no _target_
   pyramid and no read on whether the base is broad enough to safely chase `goalGrade`. Coaching wisdom:
@@ -237,8 +256,18 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - e2e: a forced throw renders the boundary, not a blank page.
 - **Files:** `src/app/error.tsx`, `src/app/global-error.tsx`, `src/app/lib/errorRecovery.ts`, `e2e/error.spec.ts`
 
-### BC-34 · Backup-reminder nudge — `open`
+### BC-34 · Backup-reminder nudge — `done`
 
+- **Shipped:** pure `src/app/lib/backupReminder.ts` — `shouldNudgeBackup(lastExportAt, asOf,
+sessionsSinceExport)` fires when there is meaningful un-backed-up data (≥`NUDGE_AFTER_SESSIONS`=10
+  new sessions, or a prior export older than `NUDGE_AFTER_DAYS`=30 with any new data), and stays quiet
+  when nothing has changed or on a never-exported user below the session bar (no first-paint nag).
+  `countSessionsSince(logDates, since)` counts logs strictly after the last export (null/unparseable →
+  full history); `isSnoozed`/`snoozeUntilIso` implement a `SNOOZE_DAYS`=7 "remind me later" dismissal.
+  Profile export stamps `LAST_EXPORT_KEY` + clears the snooze; Today renders a dismissible info Callout
+  (export-now link + remind-me-later) — all decisions live in the covered lib, the pages only do the
+  localStorage I/O. TDD: `backupReminder.test.ts` covers every threshold boundary + the snooze window;
+  100% branch/line. `pnpm gate` green.
 - **Type:** ux/stability · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-10
 - **Problem:** BC-10 ships export/import but nothing reminds the user to do it. Evictable storage + a
   human who never exports = the same data-loss risk, just opt-in.
