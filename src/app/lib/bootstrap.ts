@@ -5,6 +5,7 @@ import type {
   PlannedSession,
   Program,
   UserProfile,
+  VGrade,
 } from '@/domain/types';
 import type { IClimbRepo } from '@/data/IClimbRepo';
 import { generateProgram } from '@/domain/periodization';
@@ -15,6 +16,7 @@ import { computeLoadMetrics } from '@/domain/loadMetrics';
 import { adapt } from '@/domain/adaptation';
 import { computeReadiness, type ReadinessResult } from '@/domain/readiness';
 import { computeConsistency, type ConsistencyResult } from '@/domain/consistency';
+import { assessBenchmark, type AssessmentResult } from '@/domain/assessment';
 import { localDateIso } from './date';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -72,6 +74,20 @@ export function validateProfile(draft: ProfileDraft): string | null {
   return null;
 }
 
+/**
+ * BC-27: the profile draft after the climber accepts a measured level-up. Raises
+ * `currentGrade` to the measured grade and lifts `goalGrade` to stay at or above it
+ * (a goal is never lowered). Pure — the page passes the result to `applyProfile`
+ * with `regenerate: true` so the next mesocycle re-anchors at the new grade.
+ */
+export function levelUpProfile(profile: UserProfile, measuredGrade: VGrade): ProfileDraft {
+  return {
+    ...profile,
+    currentGrade: measuredGrade,
+    goalGrade: Math.max(profile.goalGrade, measuredGrade),
+  };
+}
+
 export interface ApplyProfileResult {
   /** True when the program was (re)built from this draft. */
   regenerated: boolean;
@@ -112,6 +128,9 @@ export interface TodayResult {
   readiness: ReadinessResult | null;
   /** BC-40: this week's session progress + the consistency streak (always present). */
   consistency: ConsistencyResult;
+  /** BC-27: rolling benchmark of recent sends. `leveledUp` drives the "you've leveled
+   *  up — update your grade?" prompt; never lowers the grade automatically. */
+  assessment: AssessmentResult;
 }
 
 function neutralCheckIn(dateIso: string): CheckIn {
@@ -174,6 +193,10 @@ export async function getTodaySession(
   const logs = await repo.getLogs();
   const consistency = computeConsistency(logs, profile, asOf);
 
+  // BC-27: re-measure the baseline grade from recent sends, independent of today's
+  // prescription, so the level-up prompt shows on training AND rest days.
+  const assessment = assessBenchmark({ logs, currentGrade: profile.currentGrade, asOf });
+
   // BC-03: a rest day is an explicit recovery prescription — no adaptation noise.
   if (planned.type === 'rest') {
     return {
@@ -183,6 +206,7 @@ export async function getTodaySession(
       neutralAssumed: false,
       readiness: null,
       consistency,
+      assessment,
     };
   }
 
@@ -209,6 +233,7 @@ export async function getTodaySession(
     neutralAssumed,
     readiness,
     consistency,
+    assessment,
   };
 }
 
