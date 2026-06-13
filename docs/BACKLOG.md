@@ -124,7 +124,7 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
   - Tested: synthetic logs → measured grade incl. the not-enough-data and tie cases.
 - **Files:** `src/domain/assessment.ts`, `src/app/lib/bootstrap.ts`, `src/app/page.tsx`
 
-### BC-28 · Readiness score on Today — `done (pending commit)`
+### BC-28 · Readiness score on Today — `done (PR #37)`
 
 - **Shipped:** pure `computeReadiness(checkIn, metrics) → { score: 0..100, band, drivers }` in
   `src/domain/readiness.ts` — docks points for poor sleep/fatigue/soreness/pain + high ACWR, with the
@@ -334,7 +334,7 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     (supported / unsupported / dismissed) with a mocked event.
 - **Files:** `src/app/lib/install.ts`, `src/app/page.tsx`
 
-### BC-40 · Training streak / consistency on Today — `done (pending commit)`
+### BC-40 · Training streak / consistency on Today — `done (PR #37)`
 
 - **Shipped:** pure `computeConsistency(logs, profile, asOf) → { weekDoneCount, weekTarget,
 currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the current rolling 7-day

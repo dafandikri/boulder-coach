@@ -24,7 +24,7 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
-## Current state — 2026-06-13 (BC-53 copy fix + BC-28 readiness + BC-40 consistency — gate green, NOT yet committed, last touched by: Claude Opus 4.8)
+## Current state — 2026-06-13 (BC-53 copy fix + BC-28 readiness + BC-40 consistency — PR #37, last touched by: Claude Opus 4.8)
 
 - **PO feedback on BC-53's program copy — fixed.** The old line "Build 1 · base volume · focus: Silent
   feet" mislabelled the volume-day's rotating drill as the whole week's focus. Replaced
@@ -45,9 +45,9 @@ drivers }` in `src/domain/readiness.ts`; safety bias (sharp pain or ACWR > 1.5 �
   `bootstrap.test.ts` (readiness null-on-neutral / real-on-checkin, rest-day) + rewritten BC-53 tests.
   `pnpm gate` green (294 tests, build OK). Coverage note: removed an unreachable defensive branch in
   `consistency.ts` (`isoDayStart` now parses via a local-midnight string, no `??` fallbacks).
-- **NOT committed/pushed yet** — `weekHeadline`→`weekSummary` is a public-API rename in `periodization.ts`
-  (consumed by `program/page.tsx`); BACKLOG marks BC-28/BC-40 `done (pending commit)`. A supervised
-  commit/PR/merge is the next step.
+- **Shipped via PR #37** — `weekHeadline`→`weekSummary` is a public-API rename in `periodization.ts`
+  (consumed by `program/page.tsx`); BACKLOG marks BC-28/BC-40 `done (PR #37)`. Reviewed + merged once
+  CI green.
 
 ## Current state — 2026-06-13 (BC-52/53/54 shipped — content-fidelity defects fixed, PR #36, last touched by: Claude Opus 4.8)
 
