@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DexieClimbRepo } from '@/data/dexieRepo';
-import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
+import {
+  getTodaySession,
+  applyProfile,
+  levelUpProfile,
+  type TodayResult,
+} from '@/app/lib/bootstrap';
+import type { UserProfile } from '@/domain/types';
+import { formatGrade } from '@/domain/grade';
 import {
   shouldNudgeBackup,
   countSessionsSince,
@@ -13,6 +20,7 @@ import {
   LAST_EXPORT_KEY,
   NUDGE_SNOOZE_KEY,
 } from '@/app/lib/backupReminder';
+import { requestPersistence, shouldWarnEviction, EVICTION_DISMISS_KEY } from '@/app/lib/storage';
 import { Button } from '@/app/components/Button';
 import { BlockSummary } from '@/app/components/BlockSummary';
 import { Callout } from '@/app/components/Callout';
@@ -39,8 +47,10 @@ function todayLabel(d: Date): string {
 export default function TodayPage() {
   const router = useRouter();
   const [today, setToday] = useState<TodayResult | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [backupNudge, setBackupNudge] = useState(false);
+  const [evictionWarn, setEvictionWarn] = useState(false);
 
   useEffect(() => {
     const repo = new DexieClimbRepo();
@@ -53,6 +63,7 @@ export default function TodayPage() {
           router.replace('/profile');
           return;
         }
+        setProfile(profile);
         return getTodaySession(repo).then(setToday);
       })
       .catch((e: unknown) => {
@@ -79,6 +90,39 @@ export default function TodayPage() {
   function dismissBackupNudge(): void {
     localStorage.setItem(NUDGE_SNOOZE_KEY, snoozeUntilIso(new Date()));
     setBackupNudge(false);
+  }
+
+  // BC-31: ask the browser to make IndexedDB durable on load, then warn if it
+  // refused. The persistence/decision logic is the covered, tested helper; the
+  // page only feeds in `navigator.storage` and reads the dismissal flag.
+  useEffect(() => {
+    void requestPersistence(navigator.storage).then((state) => {
+      const dismissed = localStorage.getItem(EVICTION_DISMISS_KEY) === '1';
+      setEvictionWarn(shouldWarnEviction(state, dismissed));
+    });
+  }, []);
+
+  function dismissEvictionWarn(): void {
+    localStorage.setItem(EVICTION_DISMISS_KEY, '1');
+    setEvictionWarn(false);
+  }
+
+  // BC-27: the climber confirmed a measured level-up. Re-anchor the profile at the
+  // new grade and regenerate the next mesocycle (BC-06's regen path), then reload
+  // Today so it reflects the recalibrated program. The "new draft" decision lives
+  // in the covered helper — the page only wires the confirmed action.
+  function applyLevelUp(): void {
+    if (!profile || today === null || today.assessment.measuredGrade === null) return;
+    const draft = levelUpProfile(profile, today.assessment.measuredGrade);
+    const repo = new DexieClimbRepo();
+    void applyProfile(repo, draft, true)
+      .then(() => {
+        setProfile(draft);
+        return getTodaySession(repo).then(setToday);
+      })
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : 'Failed to update your grade');
+      });
   }
 
   if (error) {
@@ -172,6 +216,42 @@ export default function TodayPage() {
           </p>
         )}
       </Card>
+
+      {/* BC-27: recent sends measure above the recorded grade — offer to re-anchor
+          the program. Never auto-applies; the decision/threshold are domain-tested. */}
+      {today.assessment.leveledUp && today.assessment.measuredGrade !== null && (
+        <Callout tone="success" title="You’ve leveled up!" icon="trending-up">
+          <p style={{ marginBottom: 8 }}>
+            You’ve sent {formatGrade(today.assessment.measuredGrade)} in a few recent sessions.
+            Update your grade to {formatGrade(today.assessment.measuredGrade)} so the program scales
+            from your real level?
+          </p>
+          <div className="flex gap-2.5">
+            <button type="button" className="bc-btn bc-btn--success" onClick={applyLevelUp}>
+              Update to {formatGrade(today.assessment.measuredGrade)}
+            </button>
+          </div>
+        </Callout>
+      )}
+
+      {/* BC-31: the browser declined to make storage durable, so the OS may evict
+          the training history under disk pressure. Decision is domain-tested. */}
+      {evictionWarn && (
+        <Callout tone="warning" title="Your data isn’t guaranteed to stick" icon="triangle-alert">
+          <p style={{ marginBottom: 8 }}>
+            This browser may clear app data to reclaim space. Export a backup to keep your training
+            history safe.
+          </p>
+          <div className="flex gap-2.5">
+            <Link href="/profile" className="bc-btn bc-btn--secondary">
+              Export now
+            </Link>
+            <button type="button" className="bc-btn bc-btn--ghost" onClick={dismissEvictionWarn}>
+              Dismiss
+            </button>
+          </div>
+        </Callout>
+      )}
 
       {/* BC-34: gentle, dismissible reminder to export before evictable storage
           (IndexedDB) can lose the training history. Decision is domain-tested. */}

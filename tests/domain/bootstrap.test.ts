@@ -5,6 +5,7 @@ import {
   getTodaySession,
   loadAdaptationLog,
   sortAdaptationLogNewestFirst,
+  levelUpProfile,
   DEFAULT_PROFILE,
 } from '../../src/app/lib/bootstrap';
 import type { AdaptationLogEntry, CheckIn } from '../../src/domain/types';
@@ -86,6 +87,35 @@ describe('getTodaySession', () => {
     expect(r.readiness!.drivers.length).toBeGreaterThan(0);
   });
 
+  it('surfaces a level-up benchmark from recent sends above current grade (BC-27)', async () => {
+    const repo = new DexieClimbRepo(`boot-assess-${Math.random()}`);
+    const day = new Date(2026, 5, 1, 8);
+    await getTodaySession(repo, day); // seed program; DEFAULT_PROFILE is V5
+    // Two distinct sessions sending V6 → measured V6, above the V5 baseline.
+    for (const date of ['2026-05-28', '2026-05-30']) {
+      await repo.saveLog({
+        id: `mock-assess-${date}`,
+        date,
+        warmupCompleted: true,
+        blocks: [
+          { blockId: 'mock', setsCompleted: 1, gradesAttempted: [6], gradesSent: [6], rpe: 7 },
+        ],
+        sessionRPE: 7,
+        durationMin: 60,
+      });
+    }
+    const r = await getTodaySession(repo, day);
+    expect(r.assessment.measuredGrade).toBe(6);
+    expect(r.assessment.leveledUp).toBe(true);
+  });
+
+  it('reports no level-up when there are no qualifying sends (BC-27)', async () => {
+    const repo = new DexieClimbRepo(`boot-assess-cold-${Math.random()}`);
+    const r = await getTodaySession(repo, new Date(2026, 5, 1, 8));
+    expect(r.assessment.measuredGrade).toBeNull();
+    expect(r.assessment.leveledUp).toBe(false);
+  });
+
   it('reports null readiness but real consistency on a rest day (BC-28/BC-40)', async () => {
     const repo = new DexieClimbRepo(`boot-rest-ready-${Math.random()}`);
     await getTodaySession(repo, new Date(2026, 5, 1, 8)); // seed
@@ -142,6 +172,30 @@ describe('getTodaySession', () => {
     await getTodaySession(repo, new Date(2026, 5, 3, 8)); // Wed
     const log = await loadAdaptationLog(repo);
     expect(log.map((e) => e.date)).toEqual(['2026-06-03', '2026-06-01']);
+  });
+});
+
+describe('levelUpProfile (BC-27)', () => {
+  it('raises currentGrade to the measured grade', () => {
+    const base = { ...DEFAULT_PROFILE, currentGrade: 5, goalGrade: 7 };
+    expect(levelUpProfile(base, 6).currentGrade).toBe(6);
+  });
+
+  it('keeps goalGrade when it already exceeds the measured grade', () => {
+    const base = { ...DEFAULT_PROFILE, currentGrade: 5, goalGrade: 7 };
+    expect(levelUpProfile(base, 6).goalGrade).toBe(7);
+  });
+
+  it('lifts goalGrade so it never sits below the new current grade', () => {
+    const base = { ...DEFAULT_PROFILE, currentGrade: 5, goalGrade: 6 };
+    expect(levelUpProfile(base, 8).goalGrade).toBe(8);
+  });
+
+  it('leaves the rest of the profile untouched', () => {
+    const base = { ...DEFAULT_PROFILE, currentGrade: 5, goalGrade: 7, sessionsPerWeek: 4 };
+    const next = levelUpProfile(base, 6);
+    expect(next.sessionsPerWeek).toBe(4);
+    expect(next.availableWeekdays).toEqual(base.availableWeekdays);
   });
 });
 

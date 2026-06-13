@@ -24,6 +24,35 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-13 (BC-27 benchmark recalibration + BC-31 persistent storage — local, last touched by: Claude Opus 4.8)
+
+- **Two file-adjacent P2 PBIs shipped this session, both TDD, `pnpm gate` green** (format → lint → tsc
+  → depcruise → type-coverage → tests+coverage → knip → build all pass; coverage 99.6% lines).
+  **Not yet committed/pushed** — local working tree only; a supervised commit-per-PBI + push/PR is the
+  next step if you want them on `main`. BACKLOG marks both `done`.
+  - **BC-27 (benchmark recalibration)** — pure `assessBenchmark({logs, currentGrade, asOf}) →
+{measuredGrade, leveledUp}` in new `src/domain/assessment.ts` (100% branch). Measured grade =
+    highest grade SENT in ≥`SESSIONS_TO_CONFIRM`(2) distinct sessions within `LOOKBACK_DAYS`(42).
+    **Asymmetric by design:** `leveledUp` is true ONLY when measured > current — never auto-lowers the
+    grade (regression is a coach conversation). Surfaced on `TodayResult.assessment` via
+    `getTodaySession`; Today shows a success "You've leveled up!" Callout. Accept → covered
+    `levelUpProfile(profile, measuredGrade)` (raises current, lifts goal ≥ current) →
+    `applyProfile(repo, draft, regenerate=true)` (BC-06 regen) → reload. The "new draft" decision is in
+    the covered helper, not the gate-blind page.
+  - **BC-31 (persistent storage + eviction warning)** — pure `src/app/lib/storage.ts`:
+    `requestPersistence(navigator.storage)` feature-detects + calls `persist()` → `'persisted' |
+'transient' | 'unsupported'`; `shouldWarnEviction(state, dismissed)` warns only on `transient` +
+    not-dismissed (`unsupported` stays quiet — can't measure, don't cry wolf). Today requests
+    persistence on load + renders a dismissible warning Callout. **Closes the cheapest durability win
+    before cloud sync (BC-18).** The `StorageManagerLike` structural type lets the async browser I/O be
+    fully unit-tested in the node vitest env with a fake.
+- **Pattern note:** both follow the established "decision in covered `src/domain` or `src/app/lib`, page
+  is a thin wiring layer" rule (universal-quality-bar §2). `levelUpProfile` is tested AND used by the
+  page — not re-implemented inline.
+- **Remaining open P2:** BC-14 (icons, needs art), BC-16 (e2e in CI), BC-25 (dark mode), BC-29 (injury
+  history — safety-adjacent), BC-32 (schema migration), BC-33 (error boundary), BC-35 (mutation testing,
+  now P1), BC-36 (bundle budget), BC-37 (a11y gate), BC-38 (Insights charts), BC-39 (install prompt).
+
 ## Current state — 2026-06-13 (BC-26 dep-guard + BC-30 pyramid gaps + BC-34 backup nudge — local, last touched by: Claude Opus 4.8)
 
 - **Three file-disjoint P2 PBIs shipped this session, all TDD, `pnpm gate` green** (format → lint →

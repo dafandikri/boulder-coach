@@ -112,8 +112,21 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
 
 > **— Training depth (deepen the coach's intelligence) —**
 
-### BC-27 · Benchmark / assessment session — recalibrate `currentGrade` — `open`
+### BC-27 · Benchmark / assessment session — recalibrate `currentGrade` — `done`
 
+- **Shipped:** pure `assessBenchmark({ logs, currentGrade, asOf }) → { measuredGrade, leveledUp }` in
+  `src/domain/assessment.ts` — the measured grade is the highest grade SENT in ≥`SESSIONS_TO_CONFIRM`
+  (2) distinct sessions within `LOOKBACK_DAYS` (42, ~one mesocycle). Counts a grade once per session
+  (multi-block sends don't double-count), ignores out-of-window / future / unparseable-date logs, and
+  yields `measuredGrade: null` on cold start (never NaN). The measure is **asymmetric**: `leveledUp` is
+  true ONLY when measured > current — it never auto-lowers `currentGrade` (a regression is a coach
+  conversation). `getTodaySession` surfaces `assessment` on `TodayResult` (training AND rest days);
+  Today renders a success "You've leveled up!" Callout (never auto-applies). Accepting it calls the
+  covered `levelUpProfile(profile, measuredGrade)` (raises current, lifts goal to stay ≥ current) →
+  `applyProfile(repo, draft, regenerate=true)` (BC-06's regen path) → reloads Today. TDD:
+  `assessment.test.ts` (11) covers confirm/threshold/window/future/unparseable/per-session/highest/
+  no-demotion + `bootstrap.test.ts` covers the surfaced level-up, cold start, and `levelUpProfile`.
+  `assessment.ts` 100% branch. `pnpm gate` green.
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-06
 - **Problem:** `UserProfile.currentGrade` is set once at onboarding (BC-06) and **never re-measured**.
   Progression rule 6 (BC-05) bumps a session's `targetGrade`, but the climber's _actual_ baseline grade
@@ -208,8 +221,17 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
 
 > **— Stability & data safety (protect the user's training history) —**
 
-### BC-31 · Persistent storage + eviction warning — `open`
+### BC-31 · Persistent storage + eviction warning — `done`
 
+- **Shipped:** pure `src/app/lib/storage.ts` — `requestPersistence(navigator.storage)` feature-detects
+  the Storage API, calls `persist()` (which both requests durability and reports the resulting state),
+  and returns `'persisted' | 'transient' | 'unsupported'` (degrades silently when the API or `persist`
+  is absent). `shouldWarnEviction(state, dismissed)` warns ONLY when storage is known `transient` and
+  the user hasn't dismissed — `unsupported` stays quiet (no crying wolf when we can't measure the
+  risk). Today requests persistence on load and renders a dismissible warning Callout (export-now link
+  - dismiss persisted via `EVICTION_DISMISS_KEY`); the page only does the `navigator.storage` /
+    localStorage I/O, decisions live in the covered lib. TDD: `storage.test.ts` (8) covers persisted /
+    transient / unsupported / partial-support and every warn branch. `pnpm gate` green.
 - **Type:** infra/stability · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-10
 - **Problem:** all history lives in evictable IndexedDB (BC-10 named this the data-loss risk). The app
   never calls `navigator.storage.persist()` to request durable storage, and never tells the user when
