@@ -60,7 +60,7 @@ export interface Program {
 export interface UserProfile {
   currentGrade: VGrade;
   goalGrade: VGrade;
-  sessionsPerWeek: number; // 2..4
+  sessionsPerWeek: number; // 1..7 (BC-45)
   availableWeekdays: number[]; // 0=Sun .. 6=Sat
 }
 

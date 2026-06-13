@@ -17,15 +17,15 @@ import {
 } from '@/app/lib/restTimer';
 import { createSessionLog, type BlockActual } from '@/domain/sessionLog';
 import type { VGrade } from '@/domain/types';
-import { VB, formatGrade } from '@/domain/grade';
+import { VB } from '@/domain/grade';
 import { Card } from '@/app/components/Card';
-import { Badge } from '@/app/components/Badge';
 import { Button } from '@/app/components/Button';
 import { Callout } from '@/app/components/Callout';
 import { GradePill } from '@/app/components/GradePill';
 import { BackLink } from '@/app/components/BackLink';
 import { Spinner } from '@/app/components/Spinner';
 import { ExerciseDetail } from '@/app/components/ExerciseDetail';
+import { BlockSummary } from '@/app/components/BlockSummary';
 import { hasRichContent } from '@/domain/exerciseContent';
 
 /** Audible + haptic "rest over" cue. Lives in the (gate-blind) component because
@@ -277,9 +277,11 @@ export default function SessionPage() {
           return (
             <li key={b.id}>
               <Card feature={isWarmup && checked}>
-                <div className="flex items-start justify-between gap-2">
-                  <label className="flex items-start gap-2" style={{ minWidth: 0 }}>
-                    {isWarmup && (
+                <BlockSummary
+                  block={b}
+                  badgeTone={CAT_TONE[b.category] ?? 'neutral'}
+                  leading={
+                    isWarmup ? (
                       <input
                         type="checkbox"
                         checked={checked}
@@ -288,23 +290,9 @@ export default function SessionPage() {
                         }}
                         style={{ marginTop: 3, width: 18, height: 18, accentColor: 'var(--brand)' }}
                       />
-                    )}
-                    <span style={{ fontWeight: 800, fontSize: 'var(--fs-md)' }}>{b.name}</span>
-                  </label>
-                  <Badge tone={CAT_TONE[b.category] ?? 'neutral'}>{b.category}</Badge>
-                </div>
-                <p
-                  style={{
-                    marginTop: 4,
-                    fontSize: 'var(--fs-xs)',
-                    color: 'var(--text-muted)',
-                    fontWeight: 600,
-                  }}
-                >
-                  target: {b.sets} × {b.grip}
-                  {b.targetGrade !== undefined ? ` · ${formatGrade(b.targetGrade)}` : ''} · RPE{' '}
-                  {b.targetRPE}
-                </p>
+                    ) : undefined
+                  }
+                />
 
                 {b.content && hasRichContent(b.content) && (
                   <div style={{ marginTop: 10 }}>

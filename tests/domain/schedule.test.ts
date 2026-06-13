@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateProgram } from '../../src/domain/periodization';
 import { pickDaySession } from '../../src/domain/schedule';
+import { hasRichContent } from '../../src/domain/exerciseContent';
 import type { UserProfile } from '../../src/domain/types';
 
 const profile: UserProfile = {
@@ -53,6 +54,15 @@ describe('pickDaySession', () => {
     const thursday = new Date(2026, 5, 4);
     expect(thursday.getDay()).toBe(4);
     expect(pickDaySession(week, [1, 2, 3, 4], thursday).type).toBe('rest');
+  });
+
+  it('gives the rest-day recovery block rich how-to content (BC-52)', () => {
+    const tuesday = new Date(2026, 5, 2); // a rest day
+    const rest = pickDaySession(week, [1, 3, 5], tuesday);
+    for (const b of rest.blocks) {
+      expect(b.content, `rest block ${b.id} missing content`).toBeDefined();
+      expect(hasRichContent(b.content!), `rest block ${b.id} not rich`).toBe(true);
+    }
   });
 
   it('rests when the week has no sessions at all (malformed/empty week)', () => {
