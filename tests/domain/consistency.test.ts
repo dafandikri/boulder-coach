@@ -88,6 +88,14 @@ describe('computeConsistency', () => {
     expect(c.currentStreakWeeks).toBe(2);
   });
 
+  it('terminates (never loops forever) on a degenerate zero target', () => {
+    // sessionsPerWeek can't be 0 in a validated profile, but the pure function must
+    // still terminate — the streak is bounded by the number of logged sessions.
+    const logs = [mockLogOn('2026-06-12'), mockLogOn('2026-06-05'), mockLogOn('2026-05-29')];
+    const c = computeConsistency(logs, { ...profile, sessionsPerWeek: 0 }, asOf);
+    expect(c.currentStreakWeeks).toBeLessThanOrEqual(logs.length + 1);
+  });
+
   it('breaks the streak at a week that misses target', () => {
     // current week met target, but the prior week missed → streak is just 1.
     const logs = [

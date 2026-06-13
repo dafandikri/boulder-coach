@@ -53,8 +53,11 @@ export function computeConsistency(
 
   // The current week joins the streak only when it has already met target; either way
   // it never breaks it (the week isn't over). Then walk back over completed weeks.
+  // The `offset <= logDays.length` bound guarantees termination: a genuine k-week
+  // streak needs at least k logged sessions (target ≥ 1), so the bound can never
+  // truncate a real streak — it only stops a degenerate target ≤ 0 from looping forever.
   let currentStreakWeeks = weekDoneCount >= weekTarget ? 1 : 0;
-  for (let offset = 1; countInWeek(offset) >= weekTarget; offset++) {
+  for (let offset = 1; offset <= logDays.length && countInWeek(offset) >= weekTarget; offset++) {
     currentStreakWeeks++;
   }
 
