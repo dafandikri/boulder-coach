@@ -10,6 +10,7 @@ import {
   type ProfileDraft,
 } from '@/app/lib/bootstrap';
 import { exportBackup, importBackup, backupFilename, BackupError } from '@/app/lib/backup';
+import { LAST_EXPORT_KEY, NUDGE_SNOOZE_KEY } from '@/app/lib/backupReminder';
 import { Card } from '@/app/components/Card';
 import { Chip } from '@/app/components/Chip';
 import { Button } from '@/app/components/Button';
@@ -103,6 +104,9 @@ export default function ProfilePage() {
     a.download = backupFilename();
     a.click();
     URL.revokeObjectURL(url);
+    // BC-34: stamp the export so the Today nudge knows the data is freshly backed up.
+    localStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString());
+    localStorage.removeItem(NUDGE_SNOOZE_KEY); // a real export clears any "remind me later"
     setBackupMsg('Backup downloaded.');
   }
 
