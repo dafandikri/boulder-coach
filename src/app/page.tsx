@@ -21,6 +21,13 @@ import {
   NUDGE_SNOOZE_KEY,
 } from '@/app/lib/backupReminder';
 import { requestPersistence, shouldWarnEviction, EVICTION_DISMISS_KEY } from '@/app/lib/storage';
+import {
+  isStandalone,
+  isIOS,
+  decideInstallPrompt,
+  INSTALL_DISMISS_KEY,
+  type InstallPromptEventLike,
+} from '@/app/lib/install';
 import { Button } from '@/app/components/Button';
 import { BlockSummary } from '@/app/components/BlockSummary';
 import { Callout } from '@/app/components/Callout';
@@ -51,6 +58,24 @@ export default function TodayPage() {
   const [error, setError] = useState<string | null>(null);
   const [backupNudge, setBackupNudge] = useState(false);
   const [evictionWarn, setEvictionWarn] = useState(false);
+  const [engaged, setEngaged] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<InstallPromptEventLike | null>(null);
+  const [installDismissed, setInstallDismissed] = useState(false);
+  // BC-39: mount-stable install environment (display-mode / UA / prior dismissal).
+  // Read once in a lazy initializer — SSR-safe (no `window` on the server) and
+  // pure during render — so the decision below is derived, not effect-driven.
+  const [installEnv] = useState<{ standalone: boolean; ios: boolean; dismissed: boolean }>(() => {
+    if (typeof window === 'undefined') return { standalone: false, ios: false, dismissed: false };
+    const navStandalone = (navigator as Navigator & { standalone?: boolean }).standalone;
+    return {
+      standalone: isStandalone({
+        displayStandalone: window.matchMedia('(display-mode: standalone)').matches,
+        navigatorStandalone: navStandalone,
+      }),
+      ios: isIOS(navigator.userAgent, navigator.maxTouchPoints),
+      dismissed: localStorage.getItem(INSTALL_DISMISS_KEY) === '1',
+    };
+  });
 
   useEffect(() => {
     const repo = new DexieClimbRepo();
@@ -86,10 +111,16 @@ export default function TodayPage() {
           lastExport,
         );
         setBackupNudge(shouldNudgeBackup(lastExport, now, since) && !isSnoozed(snooze, now));
+        // BC-39: "engaged" gates the install invite off first paint — a climber
+        // who has logged at least one session has gotten value worth installing for.
+        setEngaged(logs.length >= 1);
       })
-      // Non-critical hint: if the read fails, just don't show the nudge.
+      // Non-critical hint: if the read fails, both the backup nudge AND the
+      // BC-39 install invite stay hidden (engaged remains false). That's the
+      // intended conservative behaviour — when the log store can't be read we
+      // can't confirm engagement, so we don't nag; neither banner is load-bearing.
       .catch(() => {
-        /* swallow — the backup nudge is advisory, not load-bearing */
+        /* swallow — both advisory hints intentionally stay hidden on a read error */
       });
   }, []);
 
@@ -116,6 +147,40 @@ export default function TodayPage() {
   function dismissEvictionWarn(): void {
     localStorage.setItem(EVICTION_DISMISS_KEY, '1');
     setEvictionWarn(false);
+  }
+
+  // BC-39: capture Chromium's `beforeinstallprompt`, suppressing its default
+  // banner so we can surface a tasteful in-app CTA at our own moment instead.
+  useEffect(() => {
+    function onBeforeInstall(e: Event): void {
+      e.preventDefault();
+      setDeferredPrompt(e as unknown as InstallPromptEventLike);
+    }
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+    };
+  }, []);
+
+  function triggerInstall(): void {
+    if (!deferredPrompt) return;
+    void deferredPrompt.prompt();
+    void deferredPrompt.userChoice.then(({ outcome }) => {
+      // Only persist a dismissal when the user actually declined. An "accepted"
+      // outcome can still fail to install late (manifest/timeout); persisting it
+      // would permanently hide the CTA with no way back. Chrome re-fires
+      // `beforeinstallprompt` if the install didn't take, so just drop the prompt.
+      if (outcome === 'dismissed') {
+        localStorage.setItem(INSTALL_DISMISS_KEY, '1');
+        setInstallDismissed(true);
+      }
+      setDeferredPrompt(null);
+    });
+  }
+
+  function dismissInstall(): void {
+    localStorage.setItem(INSTALL_DISMISS_KEY, '1');
+    setInstallDismissed(true);
   }
 
   // BC-27: the climber confirmed a measured level-up. Re-anchor the profile at the
@@ -151,6 +216,17 @@ export default function TodayPage() {
   const { dataIssues } = today;
   const isRest = session.type === 'rest';
   const streak = consistency.currentStreakWeeks;
+
+  // BC-39: derive the install invite from the captured prompt + engagement. The
+  // precedence (installed / dismissed / not-yet-engaged → native → iOS hint) is
+  // the covered, tested helper; the page only supplies the browser signals.
+  const installDecision = decideInstallPrompt({
+    standalone: installEnv.standalone,
+    hasNativePrompt: deferredPrompt !== null,
+    ios: installEnv.ios,
+    dismissed: installEnv.dismissed || installDismissed,
+    engaged,
+  });
 
   return (
     <main className="space-y-4 p-5">
@@ -294,6 +370,39 @@ export default function TodayPage() {
             </Link>
             <button type="button" className="bc-btn bc-btn--ghost" onClick={dismissBackupNudge}>
               Remind me later
+            </button>
+          </div>
+        </Callout>
+      )}
+
+      {/* BC-39: invite the install once the climber is engaged (never on first
+          paint). Chromium's default banner is suppressed in favour of this CTA;
+          iOS Safari has no prompt event, so it gets the manual Share-sheet hint. */}
+      {installDecision === 'native' && (
+        <Callout tone="brand" title="Add Boulder Coach to your home screen" icon="download">
+          <p style={{ marginBottom: 8 }}>
+            Install it for one-tap access at the gym — it opens full-screen and works offline.
+          </p>
+          <div className="flex gap-2.5">
+            <button type="button" className="bc-btn" onClick={triggerInstall}>
+              Add to home screen
+            </button>
+            <button type="button" className="bc-btn bc-btn--ghost" onClick={dismissInstall}>
+              Not now
+            </button>
+          </div>
+        </Callout>
+      )}
+
+      {installDecision === 'ios-hint' && (
+        <Callout tone="brand" title="Add Boulder Coach to your home screen" icon="download">
+          <p style={{ marginBottom: 8 }}>
+            Tap the Share button, then “Add to Home Screen” to install — it opens full-screen and
+            works offline.
+          </p>
+          <div className="flex gap-2.5">
+            <button type="button" className="bc-btn bc-btn--ghost" onClick={dismissInstall}>
+              Got it
             </button>
           </div>
         </Callout>

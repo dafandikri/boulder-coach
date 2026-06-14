@@ -24,6 +24,23 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-14 (BC-39 custom install prompt — branch `feat/bc39-install-prompt`, last touched by: Claude Opus 4.8)
+
+- **BC-39 DONE — the app now invites the install instead of relying on the browser's default banner.**
+  Pure `src/app/lib/install.ts`: `decideInstallPrompt({ standalone, hasNativePrompt, ios, dismissed,
+engaged }) → 'native' | 'ios-hint' | 'hidden'` (precedence: installed/dismissed/not-engaged → native
+  Chromium prompt → iOS Share-sheet hint), plus `isStandalone` (display-mode + iOS `navigator.standalone`)
+  and `isIOS(ua)`. Today captures `beforeinstallprompt` (suppressing the default), gates `engaged` on
+  ≥1 logged session (no first-paint nag), and renders a brand `Callout` CTA; native fires
+  `event.prompt()` and persists `INSTALL_DISMISS_KEY` on either outcome, iOS shows the manual hint.
+- **Pattern note (Next 16 trap):** `react-hooks/set-state-in-effect` fails the lint gate on synchronous
+  `setState` inside an effect body. The install decision is **derived during render** from an SSR-safe
+  lazy-`useState` env read (`typeof window === 'undefined'` guard) — no decision effect at all. The only
+  effect is the `beforeinstallprompt` event subscription (setState in a listener callback is allowed).
+- **TDD:** `tests/app/install.test.ts` (12) covers every branch; `install.ts` 100%. `pnpm gate` green
+  (9/9, bundle 167.8/200 KB). **Next:** push → PR → agent review → merge. Remaining open code P2s:
+  BC-21 (single repo instance, S), BC-25 (dark mode, M), BC-38 (Insights charts, M), BC-20 (reminders, M).
+
 ## Current state — 2026-06-14 (RPE graph label fix + enforce-docs guard — branch `fix/rpe-scale-labels-enforce-docs`, last touched by: Claude Opus 4.8)
 
 - **RPE explainer graph fixed (PO bug).** The RPE scale diagram clipped its end labels: "Very easy"
