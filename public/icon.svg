@@ -1,8 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Boulder Coach">
-  <rect width="512" height="512" rx="96" fill="#0f172a" />
-  <!-- stylized boulder -->
-  <path d="M120 360 L196 212 L268 300 L330 188 L412 360 Z" fill="#e2e8f0" />
-  <path d="M196 212 L268 300 L240 360 L150 360 Z" fill="#94a3b8" />
-  <!-- climber chalk dot -->
-  <circle cx="330" cy="150" r="26" fill="#f59e0b" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Boulder Coach">
+  <rect width="64" height="64" fill="#fff7ed" />
+  <g transform="translate(8 8) scale(0.48)">
+    <path d="M52 7 C75 4 95 21 95 45 C95 69 80 93 54 94 C29 95 7 81 6 55 C5 31 28 11 52 7 Z" fill="#ff6a39" />
+    <path d="M52 7 C75 4 95 21 95 45 C95 69 80 93 54 94 C29 95 7 81 6 55 C5 31 28 11 52 7 Z" fill="none" stroke="#2a2233" stroke-width="4" />
+    <ellipse cx="40" cy="56" rx="8" ry="11" fill="#2a2233" opacity="0.85" transform="rotate(-12 40 56)" />
+    <ellipse cx="60" cy="60" rx="7" ry="10" fill="#2a2233" opacity="0.8" transform="rotate(10 60 60)" />
+  </g>
+  <circle cx="49" cy="16" r="4" fill="#ffc63d" stroke="#2a2233" stroke-width="2" />
 </svg>

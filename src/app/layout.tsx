@@ -8,6 +8,15 @@ export const metadata: Metadata = {
   title: 'Boulder Coach',
   description: 'Your adaptive bouldering training program',
   manifest: '/manifest.webmanifest',
+  // BC-14: branded maskable PNGs + apple-touch-icon so install-to-home-screen looks finished.
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 // Brand webfonts (Baloo 2 / Nunito / Space Mono) load via a real document <link>

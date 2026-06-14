@@ -1,0 +1,7 @@
+[
+  {
+    "name": "First-load JS (gzipped: build-manifest rootMainFiles + polyfills)",
+    "limitKB": 200,
+    "note": "Baseline at BC-36 was ~168 KB. Raise this ONLY with a justification in the PR — an intentional bundle increase is a visible decision, not a silent creep."
+  }
+]

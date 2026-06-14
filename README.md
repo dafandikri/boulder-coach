@@ -103,6 +103,15 @@ Runs fast-to-slow; exit code is law:
 | 6   | tests + coverage | Vitest v8, **per-file thresholds** (safety files = 100% branch) |
 | 7   | dead-code        | Knip                                                            |
 | 8   | build            | `next build`                                                    |
+| 9   | bundle-size      | first-load JS budget (BC-36, `scripts/check-bundle-size.mjs`)   |
+
+Heavier checks run as **separate CI jobs**, not the inner loop (too slow / need a browser):
+
+| Job               | What it asserts                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| e2e (`pnpm e2e`)  | nav/flow smoke, **a11y** (axe, serious/critical, BC-37), **offline + SW + manifest** (BC-16)      |
+| `pnpm lighthouse` | Lighthouse category budgets — perf ≥ 0.80, a11y ≥ 0.90, best-practices ≥ 0.90, SEO ≥ 0.95 (BC-16) |
+| `pnpm mutation`   | Stryker mutation score ≥ 88% on `adaptation.ts` + `loadMetrics.ts` (BC-35)                        |
 
 Coverage is **per-file** (`thresholds.perFile: true`) — every file clears its own bar, so a weak file
 can't hide behind 100%-covered siblings (a single uncovered branch fails the gate by filename). This,
@@ -115,7 +124,8 @@ provider/model to the same bar, not just Claude.
 1. **In-loop** — orchestrator runs `pnpm gate` per task before commit.
 2. **Pre-commit** (`.husky/pre-commit`) — lint-staged (format + lint) + `tsc` on staged files.
 3. **Pre-push** (`.husky/pre-push`) — full `pnpm gate`.
-4. **CI** (`.github/workflows/ci.yml`) — full gate + Semgrep + Playwright on push/PR.
+4. **CI** (`.github/workflows/ci.yml`) — `quality` (full gate + Semgrep + Playwright e2e incl. a11y +
+   offline), `lighthouse` (category budgets), and `mutation` (Stryker on the safety files) on push/PR.
 
 ### Safety net
 
@@ -158,7 +168,11 @@ Docs are part of "done" — see `AGENTS.md` → "Documentation discipline".
 | `pnpm dev` / `build` / `start`              | Next.js                                                           |
 | `pnpm test` / `test:watch`                  | Vitest domain tests                                               |
 | `pnpm test:safety`                          | Safety unit + fuzzed invariant suites                             |
-| `pnpm e2e`                                  | Playwright smoke                                                  |
+| `pnpm e2e`                                  | Playwright: smoke + a11y (axe) + offline/SW/manifest              |
+| `pnpm lighthouse`                           | Lighthouse CI category budgets (BC-16; needs Chrome)              |
+| `pnpm mutation`                             | Stryker mutation testing on the safety files (BC-35)              |
+| `pnpm bundlesize`                           | First-load JS budget check (BC-36; needs a prior `build`)         |
+| `pnpm icons`                                | Regenerate branded PWA icons from the hold-mark (BC-14)           |
 | `pnpm lint` / `format` / `format:check`     | ESLint / Prettier                                                 |
 | `pnpm depcruise` / `type-coverage` / `knip` | Static analysis                                                   |
 | `pnpm semgrep`                              | Security/static scan (needs `uv`)                                 |

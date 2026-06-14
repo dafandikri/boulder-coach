@@ -69,7 +69,10 @@ or `loadMetrics.ts`. Index: [`skills/README.md`](skills/README.md).
 This project is built and maintained under an AI-first quality harness. Before claiming any task done:
 
 - **`pnpm gate` must be green.** It runs format → lint → typecheck → architecture → type-coverage →
-  tests+coverage → dead-code → build. Exit code is law. (Details: `README.md`.)
+  tests+coverage → dead-code → build → bundle-size (BC-36). Exit code is law. (Details: `README.md`.)
+  Heavier checks run as separate CI jobs, not the inner loop: e2e incl. **axe a11y** (BC-37) and
+  **offline/SW/manifest** (BC-16), **Lighthouse** category budgets (BC-16, `pnpm lighthouse`), and
+  **Stryker mutation testing** scoped to the safety files (BC-35, `pnpm mutation`).
 - **Coverage is per-file** (`thresholds.perFile: true`): every file clears its own bar — no hiding a
   weak file behind 100% siblings. An uncovered branch fails the gate by filename. Don't leave
   unreachable defensive branches; restructure so the real case is tested. See

@@ -11,21 +11,38 @@ const root = (p: string): string => fileURLToPath(new URL(`../../${p}`, import.m
 
 describe('PWA manifest is installable', () => {
   const manifest = JSON.parse(readFileSync(root('public/manifest.webmanifest'), 'utf8')) as {
-    icons?: { src?: string; sizes?: string; type?: string }[];
+    icons?: { src?: string; sizes?: string; type?: string; purpose?: string }[];
     start_url?: string;
     display?: string;
   };
+  const icons = manifest.icons ?? [];
 
   it('declares at least one icon (empty icons = not installable)', () => {
-    expect(manifest.icons?.length ?? 0).toBeGreaterThan(0);
+    expect(icons.length).toBeGreaterThan(0);
   });
 
   it('every icon has src, sizes and type', () => {
-    for (const icon of manifest.icons ?? []) {
+    for (const icon of icons) {
       expect(icon.src).toBeTruthy();
       expect(icon.sizes).toBeTruthy();
       expect(icon.type).toBeTruthy();
     }
+  });
+
+  // BC-14: real branded maskable PNGs at both required sizes, and the file exists on disk
+  // (so the manifest can't point at a missing asset). The maskable purpose is what makes
+  // the home-screen launcher render a properly-cropped icon instead of a letterboxed one.
+  it('ships maskable PNG icons at 192 and 512', () => {
+    for (const size of ['192x192', '512x512']) {
+      const icon = icons.find((i) => i.sizes === size && i.type === 'image/png');
+      expect(icon, `missing ${size} PNG icon`).toBeTruthy();
+      expect(icon?.purpose).toContain('maskable');
+      expect(() => readFileSync(root(`public${icon?.src ?? ''}`))).not.toThrow();
+    }
+  });
+
+  it('references an apple-touch-icon asset that exists', () => {
+    expect(() => readFileSync(root('public/apple-touch-icon.png'))).not.toThrow();
   });
 
   it('has standalone display and a start_url', () => {
