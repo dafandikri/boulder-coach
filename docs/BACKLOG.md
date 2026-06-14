@@ -435,8 +435,21 @@ sessionsSinceExport)` fires when there is meaningful un-backed-up data (≥`NUDG
     empty-state safe.
 - **Files:** `src/domain/insights.ts`, `src/app/insights/page.tsx`, `src/app/components/Sparkline.tsx`
 
-### BC-39 · Custom add-to-home-screen install prompt — `open`
+### BC-39 · Custom add-to-home-screen install prompt — `done`
 
+- **Shipped:** pure `src/app/lib/install.ts` — `decideInstallPrompt({ standalone, hasNativePrompt, ios,
+dismissed, engaged }) → 'native' | 'ios-hint' | 'hidden'` with precedence: never invite an
+  already-installed (`isStandalone`, covering `display-mode: standalone` + iOS `navigator.standalone`),
+  dismissed, or not-yet-`engaged` app, then prefer the captured Chromium prompt, else the iOS
+  (`isIOS(ua, maxTouchPoints)` — also catches iPadOS 13+ iPads that report a desktop Macintosh UA)
+  manual Share-sheet hint. Today captures `beforeinstallprompt` (suppressing the default
+  banner) in an effect, gates `engaged` on having logged ≥1 session (never nags on first paint), and
+  renders the CTA in a brand `Callout` — the native variant fires `event.prompt()` then persists
+  `INSTALL_DISMISS_KEY` **only when the user declines** (an accepted-but-failed install can re-fire);
+  the iOS variant shows the Share hint. The decision is derived
+  during render from an SSR-safe lazy-read env (no effect-driven setState — satisfies the Next 16
+  `react-hooks/set-state-in-effect` rule). TDD: `tests/app/install.test.ts` (14) covers
+  standalone/iOS/dismissed/not-engaged/native/desktop branches; `install.ts` 100%. `pnpm gate` green.
 - **Type:** ux/pwa · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-14
 - **Problem:** no `beforeinstallprompt` handling exists. The whole pitch is "installable PWA you open at
   the gym," but the app never invites the install — it relies on the browser's easy-to-miss default.
