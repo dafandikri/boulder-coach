@@ -54,13 +54,18 @@ export interface RpeStop {
   label: string;
 }
 
-/** Anchor points on the 1–10 Borg-style RPE (Rate of Perceived Exertion) scale. */
+/**
+ * Anchor points on the 1–10 Borg-style RPE (Rate of Perceived Exertion) scale.
+ * These render as word labels under the RPE diagram, so they're spaced to stay
+ * legible on a narrow bar — 5 evenly-read rungs from "Very easy" to "Max effort".
+ * (A 6th rung at 9 "Very hard" sat one step from 10 and collided with "Max effort";
+ * the gap between "Hard" (7) and "Max effort" (10) reads clearly without it.)
+ */
 export const RPE_SCALE: RpeStop[] = [
   { value: 1, label: 'Very easy' },
   { value: 3, label: 'Easy' },
   { value: 5, label: 'Moderate' },
   { value: 7, label: 'Hard' },
-  { value: 9, label: 'Very hard' },
   { value: 10, label: 'Max effort' },
 ];
 

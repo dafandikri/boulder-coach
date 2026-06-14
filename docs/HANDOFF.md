@@ -24,7 +24,22 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
-## Current state — 2026-06-14 (Insights/Home UX cleanup + CI ratchet — branch `feat/insights-ux-cleanup-ci-ratchet`, PR open, last touched by: Claude Opus 4.8)
+## Current state — 2026-06-14 (RPE graph label fix + enforce-docs guard — branch `fix/rpe-scale-labels-enforce-docs`, last touched by: Claude Opus 4.8)
+
+- **RPE explainer graph fixed (PO bug).** The RPE scale diagram clipped its end labels: "Very easy"
+  rendered as "ry easy" (left-clipped) and "Max effort" was right-clipped + overlapped "Very hard" (9).
+  Fix: end labels anchor inward (`start`/`end`, not `middle`) and the redundant `9 Very hard` rung was
+  dropped, leaving 5 legible anchors (1/3/5/7/10) in the covered `RPE_SCALE`. `MetricExplainer.tsx` (the
+  SVG) only renders. See LEARNINGS 2026-06-14 "RpeScaleDiagram".
+- **Docs are now ENFORCED, not just asked-for.** Root cause of the recurring "docs skipped": the
+  same-commit doc rule lived in AGENTS.md as prose. New Tier-1 check `tests/harness/docs-in-sync.test.ts`
+  reads the numbers from `lighthouserc.json` / `stryker.config.json` / `vitest.config.ts` and asserts the
+  docs that quote them (`README.md`, `CLAUDE.md`) match — so changing a threshold without updating its
+  doc now fails the gate by name. Verified non-vacuous. This was the gap behind the #44→#45 doc-sync split.
+- **Next:** extend `docs-in-sync` whenever a new threshold becomes doc-quoted. Design-first PBIs still
+  open: BC-55 (i18n), BC-56 (Nielsen audit), BC-57 (error observability, deferred).
+
+## Current state — 2026-06-14 (Insights/Home UX cleanup + CI ratchet — shipped to `main` via PR #44, last touched by: Claude Opus 4.8)
 
 - **A supervised UX-cleanup + CI-tightening batch.** Triaged a product-owner request batch: shipped the
   safe UX items + a measured CI ratchet in one PR; logged the two subsystems as design-first PBIs.

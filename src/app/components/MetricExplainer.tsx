@@ -242,15 +242,18 @@ export function RpeScaleDiagram() {
         </linearGradient>
       </defs>
       <rect x="8" y="8" width="304" height="14" rx="7" fill="url(#rpe-grad)" />
-      {RPE_SCALE.map((s) => {
+      {RPE_SCALE.map((s, i) => {
         const x = 8 + ((s.value - 1) / 9) * 304;
+        // Anchor the end labels inward so "Very easy" (x≈8) and "Max effort"
+        // (x≈312) aren't clipped by the viewBox edges; middle stops stay centred.
+        const anchor = i === 0 ? 'start' : i === RPE_SCALE.length - 1 ? 'end' : 'middle';
         return (
           <g key={s.value}>
             <line x1={x} y1="6" x2={x} y2="24" stroke="var(--ink, #222)" strokeWidth="2" />
-            <text x={x} y="38" textAnchor="middle" fontSize="9" fill="var(--text-muted)">
+            <text x={x} y="38" textAnchor={anchor} fontSize="9" fill="var(--text-muted)">
               {s.value}
             </text>
-            <text x={x} y="50" textAnchor="middle" fontSize="8" fill="var(--text-soft)">
+            <text x={x} y="50" textAnchor={anchor} fontSize="8" fill="var(--text-soft)">
               {s.label}
             </text>
           </g>
