@@ -1,9 +1,29 @@
 'use client';
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { RPE_SCALE, type Explainer } from '@/app/lib/explainers';
+
+// Ref-counted body scroll lock so concurrent/overlapping dialogs can never leave
+// the page permanently unscrollable: only the first lock captures the original
+// overflow, only the last restores it.
+let scrollLockCount = 0;
+let prevBodyOverflow = '';
+function lockBodyScroll() {
+  if (scrollLockCount === 0) {
+    prevBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  scrollLockCount += 1;
+}
+function unlockBodyScroll() {
+  scrollLockCount -= 1;
+  if (scrollLockCount <= 0) {
+    scrollLockCount = 0;
+    document.body.style.overflow = prevBodyOverflow;
+  }
+}
 
 /**
  * A "(i)" trigger that opens a modal dialog explaining a metric (RPE / ACWR).
@@ -73,16 +93,51 @@ function MetricExplainerDialog({
   titleId: string;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
+    // Move focus into the dialog and remember where it came from so we can
+    // restore it on close (WAI-ARIA modal-dialog focus contract).
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    lockBodyScroll();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      // Trap focus: keep Tab/Shift+Tab cycling within the dialog.
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = dialog.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
+        e.preventDefault();
+        return;
+      }
+      const active = document.activeElement;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (!dialog.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
+      unlockBodyScroll();
+      previouslyFocused?.focus();
     };
   }, [onClose]);
 
@@ -102,6 +157,7 @@ function MetricExplainerDialog({
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -129,10 +185,11 @@ function MetricExplainerDialog({
             marginBottom: 8,
           }}
         >
-          <strong id={titleId} style={{ fontSize: 'var(--fs-md)' }}>
+          <h2 id={titleId} style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
             {explainer.heading}
-          </strong>
+          </h2>
           <button
+            ref={closeRef}
             type="button"
             aria-label="Close"
             onClick={onClose}
