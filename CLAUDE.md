@@ -15,7 +15,8 @@
 
 - NEVER use `any` (ESLint + type-coverage enforce this).
 - Coverage is **per-file** (`thresholds.perFile: true`): `adaptation.ts` & `loadMetrics.ts` = 100%
-  branch; rest of domain ≥ 90% branch; everything else ≥ 80%. No file hides below the bar behind a
+  branch; rest of domain ≥ 92% branch; everything else ≥ 95% branch (floors ratcheted 2026-06-14,
+  PR #44 — domain held at 92 by `periodization.ts`'s rest-day defensive defaults). No file hides below the bar behind a
   100%-covered sibling — an uncovered branch fails the gate by filename. Don't leave unreachable
   defensive branches; restructure so the meaningful case is tested.
 - **Logic belongs in covered layers** (`src/domain/**`, `src/app/lib/**`), never in gate-blind

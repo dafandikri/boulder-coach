@@ -116,8 +116,13 @@ the gate only runs at the **task boundary**, where everything must be green.
 | Scope                                                                     | Line  | Branch |
 | ------------------------------------------------------------------------- | ----- | ------ |
 | `src/domain/adaptation.ts`, `src/domain/loadMetrics.ts` (safety-critical) | 100%  | 100%   |
-| `src/domain/**` (rest)                                                    | ≥ 95% | ≥ 90%  |
-| Everything else                                                           | ≥ 90% | ≥ 80%  |
+| `src/domain/**` (rest)                                                    | ≥ 95% | ≥ 92%  |
+| Everything else                                                           | ≥ 95% | ≥ 95%  |
+
+> Floors ratcheted 2026-06-14 (PR #44) from measured headroom (global branch actual was 98.69% vs the
+> original 80% floor). Each floor sits below the lowest real file with margin; the `src/domain/**`
+> branch floor is held at 92 (not 95) by `periodization.ts`'s two rest-day `default` guards — defensive
+> code kept rather than fake-covered. See `docs/LEARNINGS.md` 2026-06-14 "CI ratchet".
 
 ## Static Analysis Layer
 

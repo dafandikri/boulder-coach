@@ -107,11 +107,11 @@ Runs fast-to-slow; exit code is law:
 
 Heavier checks run as **separate CI jobs**, not the inner loop (too slow / need a browser):
 
-| Job               | What it asserts                                                                                   |
-| ----------------- | ------------------------------------------------------------------------------------------------- |
-| e2e (`pnpm e2e`)  | nav/flow smoke, **a11y** (axe, serious/critical, BC-37), **offline + SW + manifest** (BC-16)      |
-| `pnpm lighthouse` | Lighthouse category budgets — perf ≥ 0.80, a11y ≥ 0.90, best-practices ≥ 0.90, SEO ≥ 0.95 (BC-16) |
-| `pnpm mutation`   | Stryker mutation score ≥ 88% on `adaptation.ts` + `loadMetrics.ts` (BC-35)                        |
+| Job               | What it asserts                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| e2e (`pnpm e2e`)  | nav/flow smoke, **a11y** (axe, serious/critical, BC-37), **offline + SW + manifest** (BC-16)                        |
+| `pnpm lighthouse` | Lighthouse category budgets — perf ≥ 0.85, a11y ≥ 0.95, best-practices ≥ 0.95, SEO ≥ 0.95 (BC-16, ratcheted PR #44) |
+| `pnpm mutation`   | Stryker mutation score ≥ 89% on `adaptation.ts` + `loadMetrics.ts` (BC-35, ratcheted PR #44)                        |
 
 Coverage is **per-file** (`thresholds.perFile: true`) — every file clears its own bar, so a weak file
 can't hide behind 100%-covered siblings (a single uncovered branch fails the gate by filename). This,

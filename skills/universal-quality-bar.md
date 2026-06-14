@@ -20,7 +20,7 @@ matter how it was written.** Your job is to make it green _honestly_ — never b
 ### 1. Coverage can no longer hide on the aggregate → **per-file thresholds**
 
 `vitest.config.ts` sets `thresholds.perFile: true`. **Every individual file** must clear its bar
-(safety files 100% branch; rest of `src/domain` ≥90% branch; everything else ≥80%). A 100%-covered
+(safety files 100% branch; rest of `src/domain` ≥92% branch; everything else ≥95% branch). A 100%-covered
 neighbour can no longer mask a weak file — a single uncovered branch fails the gate, naming the file.
 
 - **Therefore:** if you add a defensive branch you can't reach with a test, it is **dead code** —

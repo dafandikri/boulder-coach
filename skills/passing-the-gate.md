@@ -42,7 +42,7 @@ discover (see `docs/LEARNINGS.md`).
   relative imports also work.
 - Thresholds are **per-file** (`thresholds.perFile: true`) — every file clears its own bar, no hiding
   behind 100% siblings: safety files `adaptation.ts` & `loadMetrics.ts` = **100% branch**; rest of
-  `src/domain` ≥ 95% line / 90% branch; everything else ≥ 90/80. Test every branch including
+  `src/domain` ≥ 95% line / 92% branch; everything else ≥ 95% line / 95% branch (ratcheted 2026-06-14, PR #44). Test every branch including
   boundaries (e.g. exactly `1.3`, a `0`/`undefined` flag, an already-open-hand grip).
 - If a defensive branch is genuinely unreachable, **restructure so the meaningful case is reachable
   and tested** — do not leave a `?? fallback` / `if (!x) throw` no input triggers. Per-file coverage
