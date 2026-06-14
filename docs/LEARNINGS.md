@@ -30,6 +30,23 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-14 — docs/BACKLOG.md — duplicate PBI id (gate-blind, caught by review)
+
+- **Task:** Log new design-first PBIs (i18n, Nielsen audit, error observability) after the PR #44 work.
+- **What failed:** numbered the new PBIs **BC-44 and BC-45** — ids already owned by shipped PBIs
+  (BC-44 VB/V0 grades PR #28, BC-45 sessions 1–7 PR #29). `pnpm gate` stayed **green** and PR #44 merged
+  with the collision.
+- **Root cause:** the duplicate was invisible to every existing check. `backlog-hygiene` resolves
+  dependencies via `new Set(ids)` / `new Map(byId)`, which **silently dedupe** — a `Depends on: BC-44`
+  resolved to whichever BC-44 won the map, so nothing flagged. I picked the number by eyeballing the
+  bottom of the open list instead of the highest id in use across the whole file (BC-54).
+- **Fix:** renumbered to **BC-55/BC-56/BC-57**; updated the references in `docs/HANDOFF.md` and the
+  session spec; added a **Tier-1 duplicate-id assertion** to `tests/crew/backlog-hygiene.test.ts`
+  (counts every id, fails if any appears >1). Verified non-vacuous against the pre-fix file.
+- **Prevention:** **allocate the next free id = (max id in use) + 1**, scanning the entire file
+  (done + open + shipped log), never the visual end of a section. Now enforced by the gate.
+- **Attempts to green:** caught post-merge by a follow-up review, fixed in one pass.
+
 ## 2026-06-14 — vitest/lighthouse/stryker configs — CI ratchet (coverage/perf/mutation), not a failure
 
 - **Task:** "make CI strict toward 95–100%" — ratchet the three quality gates from measured headroom.

@@ -947,7 +947,7 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   it relates to BC-18 (sync) so the two don't diverge. **No app code** until scheduled.
 - **Files:** `docs/specs/shareable-progress-design.md`
 
-### BC-44 · Indonesian-first i18n with EN/ID language toggle — `open` (design-first)
+### BC-55 · Indonesian-first i18n with EN/ID language toggle — `open` (design-first)
 
 - **Type:** ux/i18n · **Priority:** P2 · **Complexity:** L · **Depends on:** —
 - **Problem:** the primary audience is **Indonesian boulderers**, but every string is hardcoded
@@ -965,19 +965,42 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   string migration until the spec is approved.**
 - **Files:** `docs/specs/i18n-indonesian-design.md`
 
-### BC-45 · Nielsen-heuristics UX audit + jargon reduction — `open` (design-first)
+### BC-56 · Nielsen-heuristics UX audit + jargon reduction — `open` (design-first)
 
-- **Type:** ux/design · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-44
+- **Type:** ux/design · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-55
 - **Problem:** beyond the ACWR/RPE explainers (handled in-app), copy across the product still leans on
   technical terms and terse states that hurt comprehension for non-coach users. A structured pass
   against Nielsen's 10 heuristics (visibility of system status, match to real-world language, error
   recovery, recognition over recall, consistency) would lift the whole app's intuitiveness.
 - **Acceptance criteria:** **audit doc first** (`docs/specs/`): walk each primary screen against the 10
-  heuristics, list concrete violations + fixes, prioritise. Many copy fixes **fold into BC-44's
+  heuristics, list concrete violations + fixes, prioritise. Many copy fixes **fold into BC-55's
   bilingual rewrite** (do them once, in both languages) — this PBI owns the audit + the non-copy
   heuristic fixes (status feedback, error affordances, consistency). **No code until the audit is
   reviewed.**
 - **Files:** `docs/specs/nielsen-ux-audit.md`
+
+### BC-57 · Error observability (stage-6 monitoring) — deferred until there are real users — `open` (design-first)
+
+- **Type:** infra/observability · **Priority:** P3 · **Complexity:** M · **Depends on:** —
+- **Problem:** the Micro-SDLC "Maintenance & Feedback" stage is **partially** covered — `@vercel/analytics`
+  - Speed Insights give traffic + Web Vitals, but **crashes are invisible**: `error.tsx` /
+    `global-error.tsx` only `console.error` the digest on the _user's_ device. The dev never sees a
+    production crash. **Deliberately deferred** (2026-06-14, product decision): adding crash telemetry now
+    is premature per Minimum-Viable-Thinking — there's no user base yet, and it fights three real
+    invariants below. Implement when real traffic exists and you actually need crash visibility.
+- **Hard constraints any implementation MUST respect:**
+  1. **Privacy** — the app stores injury/health data on-device and is local-first by design. Error
+     payloads/breadcrumbs MUST be scrubbed of all health/injury/profile data; report message + digest
+     only, never user records. Consider opt-in.
+  2. **Bundle** — first-load JS is ~168/200 KB (BC-36 gate). The Sentry browser SDK (~30–50 KB) would
+     likely breach the budget; either pick a lighter approach (a tiny scrubbed error beacon to a Vercel
+     log/endpoint) or raise the budget _consciously_ with justification.
+  3. **No-backend posture** — the README states the app has no env vars / no `vercel.json`. A Sentry DSN
+     reintroduces an env var; weigh that against the local-first selling point.
+- **Acceptance criteria:** **design spec first** (`docs/specs/`) choosing between (a) `@sentry/nextjs`
+  privacy-scoped, (b) a self-built scrubbed beacon, or (c) keep-as-is; with the privacy-scrub rule as a
+  testable contract. **No SDK added until the spec is approved and a user base justifies it.**
+- **Files:** `docs/specs/error-observability-design.md`
 
 ---
 

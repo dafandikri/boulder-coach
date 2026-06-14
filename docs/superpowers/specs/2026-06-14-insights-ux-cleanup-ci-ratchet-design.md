@@ -7,7 +7,7 @@
 Product-owner (dafandikri) batch of UX + quality requests, triaged 2026-06-14. The batch mixed
 small UX fixes with two whole subsystems (Indonesian localization, full UX audit). This spec covers
 only the **safe, high-confidence work shippable in one PR this session**; the subsystems are logged
-as design-first backlog PBIs (BC-44, BC-45) for their own brainstorm cycles.
+as design-first backlog PBIs (BC-55, BC-56) for their own brainstorm cycles.
 
 ## In scope (this PR)
 
@@ -26,7 +26,7 @@ minimalist) — Home should be action-focused; education belongs next to the met
    **ACWR** StatCard and the RPE explainer beside the **Sessions / Avg RPE** StatCard, each with a
    short visible hint, instead of both grouped under one caption. The modal dialogs themselves
    (shipped PR #42, a11y-gated PR #43) are unchanged.
-4. **Copy** — minimal only. Because the chosen i18n direction (BC-44) rewrites copy intuitively in
+4. **Copy** — minimal only. Because the chosen i18n direction (BC-55) rewrites copy intuitively in
    both languages at once, no English-only rewrite is done here (would be redone during i18n).
 
 **Testability:** these files are gate-blind (no React harness, by project rule — logic must live in
@@ -53,13 +53,13 @@ no coverage theatre, no flaky gate.
 
 ## Out of scope (logged, not built)
 
-- **BC-44 — Indonesian-first i18n with EN/ID toggle.** Primary audience is Indonesian boulderers,
+- **BC-55 — Indonesian-first i18n with EN/ID toggle.** Primary audience is Indonesian boulderers,
   but globally friendly via a language toggle (Indonesian as a first-class language, not an
   afterthought translation). Lightweight dictionary (no heavy framework), locale persisted locally,
   string extraction across ~12 files. Folds in the plain-language rewrite so copy is authored
   intuitively once, in both languages. **L/XL, design-first.**
-- **BC-45 — Nielsen-heuristics UX audit / jargon reduction** beyond ACWR/RPE (error messages,
-  visibility of system status, consistency). **L, design-first.** May merge into BC-44's copy pass.
+- **BC-56 — Nielsen-heuristics UX audit / jargon reduction** beyond ACWR/RPE (error messages,
+  visibility of system status, consistency). **L, design-first.** May merge into BC-55's copy pass.
 - **Literal "100% coverage everywhere"** — rejected: gate-blind UI components cannot be covered;
   chasing the number would be churn, not quality.
 
@@ -70,4 +70,4 @@ no coverage theatre, no flaky gate.
 - `pnpm gate` green with the raised coverage floors.
 - `pnpm lighthouse` and `pnpm mutation` green at the ratcheted thresholds (verified, not asserted).
 - `e2e/` a11y explainer specs still pass.
-- BC-44 + BC-45 added to `docs/BACKLOG.md`; `docs/HANDOFF.md` updated last.
+- BC-55 + BC-56 added to `docs/BACKLOG.md`; `docs/HANDOFF.md` updated last.

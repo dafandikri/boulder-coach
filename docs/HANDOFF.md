@@ -38,11 +38,16 @@ file is the live position** — update it as the LAST step of any session (see "
     "CI ratchet"):** coverage global branch 80→95 / lines·stmts 90→95, domain branch 90→92 (capped by
     `periodization.ts` rest-day defensive defaults — NOT fake-covered); Lighthouse perf 0.80→0.85, a11y
     0.90→0.95, BP 0.90→0.95; Stryker break 88→89. One real test added (`backup.ts` non-string `exportedAt`).
-- **Next:** merge the PR once CI is green. Then the two logged PBIs each need their own brainstorm:
-  **BC-44** Indonesian-first i18n with EN/ID toggle (folds in the plain-language / jargon-reduction
-  rewrite so copy is authored intuitively once, in both languages) and **BC-45** Nielsen-heuristics UX
-  audit (depends on BC-44). To push mutation higher, kill the surviving `adaptation.ts` mutants and
-  ratchet break to 92+. Other open P2s unchanged: BC-25 (dark mode + contrast), BC-38, BC-39.
+- **Next:** the three logged PBIs each need their own brainstorm: **BC-55** Indonesian-first i18n with
+  EN/ID toggle (folds in the plain-language / jargon-reduction rewrite so copy is authored intuitively
+  once, in both languages), **BC-56** Nielsen-heuristics UX audit (depends on BC-55), and **BC-57**
+  error observability (deferred until real users — privacy/bundle constraints written in the PBI). To
+  push mutation higher, kill the surviving `adaptation.ts` mutants and ratchet break to 92+. Other open
+  P2s unchanged: BC-25 (dark mode + contrast), BC-38, BC-39.
+- **Gotcha logged (LEARNINGS 2026-06-14 "duplicate PBI id"):** PR #44 first numbered these new PBIs
+  BC-44/BC-45 — ids already taken by shipped work — and the gate stayed green because backlog-hygiene's
+  `Set`/`Map` silently deduped. Now renumbered to BC-55/56/57 and a duplicate-id assertion was added to
+  `tests/crew/backlog-hygiene.test.ts`. **Allocate the next free id (highest in use + 1), never reuse.**
 
 ## Current state — 2026-06-14 (explainers → accessible modal dialog — shipped to `main` via PR #42, last touched by: Claude Opus 4.8)
 
