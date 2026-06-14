@@ -30,6 +30,35 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-14 — MetricExplainer RpeScaleDiagram — SVG label clipping (gate-blind UI)
+
+- **Task:** PO report — "the RPE graph showed 'ry easy' and the hardest label is unreadable."
+- **What failed:** the RPE scale's end labels were `textAnchor="middle"`, so "Very easy" (centred at
+  x≈8) was clipped to **"ry easy"** at the viewBox's left edge, and "Max effort" (centred at x≈312 in a
+  320-wide viewBox) was clipped on the right **and** overlapped the adjacent "Very hard" (9). Gate-blind:
+  SVG geometry has no React/coverage harness, so visual clipping ships silently.
+- **Fix:** anchor the end stops inward (`start` for the first, `end` for the last; middle stops stay
+  centred) and drop the redundant `9 Very hard` rung that sat one step from `10 Max effort` — leaving 5
+  evenly-legible anchors (1/3/5/7/10). Verified clip-/overlap-free by computing label spans.
+- **Prevention:** any edge-positioned SVG text must anchor inward at the viewBox bounds; never rely on
+  `middle` for the first/last datum. Label-density intent is documented on `RPE_SCALE`.
+- **Attempts to green:** 1.
+
+## 2026-06-14 — docs (README/CLAUDE) vs configs — enforce-docs guard added
+
+- **Task:** "why are docs being skipped — enforce docs!" (PO, after the #44→#45 split).
+- **What happened:** PR #44 ratcheted coverage/lighthouse/mutation floors but shipped with the rule docs
+  still quoting the OLD numbers; the gate stayed green and docs were corrected only in a **separate**
+  PR #45. The "Documentation discipline = same commit" rule (AGENTS.md) existed but was **prose, not
+  enforced** — so it was skippable.
+- **Fix:** `tests/harness/docs-in-sync.test.ts` — a Tier-1 check that reads the numbers from the configs
+  (`lighthouserc.json`, `stryker.config.json`, `vitest.config.ts`) and asserts the docs that quote them
+  (`README.md`, `CLAUDE.md`) state the same values. Verified non-vacuous (bumping `stryker.break` without
+  touching README fails the test). Changing a threshold now forces the doc edit in the same change.
+- **Prevention:** machine-checkable facts quoted in docs get a code↔doc sync test, not a promise. Extend
+  the test when a new threshold becomes doc-quoted.
+- **Attempts to green:** 2 (first regex matched a stray "perf"→date; scoped each lookup to its line).
+
 ## 2026-06-14 — docs/BACKLOG.md — duplicate PBI id (gate-blind, caught by review)
 
 - **Task:** Log new design-first PBIs (i18n, Nielsen audit, error observability) after the PR #44 work.
