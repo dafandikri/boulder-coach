@@ -24,6 +24,26 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-14 (Insights/Home UX cleanup + CI ratchet — branch `feat/insights-ux-cleanup-ci-ratchet`, PR open, last touched by: Claude Opus 4.8)
+
+- **A supervised UX-cleanup + CI-tightening batch.** Triaged a product-owner request batch: shipped the
+  safe UX items + a measured CI ratchet in one PR; logged the two subsystems as design-first PBIs.
+  `pnpm gate` green, full e2e green (offline confirmed on a clean build), Lighthouse + mutation green at
+  the new floors, agent code-review clean.
+  - **UX (gate-blind `page.tsx` edits, e2e/a11y still guard them):** Home no longer renders the RPE/ACWR
+    explainers (action-focused); Insights shows each `(i)` beside its stat (ACWR by the ACWR card, RPE by
+    Avg RPE) instead of grouped under one caption; onboarding Training-days vs Past-injuries fieldsets
+    were crowded because inline `margin:0` overrode `space-y` — fixed with an explicit 24px top margin.
+  - **CI ratchet (measured this session, floors below actual with margin — see LEARNINGS 2026-06-14
+    "CI ratchet"):** coverage global branch 80→95 / lines·stmts 90→95, domain branch 90→92 (capped by
+    `periodization.ts` rest-day defensive defaults — NOT fake-covered); Lighthouse perf 0.80→0.85, a11y
+    0.90→0.95, BP 0.90→0.95; Stryker break 88→89. One real test added (`backup.ts` non-string `exportedAt`).
+- **Next:** merge the PR once CI is green. Then the two logged PBIs each need their own brainstorm:
+  **BC-44** Indonesian-first i18n with EN/ID toggle (folds in the plain-language / jargon-reduction
+  rewrite so copy is authored intuitively once, in both languages) and **BC-45** Nielsen-heuristics UX
+  audit (depends on BC-44). To push mutation higher, kill the surviving `adaptation.ts` mutants and
+  ratchet break to 92+. Other open P2s unchanged: BC-25 (dark mode + contrast), BC-38, BC-39.
+
 ## Current state — 2026-06-14 (explainers → accessible modal dialog — shipped to `main` via PR #42, last touched by: Claude Opus 4.8)
 
 - **The RPE/ACWR explainers now open in a modal dialog instead of an inline panel.** The `(i)` icon is
