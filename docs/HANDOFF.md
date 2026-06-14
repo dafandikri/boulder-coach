@@ -24,6 +24,23 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-14 (explainers → accessible modal dialog — shipped to `main` via PR #42, last touched by: Claude Opus 4.8)
+
+- **The RPE/ACWR explainers now open in a modal dialog instead of an inline panel.** The `(i)` icon is
+  the only persistent UI; tapping it pops the explanation (heading + body + SVG diagram) into a portalled
+  `role="dialog"` over a dimmed backdrop. Behaviour change only — band copy still lives in the covered
+  `src/app/lib/explainers.ts`; `MetricExplainer.tsx` (gate-blind) just renders. PR #42 squash-merged, all
+  CI green (quality + lighthouse + mutation), agent-reviewed twice.
+- **Full WAI-ARIA modal contract implemented:** `aria-haspopup="dialog"` trigger → `role="dialog"` /
+  `aria-modal` / `aria-labelledby` (`<h2>`); focus moved into the dialog on open and **restored to the
+  trigger on close**; Tab/Shift+Tab **focus trap**; **ref-counted** body scroll lock; memoised `onClose`
+  so the mount-only effect runs once. Closes via Escape, backdrop click, or close button.
+- **New Tier-1 gate:** `e2e/explainer-modal.spec.ts` drives the OPEN dialog (axe on the dialog subtree +
+  focus-in/trap/restore + scroll-lock release + backdrop close). The existing `a11y.spec.ts` only scans
+  the _static_ page, so open-modal a11y bugs used to be invisible — now they fail CI. See LEARNINGS 2026-06-14.
+- **Next:** nothing outstanding on this thread. Remaining open P2s unchanged: BC-25 (dark mode + contrast
+  pass), BC-38 (charts), BC-39 (install prompt).
+
 ## Current state — 2026-06-14 (8 PBIs + ACWR fix/explainers — local, last touched by: Claude Opus 4.8)
 
 - **A large supervised batch landed, all `pnpm gate` green + every separate CI check verified locally.**

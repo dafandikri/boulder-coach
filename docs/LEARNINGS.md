@@ -30,6 +30,23 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-14 — e2e/a11y.spec.ts — a11y blind spot (modal open state untested)
+
+- **Task:** Convert the RPE/ACWR explainers from an inline panel to a modal dialog (PR #42).
+- **What failed (the near-miss):** the first modal implementation had no focus management (focus never
+  moved into the dialog, never restored to the trigger) and no focus trap — a WCAG 2 A/AA serious class.
+  `pnpm gate` was **green** and the axe e2e (`a11y.spec.ts`) **passed**, because axe scans the _static_
+  page and the dialog only exists in the DOM once opened. The agent code-reviewer caught it, not the gate.
+- **Root cause:** the a11y gate never exercises interactive/overlay states. Any `role="dialog"` / popover /
+  drawer can ship keyboard-inaccessible while every automated check stays green.
+- **Fix:** added focus-in + focus-restore + Tab/Shift+Tab trap + ref-counted scroll lock + memoised
+  `onClose`; promoted the verification to a Tier-1 check: `e2e/explainer-modal.spec.ts` opens the dialog
+  and asserts axe-clean (dialog subtree), focus contract, scroll-lock release, and backdrop close.
+- **Prevention:** when adding any modal/overlay, add an e2e that **opens it** and runs axe on the open
+  state — a static-page axe pass is not evidence an overlay is accessible. (Promoted to automated check.)
+- **Attempts to green:** gate green throughout; 2 agent-review rounds (focus contract, then the
+  `[onClose]` effect-refire) before merge.
+
 ## 2026-06-14 — src/domain/loadMetrics.ts — safety (ACWR cold-start false positive)
 
 - **Task:** Fix the PO's "ACWR hits injury warning even on a normal first week" + switch to EWMA-ACWR.
