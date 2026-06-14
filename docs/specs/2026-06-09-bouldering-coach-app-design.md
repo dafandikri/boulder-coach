@@ -106,8 +106,13 @@ Warm-up becomes **non-skippable** when rule 1 or 2 fires.
 
 ### ACWR & load math
 
-- Daily load = sessionRPE (1–10) × durationMin.
-- Acute = 7-day rolling sum; Chronic = 28-day rolling average (weekly-equivalent).
+- Daily load = sessionRPE (1–10) × durationMin, summed per calendar day.
+- **EWMA-ACWR** (Williams et al. 2017): Acute and Chronic are exponentially-weighted
+  moving averages of the daily-load series, λ = 2/(N+1) for N = 7 (acute, λ = 0.25) and
+  N = 28 (chronic, λ = 2/29). Both EWMAs are **seeded with the first in-window day's load**,
+  so the ratio starts at 1.0 — a first session/week never reads as a false 4× spike (the
+  cold-start failure of the old acute/(chronic÷4) rolling method). Logs older than the
+  42-day warm-up window are excluded (a long layoff is the re-entry rule's concern).
 - ACWR = acute / chronic. Target band **0.8–1.3**; >1.5 = high injury risk → force deload.
 
 ## Warm-up Generator (RAMP)

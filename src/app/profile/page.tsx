@@ -19,6 +19,7 @@ import { HoldMark } from '@/app/components/HoldMark';
 import { Spinner } from '@/app/components/Spinner';
 import { VB, MAX_GRADE, formatGrade } from '@/domain/grade';
 import { frequencyGuidance } from '@/domain/frequencyNotes';
+import type { BodyPart } from '@/domain/types';
 import type { CSSProperties } from 'react';
 
 const WEEKDAYS: { n: number; label: string }[] = [
@@ -34,6 +35,14 @@ const WEEKDAYS: { n: number; label: string }[] = [
 // VB(-1), V0, V1 … V17 — the beginner floor (BC-44) is selectable.
 const GRADES: number[] = Array.from({ length: MAX_GRADE - VB + 1 }, (_, i) => VB + i);
 const SESSION_OPTIONS: number[] = [1, 2, 3, 4, 5, 6, 7]; // BC-45: 1×…7×/week
+
+// BC-29: prior injuries make the baseline more conservative (softer grips + prehab).
+const BODY_PARTS: { part: BodyPart; label: string }[] = [
+  { part: 'pip', label: 'Finger (PIP)' },
+  { part: 'wrist-tfcc', label: 'Wrist (TFCC)' },
+  { part: 'shoulder', label: 'Shoulder' },
+  { part: 'elbow', label: 'Elbow' },
+];
 
 const SELECT_STYLE: CSSProperties = {
   width: '100%',
@@ -63,7 +72,8 @@ export default function ProfilePage() {
   useEffect(() => {
     void new DexieClimbRepo().getProfile().then((existing) => {
       if (existing) {
-        setDraft(existing);
+        // Coerce profiles saved before BC-29 (no injuryHistory) into the current shape.
+        setDraft({ ...existing, injuryHistory: existing.injuryHistory ?? [] });
         setIsFirstRun(false);
       }
       setLoaded(true);
@@ -79,6 +89,14 @@ export default function ProfilePage() {
         ? prev.availableWeekdays.filter((d) => d !== n)
         : [...prev.availableWeekdays, n].sort((a, b) => a - b);
       return { ...prev, availableWeekdays: next };
+    });
+  }
+
+  function toggleInjury(part: BodyPart): void {
+    setDraft((prev) => {
+      const history = prev.injuryHistory ?? [];
+      const next = history.includes(part) ? history.filter((p) => p !== part) : [...history, part];
+      return { ...prev, injuryHistory: next };
     });
   }
 
@@ -227,6 +245,29 @@ export default function ProfilePage() {
                   }}
                 >
                   {d.label}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-2" style={{ border: 'none', padding: 0, margin: 0 }}>
+            <legend style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, padding: 0 }}>
+              Past injuries (optional)
+            </legend>
+            <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', margin: 0 }}>
+              We’ll keep the baseline gentler on these — softer grips and extra prehab, never
+              harder.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {BODY_PARTS.map((b) => (
+                <Chip
+                  key={b.part}
+                  selected={(draft.injuryHistory ?? []).includes(b.part)}
+                  onClick={() => {
+                    toggleInjury(b.part);
+                  }}
+                >
+                  {b.label}
                 </Chip>
               ))}
             </div>

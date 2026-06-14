@@ -1,6 +1,7 @@
 import type {
   AdaptationChange,
   AdaptationLogEntry,
+  BodyPart,
   CheckIn,
   PlannedSession,
   Program,
@@ -17,6 +18,7 @@ import { adapt } from '@/domain/adaptation';
 import { computeReadiness, type ReadinessResult } from '@/domain/readiness';
 import { computeConsistency, type ConsistencyResult } from '@/domain/consistency';
 import { assessBenchmark, type AssessmentResult } from '@/domain/assessment';
+import { partitionLogs } from './integrity';
 import { localDateIso } from './date';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -26,6 +28,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   goalGrade: 7,
   sessionsPerWeek: 3,
   availableWeekdays: [1, 3, 5],
+  injuryHistory: [], // BC-29: no prior injuries by default
 };
 
 /** A profile as entered in the onboarding/edit form — same shape as the stored
@@ -34,6 +37,9 @@ export type ProfileDraft = UserProfile;
 
 const MIN_SESSIONS = 1; // BC-45: a single weekly quality session is valid …
 const MAX_SESSIONS = 7; // … up to daily, with a load-management note (frequencyNotes.ts).
+
+/** BC-29: the body parts the injury-history control offers. */
+const VALID_BODY_PARTS: ReadonlySet<BodyPart> = new Set(['pip', 'wrist-tfcc', 'shoulder', 'elbow']);
 
 /**
  * Validate a profile draft from the onboarding/edit form. Returns the first
@@ -70,6 +76,10 @@ export function validateProfile(draft: ProfileDraft): string | null {
   }
   if (days.length < draft.sessionsPerWeek) {
     return 'Pick at least as many training days as sessions per week.';
+  }
+  // BC-29: injury history is optional, but every entry must be a known body part.
+  if ((draft.injuryHistory ?? []).some((p) => !VALID_BODY_PARTS.has(p))) {
+    return 'Injury history contains an unknown body part.';
   }
   return null;
 }
@@ -131,6 +141,12 @@ export interface TodayResult {
   /** BC-27: rolling benchmark of recent sends. `leveledUp` drives the "you've leveled
    *  up — update your grade?" prompt; never lowers the grade automatically. */
   assessment: AssessmentResult;
+  /** EWMA-ACWR load ratio (0 when no in-window logs). Drives the personalised ACWR
+   *  explainer on Today; present on training AND rest days. */
+  acwr: number;
+  /** BC-32: count of stored logs quarantined as corrupt on read. >0 surfaces a
+   *  "your data looks damaged — re-import a backup" recovery prompt. */
+  dataIssues: number;
 }
 
 function neutralCheckIn(dateIso: string): CheckIn {
@@ -190,12 +206,20 @@ export async function getTodaySession(
 
   // BC-40: the consistency read is independent of today's prescription — compute it
   // once from the logs so it shows on training AND rest days.
-  const logs = await repo.getLogs();
+  // BC-32: validate the stored logs on read — a corrupt record (truncated write,
+  // partial import) is quarantined so it can't NaN the load engine; the count is
+  // surfaced so the user can re-import a backup instead of hitting a silent crash.
+  const { valid: logs, quarantined } = partitionLogs(await repo.getLogs());
+  const dataIssues = quarantined.length;
   const consistency = computeConsistency(logs, profile, asOf);
 
   // BC-27: re-measure the baseline grade from recent sends, independent of today's
   // prescription, so the level-up prompt shows on training AND rest days.
   const assessment = assessBenchmark({ logs, currentGrade: profile.currentGrade, asOf });
+
+  // EWMA-ACWR is independent of the prescription — compute it once so the ACWR
+  // explainer can show on training AND rest days.
+  const metrics = computeLoadMetrics(logs, asOf);
 
   // BC-03: a rest day is an explicit recovery prescription — no adaptation noise.
   if (planned.type === 'rest') {
@@ -207,6 +231,8 @@ export async function getTodaySession(
       readiness: null,
       consistency,
       assessment,
+      acwr: metrics.acwr,
+      dataIssues,
     };
   }
 
@@ -214,7 +240,6 @@ export async function getTodaySession(
   const storedCheckIn = await repo.getCheckIn(dateIso);
   const neutralAssumed = storedCheckIn === undefined;
   const checkIn = storedCheckIn ?? neutralCheckIn(dateIso);
-  const metrics = computeLoadMetrics(logs, asOf);
 
   const { adjustedSession, changes, warmupMandatory } = adapt(planned, checkIn, logs, metrics);
 
@@ -234,6 +259,8 @@ export async function getTodaySession(
     readiness,
     consistency,
     assessment,
+    acwr: metrics.acwr,
+    dataIssues,
   };
 }
 

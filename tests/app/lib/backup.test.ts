@@ -24,6 +24,7 @@ const mockProfile: UserProfile = {
   goalGrade: 7,
   sessionsPerWeek: 3,
   availableWeekdays: [1, 3, 5],
+  injuryHistory: ['pip', 'shoulder'], // BC-29: must survive export → import
 };
 
 const mockProgram: Program = {
@@ -290,7 +291,9 @@ describe('round-trip', () => {
 
     await importBackup(original, json);
 
-    expect(await original.getProfile()).toEqual(mockProfile);
+    const restored = await original.getProfile();
+    expect(restored).toEqual(mockProfile);
+    expect(restored?.injuryHistory).toEqual(['pip', 'shoulder']); // BC-29 round-trips
     expect(await original.getActiveProgram()).toEqual(mockProgram);
     expect(await original.getCheckIns()).toEqual(mockCheckIns);
     const logs = await original.getLogs();

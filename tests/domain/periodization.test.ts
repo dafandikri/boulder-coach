@@ -51,6 +51,21 @@ describe('generateProgram', () => {
     expect(s.blocks.some((b) => b.category === 'main')).toBe(true);
   });
 
+  it('shapes the baseline conservatively for a prior injury (BC-29)', () => {
+    const injured = generateProgram({ ...profile, injuryHistory: ['pip'] }, '2026-06-09');
+    const healthy = generateProgram(profile, '2026-06-09');
+    const injuredS = injured.weeks[0]!.sessions[0]!;
+    const healthyS = healthy.weeks[0]!.sessions[0]!;
+
+    // a finger injury adds prehab and removes crimp/mixed grips from the session
+    expect(injuredS.blocks.some((b) => b.id === 'injury-prehab-pip')).toBe(true);
+    expect(injuredS.blocks.every((b) => b.grip !== 'crimp' && b.grip !== 'mixed')).toBe(true);
+    // additive-safety: never more main climbing volume than the healthy baseline
+    const mainSets = (s: typeof injuredS) =>
+      s.blocks.filter((b) => b.category === 'main').reduce((n, b) => n + b.sets, 0);
+    expect(mainSets(injuredS)).toBeLessThanOrEqual(mainSets(healthyS));
+  });
+
   it('targets at or above current grade on limit days in hard weeks', () => {
     const p = generateProgram(profile, '2026-06-09');
     const limit = p.weeks[0]!.sessions.find((s) => s.type === 'limit-boulder');
