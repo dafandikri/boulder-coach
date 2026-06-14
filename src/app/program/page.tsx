@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import { programPosition } from '@/domain/programClock';
 import { weekSummary } from '@/domain/periodization';
 import { toOptionalLoadState, type OptionalLoadState } from '@/app/lib/loadState';
@@ -33,14 +33,16 @@ export default function ProgramPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void new DexieClimbRepo().getActiveProgram().then(
-      (p) => {
-        if (!cancelled) setLoad(toOptionalLoadState({ ok: true, data: p }));
-      },
-      (error: unknown) => {
-        if (!cancelled) setLoad(toOptionalLoadState<Program>({ ok: false, error }));
-      },
-    );
+    void getRepo()
+      .getActiveProgram()
+      .then(
+        (p) => {
+          if (!cancelled) setLoad(toOptionalLoadState({ ok: true, data: p }));
+        },
+        (error: unknown) => {
+          if (!cancelled) setLoad(toOptionalLoadState<Program>({ ok: false, error }));
+        },
+      );
     return () => {
       cancelled = true;
     };

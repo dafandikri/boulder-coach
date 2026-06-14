@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { programPosition } from '@/domain/programClock';
 import { prescribeOffWall, type OffWallPrescription } from '@/domain/offWallExercises';
@@ -25,7 +25,7 @@ export default function ExercisesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const repo = new DexieClimbRepo();
+    const repo = getRepo();
     const asOf = new Date();
     void Promise.all([getTodaySession(repo, asOf), repo.getActiveProgram()]).then(
       ([today, program]: [TodayResult, Awaited<ReturnType<typeof repo.getActiveProgram>>]) => {

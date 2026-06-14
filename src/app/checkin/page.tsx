@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import { localDateIso } from '@/app/lib/date';
 import { checkInFormValues, cycleSeverity, type CheckInFlags } from '@/app/lib/checkinForm';
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
@@ -39,22 +39,24 @@ export default function CheckInPage() {
   useEffect(() => {
     let cancelled = false;
     const today = localDateIso(new Date());
-    void new DexieClimbRepo().getCheckIn(today).then(
-      (existing) => {
-        if (cancelled) return;
-        const v = checkInFormValues(existing);
-        setSleep(v.sleepQuality);
-        setFatigue(v.overallFatigue);
-        setMotivation(v.motivation);
-        setSoreness(v.soreness);
-        setPain(v.pain);
-        setEditing(v.editing);
-        setLoad(toLoadState({ ok: true, data: existing }));
-      },
-      (error: unknown) => {
-        if (!cancelled) setLoad(toLoadState<CheckIn | undefined>({ ok: false, error }));
-      },
-    );
+    void getRepo()
+      .getCheckIn(today)
+      .then(
+        (existing) => {
+          if (cancelled) return;
+          const v = checkInFormValues(existing);
+          setSleep(v.sleepQuality);
+          setFatigue(v.overallFatigue);
+          setMotivation(v.motivation);
+          setSoreness(v.soreness);
+          setPain(v.pain);
+          setEditing(v.editing);
+          setLoad(toLoadState({ ok: true, data: existing }));
+        },
+        (error: unknown) => {
+          if (!cancelled) setLoad(toLoadState<CheckIn | undefined>({ ok: false, error }));
+        },
+      );
     return () => {
       cancelled = true;
     };
@@ -70,7 +72,7 @@ export default function CheckInPage() {
       soreness,
       pain,
     };
-    await new DexieClimbRepo().saveCheckIn(checkIn);
+    await getRepo().saveCheckIn(checkIn);
     router.push('/');
   }
 

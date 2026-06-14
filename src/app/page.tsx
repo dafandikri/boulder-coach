@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import {
   getTodaySession,
   applyProfile,
@@ -78,7 +78,7 @@ export default function TodayPage() {
   });
 
   useEffect(() => {
-    const repo = new DexieClimbRepo();
+    const repo = getRepo();
     // First run has no profile yet — send the climber to onboarding instead of
     // silently adopting someone else's defaults (BC-06).
     void repo
@@ -99,7 +99,7 @@ export default function TodayPage() {
   // BC-34: decide whether to surface the "back up your data" nudge. The decision
   // is the covered, tested domain rule; the page only reads logs + localStorage.
   useEffect(() => {
-    const repo = new DexieClimbRepo();
+    const repo = getRepo();
     void repo
       .getLogs()
       .then((logs) => {
@@ -190,7 +190,7 @@ export default function TodayPage() {
   function applyLevelUp(): void {
     if (!profile || today === null || today.assessment.measuredGrade === null) return;
     const draft = levelUpProfile(profile, today.assessment.measuredGrade);
-    const repo = new DexieClimbRepo();
+    const repo = getRepo();
     void applyProfile(repo, draft, true)
       .then(() => {
         setProfile(draft);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import type { SessionLog } from '@/domain/types';
 import { Card } from '@/app/components/Card';
 import { Badge } from '@/app/components/Badge';
@@ -12,7 +12,7 @@ export default function HistoryPage() {
   const [logs, setLogs] = useState<SessionLog[]>([]);
 
   useEffect(() => {
-    void new DexieClimbRepo().getLogs().then(setLogs);
+    void getRepo().getLogs().then(setLogs);
   }, []);
 
   return (
