@@ -49,6 +49,13 @@ next-env.d.ts
 /playwright-report/
 /.playwright-mcp/
 
+# lighthouse-ci reports (BC-16)
+/.lighthouseci/
+
+# stryker mutation-testing temp + reports (BC-35)
+/.stryker-tmp/
+/reports/
+
 # Crew runtime state (claims/queue/log/completed are ephemeral; config + schema are tracked)
 .crew/claims/
 .crew/review-queue/

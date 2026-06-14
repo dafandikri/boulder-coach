@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "BC-35 — mutation testing SCOPED to the two safety files only. 100% branch coverage proves the lines RAN; this proves a wrong rule would be CAUGHT (flip > to >= on the ACWR threshold and a test must fail). Full-repo mutation is too slow for the gate, so this runs as its own CI job.",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "mutate": ["src/domain/adaptation.ts", "src/domain/loadMetrics.ts"],
+  "_comment_mutator": "excludedMutations: reason strings are supportive-coach UX copy, not injury-safety rules — mutating them is no safety risk, so they're a justified ignore. Every behaviour-changing mutator (operators, conditionals, arithmetic) is still tested.",
+  "mutator": { "excludedMutations": ["StringLiteral"] },
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text", "progress"],
+  "_comment_thresholds": "Current score ~90% (loadMetrics 95%, adaptation ~88%). break=88 leaves margin so the single timeout-killed mutant flipping on a faster CI runner can't flake the gate. Ratchet UP as survivors are killed; never lower.",
+  "thresholds": { "high": 95, "low": 88, "break": 88 }
+}

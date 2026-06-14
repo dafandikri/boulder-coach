@@ -48,6 +48,10 @@ const eslintConfig = defineConfig([
     'coverage/**',
     'e2e/**',
     '.claude/worktrees/**',
+    // Stryker (BC-35) writes sandbox copies with `@ts-nocheck` headers under .stryker-tmp;
+    // linting them would fail the gate on generated mutants, not source. CI runs mutation
+    // as a separate job, so the temp dir never exists during the quality job's eslint.
+    '.stryker-tmp/**',
   ]),
 ]);
 

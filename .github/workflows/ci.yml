@@ -37,3 +37,35 @@ jobs:
         run: pnpm exec playwright install-deps chromium
       - name: E2E smoke
         run: pnpm exec playwright test
+
+  lighthouse:
+    runs-on: ubuntu-latest # GitHub-hosted runners ship Google Chrome, which lhci finds.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Lighthouse CI (perf / a11y / best-practices / SEO budgets)
+        run: pnpm lighthouse
+
+  mutation:
+    runs-on: ubuntu-latest # BC-35: mutation testing scoped to the two safety files.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Stryker mutation testing (adaptation.ts + loadMetrics.ts)
+        run: pnpm mutation

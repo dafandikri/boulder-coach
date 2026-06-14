@@ -11,7 +11,7 @@
 
 ## Quality bar (every task must pass `pnpm gate` before commit)
 
-`pnpm gate` runs: format:check → lint → tsc --noEmit → depcruise → type-coverage → vitest+coverage → knip → build.
+`pnpm gate` runs: format:check → lint → tsc --noEmit → depcruise → type-coverage → vitest+coverage → knip → build → bundle-size (BC-36). Heavier checks run as separate CI jobs (not the inner loop): e2e incl. **axe a11y** (BC-37) + **offline/SW/manifest** (BC-16), **Lighthouse budgets** (BC-16, `pnpm lighthouse`), and **Stryker mutation testing** on the safety files (BC-35, `pnpm mutation`).
 
 - NEVER use `any` (ESLint + type-coverage enforce this).
 - Coverage is **per-file** (`thresholds.perFile: true`): `adaptation.ts` & `loadMetrics.ts` = 100%

@@ -24,6 +24,34 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-14 (8 PBIs + ACWR fix/explainers — local, last touched by: Claude Opus 4.8)
+
+- **A large supervised batch landed, all `pnpm gate` green + every separate CI check verified locally.**
+  Worked sequentially (NOT parallel agents — the CI-infra PBIs collide on `ci.yml`/`playwright.config`/
+  `package.json`, and the ACWR change is a safety file needing serial review). **Not yet committed/pushed** —
+  one large local working tree; a supervised commit-per-PBI + push/PR is the next step. BACKLOG marks all
+  done.
+  - **ACWR cold-start fix (safety, PO-flagged bug)** — `loadMetrics.ts` rewritten to **EWMA-ACWR** (seeded
+    so a first week reads ~1.0, not a false 4.0 deload). `safety-rule-reviewer`: PASS. Canonical docs
+    (skill + spec + types) updated in lockstep. See LEARNINGS 2026-06-14.
+  - **Explainers (RPE + ACWR)** — covered `src/app/lib/explainers.ts` (band logic) + presentational
+    `MetricExplainer` with inline-SVG diagrams; surfaced on Today (personalised via new `TodayResult.acwr`)
+    and Insights.
+  - **BC-29** injury-history baseline (pure `injuryBaseline.ts`, additive-only, round-trips in backup).
+  - **BC-32** integrity validator (`integrity.ts`, quarantine on read → `TodayResult.dataIssues`) + v1→v2
+    migration test.
+  - **BC-33** `error.tsx` + `global-error.tsx` over covered `errorRecovery.ts` (Next 16 `unstable_retry`).
+  - **BC-36** bundle budget (gate step 9/9, ~168/200 KB). **BC-35** Stryker on the safety files (90%, sep CI
+    job). **BC-37** axe a11y e2e (neutral contrast fixed; brand pairs baselined → BC-25). **BC-16** offline/
+    SW/manifest e2e + Lighthouse budgets. **BC-14** branded maskable PWA icons (`pnpm icons`).
+- **New deps (all devDependencies, dep-placement guard green):** `@axe-core/playwright`, `@lhci/cli`,
+  `@stryker-mutator/{core,vitest-runner}`, `sharp`. New scripts: `bundlesize`, `lighthouse`, `mutation`,
+  `icons`. New CI jobs: `lighthouse`, `mutation` (alongside `quality`).
+- **Gate-blind / follow-ups:** BC-33 forced-throw e2e descoped (would need a prod throw hook); brand-palette
+  contrast is **BC-25** (axe baseline references it); Lighthouse BP=0.96 locally is the localhost Vercel-
+  script 404 (deploy = 1.0). Open P2 remaining: BC-25 (dark mode + the a11y contrast pass), BC-38 (charts),
+  BC-39 (install prompt).
+
 ## Current state — 2026-06-13 (BC-27 benchmark recalibration + BC-31 persistent storage — local, last touched by: Claude Opus 4.8)
 
 - **Two file-adjacent P2 PBIs shipped this session, both TDD, `pnpm gate` green** (format → lint → tsc

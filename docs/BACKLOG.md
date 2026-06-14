@@ -48,7 +48,13 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
 
 ## P2 — Polish & infrastructure that compounds
 
-### BC-14 · Real PWA icons (carried from HANDOFF) — `open`
+### BC-14 · Real PWA icons (carried from HANDOFF) — `done`
+
+- **Shipped:** branded **maskable** PNGs (`public/icon-192.png`, `icon-512.png`) + `apple-touch-icon.png`,
+  generated reproducibly from the hold-mark by `scripts/gen-icons.mjs` (`pnpm icons`, `sharp`) — full-bleed
+  chalk so the launcher mask never letterboxes. Manifest lists the 192/512 PNGs (`purpose: any maskable`) +
+  brand-refreshed `icon.svg` + brand colors; `layout.tsx` adds `icons.icon`/`icons.apple`. Manifest test now
+  requires both maskable PNG sizes + the apple-touch-icon, all asserted to exist on disk.
 
 - **Type:** infra/design · **Priority:** P2 · **Complexity:** S
 - **Problem:** `public/icon.svg` is a placeholder mark; the manifest test enforces presence, not
@@ -57,7 +63,14 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
   `tests/pwa/manifest.test.ts` extended to require the maskable purpose + both sizes.
 - **Files:** `public/manifest.webmanifest`, `tests/pwa/manifest.test.ts`
 
-### BC-16 · Installability + offline e2e in CI (carried from HANDOFF) — `open`
+### BC-16 · Installability + offline e2e in CI (carried from HANDOFF) — `done`
+
+- **Shipped:** `e2e/offline.spec.ts` runs against the prod build — asserts the SW registers/activates, a
+  precached route loads with the network cut (`context.setOffline`), and the manifest is installable
+  (name/start_url/standalone + a maskable icon). Promotes the HANDOFF's top gate-blind (SW runtime) risk to
+  Tier-1; runs in CI's existing `playwright test` step. **Lighthouse** added (`lighthouserc.json`,
+  `pnpm lighthouse`, new `lighthouse` CI job) with category budgets (perf ≥ 0.80, a11y ≥ 0.90, BP ≥ 0.90,
+  SEO ≥ 0.95 — buffered below the deployed 87/96/100/100 for the localhost-only Vercel-script 404s).
 
 - **Type:** ci/test · **Priority:** P2 · **Complexity:** M
 - **Problem:** service-worker runtime behavior is the biggest acknowledged gate-blind risk —
@@ -172,7 +185,15 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Fully tested incl. the pain/ACWR override branches.
 - **Files:** `src/domain/readiness.ts`, `src/app/page.tsx`
 
-### BC-29 · Injury-history-aware baseline (restore `injuryHistory[]`) — `open`
+### BC-29 · Injury-history-aware baseline (restore `injuryHistory[]`) — `done`
+
+- **Shipped:** `injuryHistory?: BodyPart[]` restored to `UserProfile` (optional — legacy stored profiles
+  lack it, read `?? []`); onboarding/profile UI exposes a body-part picker; `BackupV1` round-trips it
+  (profile serialized whole; test asserts survival). New pure `src/domain/injuryBaseline.ts`
+  `applyInjuryHistory(blocks, history)` — kept OUT of `adaptation.ts` so the safety file stays focused on
+  same-day rules — softens crimp/mixed → open-hand for prior finger/wrist injuries and ADDS one prehab block
+  per flagged part. **Additive-only safety contract tested** (never raises volume/intensity/grade).
+  Threaded through `generateProgram` → `buildSession`. `validateProfile` rejects unknown body parts.
 
 - **Type:** feature/safety · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-06
 - **Problem:** the design's data model lists `UserProfile.injuryHistory[]` but `src/domain/types.ts`
@@ -246,7 +267,14 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
     only renders. Tested (persisted true / false / unsupported) with a mocked `navigator.storage`.
 - **Files:** `src/app/lib/storage.ts`, `src/app/page.tsx`
 
-### BC-32 · Schema-migration safety net + load-time integrity validation — `open`
+### BC-32 · Schema-migration safety net + load-time integrity validation — `done`
+
+- **Shipped:** integration test seeds a `version(1)` DB, opens it through `DexieClimbRepo` (`version(2)`),
+  and asserts rows survive + the v2-only store works (fake-indexeddb). New pure `src/app/lib/integrity.ts`
+  (`validateLog`/`partitionLogs`) checks each stored log's runtime shape on read; corrupt records (e.g. a
+  non-numeric `sessionRPE` that would NaN the load engine) are **quarantined**, not crashed on. Wired at the
+  app layer (`bootstrap.getTodaySession`, since `src/data` can't import `src/app`) — `TodayResult.dataIssues`
+  surfaces a count, and Today shows a "some saved data looks damaged — restore from backup" Callout.
 
 - **Type:** infra/stability · **Priority:** P2 · **Complexity:** M · **Depends on:** —
 - **Problem:** `dexieRepo.ts` is already at `.version(2)` with no test proving a `version(1)→(2)`
@@ -262,7 +290,15 @@ drivers: string[] }` in `src/domain/readiness.ts` (no I/O).
   - Tested: a malformed log/profile yields a typed validation error, not a throw mid-render.
 - **Files:** `src/app/lib/integrity.ts`, `src/data/dexieRepo.ts`, `tests/domain/dexieRepo.test.ts`
 
-### BC-33 · Global error boundary + crash recovery UI — `open`
+### BC-33 · Global error boundary + crash recovery UI — `done`
+
+- **Shipped:** App Router `src/app/error.tsx` (segment) + `src/app/global-error.tsx` (root, self-contained
+  `<html>`/`<body>` + inline styles since it replaces the shell) render a branded recovery screen with
+  **reload + "export your data"** actions and never expose a raw stack. Copy/actions/`safeErrorDigest` live
+  in the covered `src/app/lib/errorRecovery.ts` (the digest strips the stack to a short single-line
+  reference, logged to console only). Next 16 passes `unstable_retry` (NOT the old `reset`). _Note:_ the
+  forced-throw e2e was descoped — triggering the boundary deterministically needs a prod throw hook, which
+  would ship test code to production; the recovery logic is unit-tested and the boundaries are thin renderers.
 
 - **Type:** ux/stability · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-10
 - **Problem:** there is no `error.tsx`/`global-error.tsx` in `src/app`. Any unhandled render error blanks
@@ -303,7 +339,15 @@ sessionsSinceExport)` fires when there is meaningful un-backed-up data (≥`NUDG
 
 > **— Infra & quality bar (compound the harness) —**
 
-### BC-35 · Mutation testing on the safety files (Stryker) — `open`
+### BC-35 · Mutation testing on the safety files (Stryker) — `done`
+
+- **Shipped:** `stryker.config.json` mutates ONLY `adaptation.ts` + `loadMetrics.ts` (vitest runner, plugin
+  declared explicitly for pnpm). Separate `mutation` CI job (`pnpm mutation`), kept out of the inner gate.
+  Surfaced real assertion gaps: added exact-boundary safety tests (ACWR 1.3/1.5, fatigue 4, sleep 2,
+  progression RPE/`>=`, exact volume-halving + RPE-floor + warmup-mandatory + grip-scope) that lift the
+  score to **90%** (loadMetrics 95%). Reason strings excluded as a justified ignore (UX copy, not safety
+  rules). `break: 88` leaves margin for the one timeout-killed mutant; ratchet up, never down. eslint ignores
+  `.stryker-tmp/**` (Stryker's `@ts-nocheck` sandbox copies).
 
 > **Re-prioritized 2026-06-13 (P2 → P1):** a review of proposed test-quality upgrades (SAST/DAST/
 > API-schema/BDD/load-test/mutation) confirmed mutation testing is the only one that fits a
@@ -327,7 +371,13 @@ sessionsSinceExport)` fires when there is meaningful un-backed-up data (≥`NUDG
     justified ignore.
 - **Files:** `stryker.config.json`, `.github/workflows/ci.yml`, `package.json`
 
-### BC-36 · Bundle-size budget (Tier-1 gate) — `open`
+### BC-36 · Bundle-size budget (Tier-1 gate) — `done`
+
+- **Shipped:** `scripts/check-bundle-size.mjs` (zero-dep, `node:zlib`) gzip-measures the App-Router first-load
+  JS (build-manifest `rootMainFiles` + polyfills) and fails by number against the data-driven ceiling in
+  `.size-limit.json` (200 KB; baseline ~168 KB). Wired as gate step **9/9** (`pnpm bundlesize`). The pure
+  `summarizeBundle` is unit-tested (`tests/harness/bundle-size.test.ts`); the limit bumps one line with a
+  justification so an intentional increase is a visible decision.
 
 - **Type:** ci/test · **Priority:** P2 · **Complexity:** S · **Depends on:** —
 - **Problem:** nothing bounds the JS shipped to the phone. A PWA opened on gym cell data degrades
@@ -341,7 +391,14 @@ sessionsSinceExport)` fires when there is meaningful un-backed-up data (≥`NUDG
   - Wired into `pnpm gate` / CI; the current build sets the initial baseline.
 - **Files:** `.size-limit.json`, `package.json`, `scripts/gate.sh`
 
-### BC-37 · Accessibility audit gate (axe-core in e2e) — `open`
+### BC-37 · Accessibility audit gate (axe-core in e2e) — `done`
+
+- **Shipped:** `e2e/a11y.spec.ts` runs `@axe-core/playwright` (WCAG 2 A/AA) against the prod build on every
+  route + Today-after-onboarding; serious/critical violations fail (runs in CI's existing `playwright test`).
+  Covers contrast, labels, focus order, and a reduced-motion smoke. Genuinely **fixed** the dominant neutral
+  contrast (`--text-soft` #8d8497 3.57:1 → darkened ≥4.5:1, hierarchy kept). Remaining failures are all
+  brand/semantic colour PAIRS (white-on-brand CTAs, success green, badge tints) — **baselined by colour pair
+  with BC-25 references** (brand-owner palette pass); any NEW pair or non-contrast violation still fails.
 
 - **Type:** ci/test · **Priority:** P2 · **Complexity:** M · **Depends on:** —
 - **Problem:** no automated a11y check exists. A one-handed, thumb-driven, sweaty-fingers-at-the-gym app

@@ -296,3 +296,105 @@ describe('adapt — progression (rules 6-7)', () => {
     expect(r.changes.some((c) => c.ruleId === 'regression')).toBe(false);
   });
 });
+
+// BC-35 — exact-boundary kills for the safety operators. 100% branch coverage proves
+// the lines ran; these prove the *thresholds* are exact (mutation testing pins them):
+// the domain-rule-authoring skill mandates boundary tests at ACWR 1.3 and 1.5.
+describe('adapt — threshold boundaries (mutation-hardening)', () => {
+  const ruleIds = (r: ReturnType<typeof adapt>) => r.changes.map((c) => c.ruleId);
+
+  it('ACWR exactly 1.5 is caution, NOT a deload (rule 3 is > 1.5, strict)', () => {
+    const r = adapt(session(), neutralCheckIn(), [], { acute: 450, chronic: 300, acwr: 1.5 });
+    expect(ruleIds(r)).toContain('acwr-caution');
+    expect(ruleIds(r)).not.toContain('acwr-high');
+  });
+
+  it('ACWR just above 1.5 (1.51) forces a deload', () => {
+    const r = adapt(session(), neutralCheckIn(), [], { acute: 453, chronic: 300, acwr: 1.51 });
+    expect(ruleIds(r)).toContain('acwr-high');
+  });
+
+  it('ACWR exactly 1.3 is the caution floor (rule 4 is >= 1.3, inclusive)', () => {
+    const r = adapt(session(), neutralCheckIn(), [], { acute: 390, chronic: 300, acwr: 1.3 });
+    expect(ruleIds(r)).toContain('acwr-caution');
+  });
+
+  it('ACWR just below 1.3 (1.29) triggers no load rule', () => {
+    const r = adapt(session(), neutralCheckIn(), [], { acute: 387, chronic: 300, acwr: 1.29 });
+    expect(ruleIds(r)).not.toContain('acwr-caution');
+    expect(ruleIds(r)).not.toContain('acwr-high');
+  });
+
+  it('fatigue exactly 4 fires the fatigue rule (>= 4, inclusive)', () => {
+    const ci = { ...neutralCheckIn(), overallFatigue: 4, sleepQuality: 4 };
+    expect(ruleIds(adapt(session(), ci, [], okMetrics))).toContain('fatigue');
+  });
+
+  it('fatigue 3 with good sleep does NOT fire the fatigue rule', () => {
+    const ci = { ...neutralCheckIn(), overallFatigue: 3, sleepQuality: 4 };
+    expect(ruleIds(adapt(session(), ci, [], okMetrics))).not.toContain('fatigue');
+  });
+
+  it('sleep exactly 2 fires the fatigue rule on its own (<= 2, inclusive; OR not AND)', () => {
+    const ci = { ...neutralCheckIn(), overallFatigue: 2, sleepQuality: 2 };
+    expect(ruleIds(adapt(session(), ci, [], okMetrics))).toContain('fatigue');
+  });
+
+  it('pain cuts main volume to exactly half (6 → 3 sets) and leaves non-main sets alone', () => {
+    const r = adapt(session(), { ...neutralCheckIn(), pain: { pip: 2 } }, [], okMetrics);
+    expect(totalMainSets(r.adjustedSession)).toBe(3); // Math.max(1, round(6 × 0.5)) — not min
+    expect(r.adjustedSession.blocks.find((b) => b.id === 'wu')?.sets).toBe(10); // warm-up untouched
+  });
+
+  it('pain forces only MAIN grips open — a non-main block keeps its grip', () => {
+    const s = session();
+    const cooldown = s.blocks.find((b) => b.id === 'cd');
+    if (cooldown) cooldown.grip = 'crimp';
+    const r = adapt(s, { ...neutralCheckIn(), pain: { shoulder: 2 } }, [], okMetrics);
+    expect(r.adjustedSession.blocks.find((b) => b.id === 'cd')?.grip).toBe('crimp');
+  });
+
+  it('soreness mandates the warm-up and lowers main RPE to exactly targetRPE − 1 (floor 5)', () => {
+    const r = adapt(session(), { ...neutralCheckIn(), soreness: { pip: 2 } }, [], okMetrics);
+    expect(r.warmupMandatory).toBe(true); // not false
+    const main = r.adjustedSession.blocks.find((b) => b.category === 'main');
+    expect(main?.targetRPE).toBe(8); // Math.max(5, 9 − 1) — not min
+  });
+
+  it('progression counts a single qualifying send among misses (some, not every)', () => {
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [logBlock('m', { gradesSent: [3, 6], rpe: 8 })]),
+      sessionLog('log-2', '2026-06-05', [logBlock('m', { gradesSent: [4, 5], rpe: 8 })]),
+    ];
+    expect(ruleIds(adapt(session(), neutralCheckIn(), logs, okMetrics))).toContain('progression');
+  });
+
+  it('a send exactly AT target counts as hitting it — no regression (>=, not >)', () => {
+    const logs = [
+      sessionLog('log-1', '2026-06-08', [logBlock('m', { gradesSent: [5], rpe: 9 })]),
+      sessionLog('log-2', '2026-06-05', [logBlock('m', { gradesSent: [5], rpe: 9 })]),
+    ];
+    expect(ruleIds(adapt(session(), neutralCheckIn(), logs, okMetrics))).not.toContain(
+      'regression',
+    );
+  });
+
+  it('progression needs RPE at or below targetRPE − 1: sends at exactly targetRPE do NOT progress', () => {
+    // target grade 5, targetRPE 9 → crushing requires rpe <= 8. Sends at rpe 9 must not bump.
+    const atCap = [
+      sessionLog('log-1', '2026-06-08', [logBlock('m', { gradesSent: [5, 6], rpe: 9 })]),
+      sessionLog('log-2', '2026-06-05', [logBlock('m', { gradesSent: [5], rpe: 9 })]),
+    ];
+    expect(ruleIds(adapt(session(), neutralCheckIn(), atCap, okMetrics))).not.toContain(
+      'progression',
+    );
+
+    const belowCap = [
+      sessionLog('log-3', '2026-06-08', [logBlock('m', { gradesSent: [5, 6], rpe: 8 })]),
+      sessionLog('log-4', '2026-06-05', [logBlock('m', { gradesSent: [5], rpe: 8 })]),
+    ];
+    expect(ruleIds(adapt(session(), neutralCheckIn(), belowCap, okMetrics))).toContain(
+      'progression',
+    );
+  });
+});

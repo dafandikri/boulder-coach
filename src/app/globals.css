@@ -65,7 +65,9 @@
   --surface-tint: var(--chalk-50);
   --text: var(--basalt-900);
   --text-muted: var(--basalt-500);
-  --text-soft: var(--basalt-400);
+  /* BC-37: was basalt-400 (#8d8497 = 3.57:1 on white, fails WCAG AA). Darkened to a
+     neutral that clears 4.5:1 while staying lighter than --text-muted (hierarchy kept). */
+  --text-soft: #767082;
   --text-on-brand: #ffffff;
   --border: var(--chalk-300);
   --border-strong: var(--basalt-900);
