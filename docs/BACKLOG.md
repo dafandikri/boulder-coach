@@ -69,8 +69,9 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
   precached route loads with the network cut (`context.setOffline`), and the manifest is installable
   (name/start_url/standalone + a maskable icon). Promotes the HANDOFF's top gate-blind (SW runtime) risk to
   Tier-1; runs in CI's existing `playwright test` step. **Lighthouse** added (`lighthouserc.json`,
-  `pnpm lighthouse`, new `lighthouse` CI job) with category budgets (perf ≥ 0.80, a11y ≥ 0.90, BP ≥ 0.90,
-  SEO ≥ 0.95 — buffered below the deployed 87/96/100/100 for the localhost-only Vercel-script 404s).
+  `pnpm lighthouse`, new `lighthouse` CI job) with category budgets (originally perf ≥ 0.80, a11y ≥ 0.90,
+  BP ≥ 0.90, SEO ≥ 0.95 — buffered below the deployed 87/96/100/100 for the localhost-only Vercel-script
+  404s; **ratcheted 2026-06-14 PR #44 to perf ≥ 0.85, a11y ≥ 0.95, BP ≥ 0.95** — see README for current).
 
 - **Type:** ci/test · **Priority:** P2 · **Complexity:** M
 - **Problem:** service-worker runtime behavior is the biggest acknowledged gate-blind risk —

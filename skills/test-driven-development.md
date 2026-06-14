@@ -23,7 +23,7 @@ _should_ do.
 - **Test behavior, not implementation.** Assert outputs/observable effects, not internal calls.
 - **Cover the branches the gate requires.** For safety files (`adaptation.ts`, `loadMetrics.ts`) that's
   **100% branch** — explicitly test boundaries and edge inputs (exact thresholds, zero/undefined flags,
-  the "already in the target state" case). For other domain code aim ≥ 90% branch.
+  the "already in the target state" case). For other domain code aim ≥ 92% branch (everything else ≥ 95%).
 - **Prefer integration-style domain tests** (drive a function end-to-end with realistic inputs) over
   testing trivial internals — they catch real bugs.
 - Use a test/mock/dummy/example marker in fixture data.
