@@ -31,12 +31,6 @@ import { ProgressBar } from '@/app/components/ProgressBar';
 import { ReadinessCard } from '@/app/components/ReadinessCard';
 import { SessionCard } from '@/app/components/SessionCard';
 import { Spinner } from '@/app/components/Spinner';
-import {
-  MetricExplainer,
-  AcwrBandDiagram,
-  RpeScaleDiagram,
-} from '@/app/components/MetricExplainer';
-import { explainAcwr, explainRpe } from '@/app/lib/explainers';
 
 const CAT_LABEL: Record<string, string> = {
   warmup: 'Warm-up',
@@ -153,7 +147,7 @@ export default function TodayPage() {
   }
   if (!today) return <Spinner label="Loading today's session…" />;
 
-  const { session, changes, warmupMandatory, neutralAssumed, readiness, consistency, acwr } = today;
+  const { session, changes, warmupMandatory, neutralAssumed, readiness, consistency } = today;
   const { dataIssues } = today;
   const isRest = session.type === 'rest';
   const streak = consistency.currentStreakWeeks;
@@ -209,23 +203,6 @@ export default function TodayPage() {
       {/* BC-28: today's readiness read-out (only on a training day with a real
           check-in; a neutral day shows the check-in prompt below instead). */}
       {!isRest && readiness && <ReadinessCard readiness={readiness} />}
-
-      {/* Plain-language explainers for the two metrics climbers ask about most —
-          load ramp (ACWR, personalised to today's ratio) and effort (RPE). Copy +
-          band logic live in the covered `explainers` lib; this only renders. */}
-      <Card padding="sm">
-        <div className="flex items-center justify-between gap-2">
-          <span className="bc-eyebrow">Load ratio (ACWR)</span>
-          <MetricExplainer
-            explainer={explainAcwr(acwr)}
-            diagram={<AcwrBandDiagram acwr={acwr} />}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-2" style={{ marginTop: 6 }}>
-          <span className="bc-eyebrow">Effort (RPE)</span>
-          <MetricExplainer explainer={explainRpe()} diagram={<RpeScaleDiagram />} />
-        </div>
-      </Card>
 
       {/* BC-40: this week's consistency — progress vs target + a supportive streak. */}
       <Card padding="sm">

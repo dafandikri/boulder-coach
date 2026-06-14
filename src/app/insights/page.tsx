@@ -101,23 +101,33 @@ export default function InsightsPage() {
           icon="activity"
           tone={tone.color}
           value={acwr === 0 ? '—' : acwr.toFixed(2)}
-          label="ACWR"
+          label={
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              ACWR
+              <MetricExplainer
+                explainer={explainAcwr(acwr)}
+                diagram={<AcwrBandDiagram acwr={acwr} />}
+              />
+            </span>
+          }
           sub={tone.label}
         />
         <StatCard
           icon="trending-up"
           value={insights.totalSessions}
           label="Sessions"
-          sub={`Avg RPE ${String(insights.averageSessionRPE)}`}
+          sub={
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {`Avg RPE ${String(insights.averageSessionRPE)}`}
+              <MetricExplainer explainer={explainRpe()} diagram={<RpeScaleDiagram />} />
+            </span>
+          }
         />
       </div>
-      <div className="flex items-center gap-2" style={{ marginTop: -4 }}>
-        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-soft)', margin: 0 }}>
-          ACWR target 0.8–1.3. Above 1.5 forces a deload.
-        </p>
-        <MetricExplainer explainer={explainAcwr(acwr)} diagram={<AcwrBandDiagram acwr={acwr} />} />
-        <MetricExplainer explainer={explainRpe()} diagram={<RpeScaleDiagram />} />
-      </div>
+      <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-soft)', marginTop: -4 }}>
+        ACWR target 0.8–1.3. Above 1.5 forces a deload. Tap the (i) beside each stat for a
+        plain-language explainer.
+      </p>
 
       <Card accent="var(--brand)">
         <div className="bc-eyebrow" style={{ marginBottom: 8 }}>

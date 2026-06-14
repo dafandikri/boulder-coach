@@ -194,6 +194,23 @@ describe('parseBackup (import validation)', () => {
     const parsed = parseBackup(JSON.stringify(blob));
     expect(parsed).toEqual(blob);
   });
+
+  it('coerces a non-string exportedAt (corrupt/legacy backup) to an empty string', () => {
+    // A hand-edited or pre-v1 export can carry a missing/numeric exportedAt. The
+    // structural parse must not crash on it — it falls back to '' so the restore
+    // proceeds. (Covers the `: ''` branch of the exportedAt guard.)
+    const blob = {
+      version: BACKUP_VERSION,
+      exportedAt: 0, // not a string — the corrupt/legacy case
+      profile: null,
+      program: null,
+      checkIns: [],
+      logs: [],
+      adaptationLog: [],
+    };
+    const parsed = parseBackup(JSON.stringify(blob));
+    expect(parsed.exportedAt).toBe('');
+  });
 });
 
 describe('importBackup', () => {
