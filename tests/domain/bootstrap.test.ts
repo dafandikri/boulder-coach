@@ -109,6 +109,26 @@ describe('getTodaySession', () => {
     expect(r.assessment.leveledUp).toBe(true);
   });
 
+  it('surfaces the EWMA ACWR on TodayResult for the explainer (training and rest)', async () => {
+    const repo = new DexieClimbRepo(`boot-acwr-${Math.random()}`);
+    const day = new Date(2026, 5, 1, 8); // Mon — training day
+    await getTodaySession(repo, day); // seed program
+    await repo.saveLog({
+      id: 'mock-acwr-log',
+      date: '2026-06-01',
+      warmupCompleted: true,
+      blocks: [],
+      sessionRPE: 8,
+      durationMin: 60,
+    });
+    const training = await getTodaySession(repo, day);
+    // One in-window session → seeded EWMA → ACWR exactly 1.0 (no cold-start spike).
+    expect(training.acwr).toBe(1);
+    // Rest day (Sun) still reports the load ratio for the explainer.
+    const rest = await getTodaySession(repo, new Date(2026, 5, 7, 8));
+    expect(typeof rest.acwr).toBe('number');
+  });
+
   it('reports no level-up when there are no qualifying sends (BC-27)', async () => {
     const repo = new DexieClimbRepo(`boot-assess-cold-${Math.random()}`);
     const r = await getTodaySession(repo, new Date(2026, 5, 1, 8));

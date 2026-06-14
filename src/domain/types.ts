@@ -62,6 +62,10 @@ export interface UserProfile {
   goalGrade: VGrade;
   sessionsPerWeek: number; // 1..7 (BC-45)
   availableWeekdays: number[]; // 0=Sun .. 6=Sat
+  /** BC-29: previously-injured parts. Baseline sessions are made more conservative for
+   *  these (softer grips + prehab), never more aggressive. Optional — absent on profiles
+   *  saved before BC-29 (and when the climber has no injury history); read it as `?? []`. */
+  injuryHistory?: BodyPart[];
 }
 
 /** 1..3 severity for soreness; 1..3 for sharp pain. Absent = none. */
@@ -94,9 +98,9 @@ export interface SessionLog {
 }
 
 export interface LoadMetrics {
-  acute: number; // 7-day load sum
-  chronic: number; // 28-day load as weekly-equivalent
-  acwr: number; // acute / chronic, 0 when chronic is 0
+  acute: number; // EWMA of daily load, N=7 (λ=0.25)
+  chronic: number; // EWMA of daily load, N=28 (λ=2/29)
+  acwr: number; // acute / chronic (EWMA-ACWR), 0 when chronic is 0
 }
 
 export interface AdaptationChange {

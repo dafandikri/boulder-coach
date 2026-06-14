@@ -22,6 +22,15 @@ describe('validateProfile', () => {
     expect(validateProfile(validDraft)).toBeNull();
   });
 
+  it('accepts a valid injury history (BC-29)', () => {
+    expect(validateProfile({ ...validDraft, injuryHistory: ['pip', 'shoulder'] })).toBeNull();
+  });
+
+  it('rejects an injury history with an unknown body part (BC-29)', () => {
+    // @ts-expect-error — deliberately invalid body part to prove the guard fires
+    expect(validateProfile({ ...validDraft, injuryHistory: ['knee'] })).toMatch(/injury/i);
+  });
+
   it('accepts a goal equal to the current grade (maintenance is valid)', () => {
     expect(validateProfile({ ...validDraft, goalGrade: 4, currentGrade: 4 })).toBeNull();
   });

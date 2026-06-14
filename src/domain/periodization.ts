@@ -2,6 +2,7 @@ import type {
   AdaptationChange,
   AdaptationResult,
   Block,
+  BodyPart,
   PhaseKind,
   PlannedSession,
   Program,
@@ -11,6 +12,7 @@ import type {
   UserProfile,
 } from './types';
 import { generateWarmup } from './warmup';
+import { applyInjuryHistory } from './injuryBaseline';
 import { VB } from './grade';
 import type { ExerciseContent } from './exerciseContent';
 import { getDrillsByCategory } from './drills';
@@ -309,12 +311,16 @@ function buildSession(
   phase: PhaseKind,
   currentGrade: number,
   phaseRunOrdinal: number,
+  injuryHistory: BodyPart[],
 ): PlannedSession {
-  const blocks: Block[] = [
-    ...generateWarmup({ injuryActive: false }),
-    ...mainBlocksFor(type, phase, currentGrade, weekIndex, phaseRunOrdinal),
-    cooldownPrehab(),
-  ];
+  const blocks: Block[] = applyInjuryHistory(
+    [
+      ...generateWarmup({ injuryActive: false }),
+      ...mainBlocksFor(type, phase, currentGrade, weekIndex, phaseRunOrdinal),
+      cooldownPrehab(),
+    ],
+    injuryHistory,
+  );
   return {
     id: `${programId}-w${weekIndex}-d${dayIndex}`,
     programId,
@@ -341,6 +347,7 @@ export function generateProgram(profile: UserProfile, startDate: string): Progra
         phase,
         profile.currentGrade,
         phaseRunOrdinal,
+        profile.injuryHistory ?? [],
       ),
     );
     return { weekIndex, phase, sessions };

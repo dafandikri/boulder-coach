@@ -20,6 +20,12 @@ import { GradePill } from '@/app/components/GradePill';
 import { ProgressBar } from '@/app/components/ProgressBar';
 import { StatCard } from '@/app/components/StatCard';
 import { Spinner } from '@/app/components/Spinner';
+import {
+  MetricExplainer,
+  AcwrBandDiagram,
+  RpeScaleDiagram,
+} from '@/app/components/MetricExplainer';
+import { explainAcwr, explainRpe } from '@/app/lib/explainers';
 
 /** ACWR risk → brand feedback tone (presentational only; the value is domain-computed). */
 function acwrTone(acwr: number): { color: string; label: string } {
@@ -90,9 +96,13 @@ export default function InsightsPage() {
           sub={`Avg RPE ${String(insights.averageSessionRPE)}`}
         />
       </div>
-      <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-soft)', marginTop: -4 }}>
-        ACWR target 0.8–1.3. Above 1.5 forces a deload.
-      </p>
+      <div className="flex items-center gap-2" style={{ marginTop: -4 }}>
+        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-soft)', margin: 0 }}>
+          ACWR target 0.8–1.3. Above 1.5 forces a deload.
+        </p>
+        <MetricExplainer explainer={explainAcwr(acwr)} diagram={<AcwrBandDiagram acwr={acwr} />} />
+        <MetricExplainer explainer={explainRpe()} diagram={<RpeScaleDiagram />} />
+      </div>
 
       <Card accent="var(--brand)">
         <div className="bc-eyebrow" style={{ marginBottom: 8 }}>

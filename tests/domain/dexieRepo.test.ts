@@ -1,7 +1,8 @@
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DexieClimbRepo } from '../../src/data/dexieRepo';
-import type { CheckIn, Program, UserProfile } from '../../src/domain/types';
+import type { CheckIn, Program, SessionLog, UserProfile } from '../../src/domain/types';
 
 const profile: UserProfile = {
   currentGrade: 5,
@@ -126,5 +127,40 @@ describe('DexieClimbRepo', () => {
     const entry = log.find((e) => e.date === '2026-06-09');
     expect(entry?.neutralAssumed).toBe(false);
     expect(entry?.changes).toHaveLength(0);
+  });
+});
+
+describe('schema migration (BC-32)', () => {
+  it('preserves version(1) rows when the DB is opened at version(2)', async () => {
+    const name = `test-migrate-${Math.random()}`;
+
+    // Seed a DB that only knows the v1 schema (no adaptationLog store).
+    const v1 = new Dexie(name);
+    v1.version(1).stores({
+      profile: 'id',
+      programs: 'id, active',
+      checkIns: 'date',
+      logs: 'id, date',
+    });
+    await v1.table('profile').put({ id: 'singleton', ...profile });
+    const mockLog: SessionLog = {
+      id: 'mock-pre-migration',
+      date: '2026-06-01',
+      warmupCompleted: true,
+      blocks: [],
+      sessionRPE: 7,
+      durationMin: 60,
+    };
+    await v1.table('logs').put(mockLog);
+    v1.close();
+
+    // Re-open through the real repo, which upgrades the same DB to version(2).
+    const repo = new DexieClimbRepo(name);
+    expect(await repo.getProfile()).toEqual(profile); // v1 rows survived the upgrade
+    expect(await repo.getLogs()).toEqual([mockLog]);
+
+    // The v2-only store is usable after the upgrade.
+    await repo.saveAdaptationLogEntry({ date: '2026-06-01', changes: [], neutralAssumed: true });
+    expect(await repo.getAdaptationLog()).toHaveLength(1);
   });
 });
