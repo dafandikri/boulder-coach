@@ -1,14 +1,37 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { RPE_SCALE, type Explainer } from '@/app/lib/explainers';
 
+// Ref-counted body scroll lock so concurrent/overlapping dialogs can never leave
+// the page permanently unscrollable: only the first lock captures the original
+// overflow, only the last restores it.
+let scrollLockCount = 0;
+let prevBodyOverflow = '';
+function lockBodyScroll() {
+  if (scrollLockCount === 0) {
+    prevBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  scrollLockCount += 1;
+}
+function unlockBodyScroll() {
+  scrollLockCount -= 1;
+  if (scrollLockCount <= 0) {
+    scrollLockCount = 0;
+    document.body.style.overflow = prevBodyOverflow;
+  }
+}
+
 /**
- * A tap-to-expand "(i)" affordance for a metric (RPE / ACWR). Presentational and
- * gate-blind by design — all copy/band logic lives in the covered `explainers` lib;
- * this only toggles a panel and renders an optional inline-SVG diagram. Accessible:
- * the trigger is a labelled button with `aria-expanded`/`aria-controls`.
+ * A "(i)" trigger that opens a modal dialog explaining a metric (RPE / ACWR).
+ * Presentational and gate-blind by design — all copy/band logic lives in the
+ * covered `explainers` lib; this only toggles a dialog and renders an optional
+ * inline-SVG diagram. Accessible: the trigger is a labelled button with
+ * `aria-haspopup="dialog"`; the popup is a `role="dialog"`/`aria-modal` labelled
+ * by its heading and closable via Escape, backdrop click, or the close button.
  */
 export function MetricExplainer({
   explainer,
@@ -18,16 +41,20 @@ export function MetricExplainer({
   diagram?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const panelId = useId();
+  const titleId = useId();
+  // Stable identity so the dialog's mount-only effect (focus capture + scroll
+  // lock) doesn't re-fire on unrelated parent re-renders. `setOpen` is stable.
+  const handleClose = useCallback(() => {
+    setOpen(false);
+  }, []);
   return (
     <>
       <button
         type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
+        aria-haspopup="dialog"
         aria-label={explainer.heading}
         onClick={() => {
-          setOpen((v) => !v);
+          setOpen(true);
         }}
         style={{
           display: 'inline-flex',
@@ -46,35 +73,160 @@ export function MetricExplainer({
         <Icon name="info" size={14} />
       </button>
       {open && (
-        <div
-          id={panelId}
-          role="region"
-          aria-label={explainer.heading}
-          style={{
-            marginTop: 10,
-            padding: 12,
-            borderRadius: 'var(--radius-md, 12px)',
-            background: 'var(--surface-2, var(--surface))',
-            border: '2px solid var(--border)',
-          }}
-        >
-          <strong style={{ fontSize: 'var(--fs-sm)', display: 'block', marginBottom: 6 }}>
-            {explainer.heading}
-          </strong>
-          <p
-            style={{
-              fontSize: 'var(--fs-xs)',
-              color: 'var(--text-muted)',
-              lineHeight: 1.5,
-              margin: 0,
-            }}
-          >
-            {explainer.body}
-          </p>
-          {diagram && <div style={{ marginTop: 10 }}>{diagram}</div>}
-        </div>
+        <MetricExplainerDialog
+          explainer={explainer}
+          diagram={diagram}
+          titleId={titleId}
+          onClose={handleClose}
+        />
       )}
     </>
+  );
+}
+
+/** The modal itself: a portalled, centred dialog over a dimmed backdrop. */
+function MetricExplainerDialog({
+  explainer,
+  diagram,
+  titleId,
+  onClose,
+}: {
+  explainer: Explainer;
+  diagram?: ReactNode;
+  titleId: string;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    // Move focus into the dialog and remember where it came from so we can
+    // restore it on close (WAI-ARIA modal-dialog focus contract).
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    lockBodyScroll();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      // Trap focus: keep Tab/Shift+Tab cycling within the dialog.
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = dialog.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
+        e.preventDefault();
+        return;
+      }
+      const active = document.activeElement;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (!dialog.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      unlockBodyScroll();
+      previouslyFocused?.focus();
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      role="presentation"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0, 0, 0, 0.45)',
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+        style={{
+          width: '100%',
+          maxWidth: 360,
+          maxHeight: '85vh',
+          overflowY: 'auto',
+          padding: 16,
+          borderRadius: 'var(--radius-lg, 16px)',
+          background: 'var(--surface)',
+          border: '2px solid var(--border)',
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <h2 id={titleId} style={{ fontSize: 'var(--fs-md)', margin: 0 }}>
+            {explainer.heading}
+          </h2>
+          <button
+            ref={closeRef}
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: 999,
+              border: '2px solid var(--border)',
+              background: 'var(--surface)',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <Icon name="x" size={16} />
+          </button>
+        </div>
+        <p
+          style={{
+            fontSize: 'var(--fs-sm)',
+            color: 'var(--text-muted)',
+            lineHeight: 1.5,
+            margin: 0,
+          }}
+        >
+          {explainer.body}
+        </p>
+        {diagram && <div style={{ marginTop: 12 }}>{diagram}</div>}
+      </div>
+    </div>,
+    document.body,
   );
 }
 
