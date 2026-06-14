@@ -81,16 +81,22 @@ export default function TodayPage() {
   // is the covered, tested domain rule; the page only reads logs + localStorage.
   useEffect(() => {
     const repo = new DexieClimbRepo();
-    void repo.getLogs().then((logs) => {
-      const now = new Date();
-      const lastExport = localStorage.getItem(LAST_EXPORT_KEY);
-      const snooze = localStorage.getItem(NUDGE_SNOOZE_KEY);
-      const since = countSessionsSince(
-        logs.map((l) => l.date),
-        lastExport,
-      );
-      setBackupNudge(shouldNudgeBackup(lastExport, now, since) && !isSnoozed(snooze, now));
-    });
+    void repo
+      .getLogs()
+      .then((logs) => {
+        const now = new Date();
+        const lastExport = localStorage.getItem(LAST_EXPORT_KEY);
+        const snooze = localStorage.getItem(NUDGE_SNOOZE_KEY);
+        const since = countSessionsSince(
+          logs.map((l) => l.date),
+          lastExport,
+        );
+        setBackupNudge(shouldNudgeBackup(lastExport, now, since) && !isSnoozed(snooze, now));
+      })
+      // Non-critical hint: if the read fails, just don't show the nudge.
+      .catch(() => {
+        /* swallow — the backup nudge is advisory, not load-bearing */
+      });
   }, []);
 
   function dismissBackupNudge(): void {
@@ -102,10 +108,15 @@ export default function TodayPage() {
   // refused. The persistence/decision logic is the covered, tested helper; the
   // page only feeds in `navigator.storage` and reads the dismissal flag.
   useEffect(() => {
-    void requestPersistence(navigator.storage).then((state) => {
-      const dismissed = localStorage.getItem(EVICTION_DISMISS_KEY) === '1';
-      setEvictionWarn(shouldWarnEviction(state, dismissed));
-    });
+    void requestPersistence(navigator.storage)
+      .then((state) => {
+        const dismissed = localStorage.getItem(EVICTION_DISMISS_KEY) === '1';
+        setEvictionWarn(shouldWarnEviction(state, dismissed));
+      })
+      // Non-critical: if persistence probing fails, skip the eviction warning.
+      .catch(() => {
+        /* swallow — the eviction warning is advisory */
+      });
   }, []);
 
   function dismissEvictionWarn(): void {

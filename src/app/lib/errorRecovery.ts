@@ -3,12 +3,14 @@
 // guiding rule: a crash on a single-device app holding irreplaceable data must never be
 // a dead white screen — reassure, offer reload + export, and NEVER expose a raw stack.
 
-export interface RecoveryAction {
-  label: string;
-  /** 'reload' re-runs the segment / reloads the app; 'link' navigates (e.g. to export). */
-  kind: 'reload' | 'link';
-  href?: string;
-}
+/**
+ * A recovery action. Discriminated so a `link` ALWAYS carries an `href` — a
+ * destination-less link is unrepresentable, not silently rendered as nothing (the worst
+ * failure on a crash-recovery screen). 'reload' re-runs the segment / reloads the app.
+ */
+export type RecoveryAction =
+  | { label: string; kind: 'reload' }
+  | { label: string; kind: 'link'; href: string };
 
 export const RECOVERY_COPY = {
   title: 'Something broke',

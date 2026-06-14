@@ -4,13 +4,19 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Callout } from '@/app/components/Callout';
 import { Button } from '@/app/components/Button';
-import { RECOVERY_COPY, RECOVERY_ACTIONS, safeErrorDigest } from '@/app/lib/errorRecovery';
+import {
+  RECOVERY_COPY,
+  RECOVERY_ACTIONS,
+  safeErrorDigest,
+  type RecoveryAction,
+} from '@/app/lib/errorRecovery';
 
 /**
  * BC-33 — segment-level crash recovery. A render error inside the app shows this
  * branded fallback (reload + export) instead of a blank screen, and never exposes a
  * raw stack. Copy/actions live in the covered `errorRecovery` lib; this only renders.
- * Next 16 passes `unstable_retry` (NOT the old `reset`) to re-run the segment.
+ * Next 16 passes `unstable_retry` (the recommended retry that re-fetches + re-renders;
+ * `reset` is also passed but only clears state without re-fetching).
  */
 export default function Error({
   error,
@@ -25,7 +31,9 @@ export default function Error({
   }, [error]);
 
   const reload = RECOVERY_ACTIONS.find((a) => a.kind === 'reload');
-  const exportAction = RECOVERY_ACTIONS.find((a) => a.kind === 'link');
+  const exportAction = RECOVERY_ACTIONS.find(
+    (a): a is Extract<RecoveryAction, { kind: 'link' }> => a.kind === 'link',
+  );
 
   return (
     <main className="space-y-4 p-5">
@@ -42,7 +50,7 @@ export default function Error({
               {reload.label}
             </Button>
           )}
-          {exportAction?.href && (
+          {exportAction && (
             <Link href={exportAction.href} className="bc-btn bc-btn--secondary">
               {exportAction.label}
             </Link>

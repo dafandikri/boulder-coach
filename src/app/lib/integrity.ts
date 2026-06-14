@@ -1,9 +1,11 @@
 // BC-32 — load-time integrity validation. IndexedDB rows are typed as domain entities
 // at the seam, but a truncated write or a hand-edited/partial import can leave a record
-// whose runtime shape lies about its type. An unvalidated corrupt log silently NaNs the
-// load engine (sessionRPE × durationMin). These pure validators check the shape on read
-// so a bad record is QUARANTINED and surfaced ("your data looks damaged — re-import a
-// backup"), never crashed on mid-render. Pure: no I/O, safe to import anywhere.
+// whose runtime shape lies about its type. An unvalidated corrupt log can NaN the load
+// engine (sessionRPE × durationMin) — so `validateLog` guards the top-level fields the
+// engine reads (finite sessionRPE/durationMin, string id/date, array blocks). A bad record
+// is QUARANTINED and surfaced ("your data looks damaged — re-import a backup"), never
+// crashed on mid-render. (Block-level contents are not deep-validated — out of scope for
+// the load-engine threat.) Pure: no I/O, safe to import anywhere.
 
 import type { SessionLog } from '@/domain/types';
 
