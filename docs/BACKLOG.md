@@ -884,8 +884,15 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   "Limit day today — check in first." Depends on BC-03 (real schedule) and BC-15 (HTTPS origin).
 - **Files:** `src/app/lib/reminders.ts`
 
-### BC-21 · Single repo instance — `open`
+### BC-21 · Single repo instance — `done`
 
+- **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**
+  singleton (`instance ??= new DexieClimbRepo()`). All 15 `new DexieClimbRepo()` call sites across the 8
+  page files now use `getRepo()`, so the app holds one Dexie connection and one seam to swap when a
+  sync-capable repo (BC-18) lands. Lazy so no Dexie is constructed during SSR — the first call lands in a
+  client effect. TDD: `tests/domain/repoInstance.test.ts` asserts identity (same instance across calls) +
+  that it's the `DexieClimbRepo` impl; `repoInstance.ts` 100%. Behavior-preserving (only the prettier
+  method-chain reflow differs in the pages). `pnpm gate` green.
 - **Type:** refactor · **Complexity:** S
 - Every page constructs `new DexieClimbRepo()`. Works, but a module-level singleton (or a tiny
   provider) gives one Dexie connection and one seam to swap when BC-18 lands. Pure

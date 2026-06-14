@@ -24,6 +24,18 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-15 (BC-21 single repo instance — branch `refactor/bc21-single-repo-instance`, last touched by: Claude Opus 4.8)
+
+- **BC-21 DONE — one shared repository instance.** `src/data/repoInstance.ts` exports `getRepo():
+IClimbRepo`, a lazily-constructed singleton (`instance ??= new DexieClimbRepo()`). All 15
+  `new DexieClimbRepo()` call sites across the 8 page files now call `getRepo()` → one Dexie connection,
+  one seam to swap for BC-18 (cloud sync). Lazy construction keeps Dexie out of SSR (first call is in a
+  client effect). Behavior-preserving — the only non-swap diff is prettier reflowing method chains.
+- **TDD:** `tests/domain/repoInstance.test.ts` asserts call-to-call identity + that it's the
+  `DexieClimbRepo` impl; `repoInstance.ts` 100%. `pnpm gate` green (9/9, bundle 167.8/200 KB).
+- **Next:** push → PR → review → merge. Remaining open code P2s: BC-25 (dark mode, M), BC-38 (Insights
+  charts, M), BC-20 (training-day reminders, M). All open S-complexity code PBIs are now shipped.
+
 ## Current state — 2026-06-14 (BC-39 custom install prompt — branch `feat/bc39-install-prompt`, last touched by: Claude Opus 4.8)
 
 - **BC-39 DONE — the app now invites the install instead of relying on the browser's default banner.**

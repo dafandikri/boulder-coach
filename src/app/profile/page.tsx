@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import {
   DEFAULT_PROFILE,
   applyProfile,
@@ -70,14 +70,16 @@ export default function ProfilePage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    void new DexieClimbRepo().getProfile().then((existing) => {
-      if (existing) {
-        // Coerce profiles saved before BC-29 (no injuryHistory) into the current shape.
-        setDraft({ ...existing, injuryHistory: existing.injuryHistory ?? [] });
-        setIsFirstRun(false);
-      }
-      setLoaded(true);
-    });
+    void getRepo()
+      .getProfile()
+      .then((existing) => {
+        if (existing) {
+          // Coerce profiles saved before BC-29 (no injuryHistory) into the current shape.
+          setDraft({ ...existing, injuryHistory: existing.injuryHistory ?? [] });
+          setIsFirstRun(false);
+        }
+        setLoaded(true);
+      });
   }, []);
 
   const error = validateProfile(draft);
@@ -105,7 +107,7 @@ export default function ProfilePage() {
     setSaving(true);
     // First run always (re)builds the program; an edit only does so when the
     // climber confirmed they want to replace the current cycle.
-    await applyProfile(new DexieClimbRepo(), draft, isFirstRun || regenerate);
+    await applyProfile(getRepo(), draft, isFirstRun || regenerate);
     router.push('/');
   }
 
@@ -114,7 +116,7 @@ export default function ProfilePage() {
   // before a destructive import. ---
 
   async function exportData(): Promise<void> {
-    const backup = await exportBackup(new DexieClimbRepo());
+    const backup = await exportBackup(getRepo());
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -131,7 +133,7 @@ export default function ProfilePage() {
   async function importData(file: File): Promise<void> {
     if (!window.confirm('Importing replaces ALL current data on this device. Continue?')) return;
     try {
-      await importBackup(new DexieClimbRepo(), await file.text());
+      await importBackup(getRepo(), await file.text());
       router.push('/');
     } catch (e) {
       setBackupMsg(e instanceof BackupError ? e.message : 'Import failed: unreadable file.');

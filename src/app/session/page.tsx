@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { localDateIso } from '@/app/lib/date';
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
@@ -139,7 +139,7 @@ export default function SessionPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void getTodaySession(new DexieClimbRepo()).then(
+    void getTodaySession(getRepo()).then(
       (t) => {
         if (cancelled) return;
         setLoad(toLoadState({ ok: true, data: t }));
@@ -249,7 +249,7 @@ export default function SessionPage() {
       blocks,
       durationMin,
     });
-    await new DexieClimbRepo().saveLog(log);
+    await getRepo().saveLog(log);
     router.push('/');
   }
 

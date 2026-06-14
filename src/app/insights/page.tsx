@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DexieClimbRepo } from '@/data/dexieRepo';
+import { getRepo } from '@/data/repoInstance';
 import { computeLoadMetrics } from '@/domain/loadMetrics';
 import {
   computeInsights,
@@ -45,7 +45,7 @@ export default function InsightsPage() {
 
   useEffect(() => {
     async function load() {
-      const repo = new DexieClimbRepo();
+      const repo = getRepo();
       const [logs, checkIns, adaptationLog, prof] = await Promise.all([
         repo.getLogs(),
         repo.getCheckIns(),
