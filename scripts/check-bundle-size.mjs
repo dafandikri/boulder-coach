@@ -32,6 +32,15 @@ function main() {
   const limitKB = Number(config[0].limitKB);
   /** @type {string[]} */
   const files = [...(manifest.rootMainFiles ?? []), ...(manifest.polyfillFiles ?? [])];
+  // Fail LOUD rather than silently pass at 0 KB if the manifest shape drifts (e.g. a
+  // bundler change empties rootMainFiles) — a fake 0 KB would defeat the whole budget.
+  if (files.length === 0) {
+    console.error(
+      '❌ build-manifest had no first-load JS (rootMainFiles/polyfillFiles empty).\n' +
+        '   Did `next build` run, and does the manifest shape still match this check?',
+    );
+    process.exit(1);
+  }
   /** @param {string} file */
   const sizeOf = (file) => gzipSync(readFileSync(resolve(root, '.next', file))).length;
 

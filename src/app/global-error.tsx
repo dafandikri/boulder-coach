@@ -1,7 +1,12 @@
 'use client'; // Error boundaries must be Client Components.
 
 import { useEffect } from 'react';
-import { RECOVERY_COPY, RECOVERY_ACTIONS, safeErrorDigest } from '@/app/lib/errorRecovery';
+import {
+  RECOVERY_COPY,
+  RECOVERY_ACTIONS,
+  safeErrorDigest,
+  type RecoveryAction,
+} from '@/app/lib/errorRecovery';
 
 /**
  * BC-33 — root-level crash recovery. `global-error` replaces the root layout when an
@@ -21,7 +26,9 @@ export default function GlobalError({
   }, [error]);
 
   const reload = RECOVERY_ACTIONS.find((a) => a.kind === 'reload');
-  const exportAction = RECOVERY_ACTIONS.find((a) => a.kind === 'link');
+  const exportAction = RECOVERY_ACTIONS.find(
+    (a): a is Extract<RecoveryAction, { kind: 'link' }> => a.kind === 'link',
+  );
 
   return (
     <html lang="en">
@@ -63,7 +70,7 @@ export default function GlobalError({
                 {reload.label}
               </button>
             )}
-            {exportAction?.href && (
+            {exportAction && (
               <a
                 href={exportAction.href}
                 style={{

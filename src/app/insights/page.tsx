@@ -15,6 +15,7 @@ import { formatGrade } from '@/domain/grade';
 import { loadAdaptationLog } from '@/app/lib/bootstrap';
 import type { AdaptationLogEntry, UserProfile } from '@/domain/types';
 import { Card } from '@/app/components/Card';
+import { Callout } from '@/app/components/Callout';
 import { Badge } from '@/app/components/Badge';
 import { GradePill } from '@/app/components/GradePill';
 import { ProgressBar } from '@/app/components/ProgressBar';
@@ -40,6 +41,7 @@ export default function InsightsPage() {
   const [acwr, setAcwr] = useState(0);
   const [decisionLog, setDecisionLog] = useState<AdaptationLogEntry[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -56,9 +58,22 @@ export default function InsightsPage() {
       setDecisionLog(adaptationLog);
       setProfile(prof ?? null);
     }
-    void load();
+    // A render error is caught by error.tsx, but an async rejection here is NOT — so a
+    // failed load must set an error state itself, never leave an infinite spinner.
+    void load().catch((e: unknown) => {
+      setError(e instanceof Error ? e.message : 'Failed to load insights');
+    });
   }, []);
 
+  if (error) {
+    return (
+      <main className="space-y-4 p-5">
+        <Callout tone="danger" title="Couldn’t load your insights">
+          {error}
+        </Callout>
+      </main>
+    );
+  }
   if (!insights) return <Spinner label="Loading insights…" />;
 
   const tone = acwrTone(acwr);
