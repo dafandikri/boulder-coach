@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { RPE_SCALE, type Explainer } from '@/app/lib/explainers';
@@ -42,6 +42,11 @@ export function MetricExplainer({
 }) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
+  // Stable identity so the dialog's mount-only effect (focus capture + scroll
+  // lock) doesn't re-fire on unrelated parent re-renders. `setOpen` is stable.
+  const handleClose = useCallback(() => {
+    setOpen(false);
+  }, []);
   return (
     <>
       <button
@@ -72,9 +77,7 @@ export function MetricExplainer({
           explainer={explainer}
           diagram={diagram}
           titleId={titleId}
-          onClose={() => {
-            setOpen(false);
-          }}
+          onClose={handleClose}
         />
       )}
     </>
