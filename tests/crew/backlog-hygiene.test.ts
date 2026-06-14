@@ -39,4 +39,18 @@ describe('backlog hygiene (real BACKLOG.md)', () => {
       .filter(({ dep }) => !byId.has(dep));
     expect(unresolved).toEqual([]);
   });
+
+  // PBI ids must be unique. A reused id (e.g. a new open PBI numbered BC-44 when a done
+  // BC-44 already exists — the regression that shipped in PR #44, LEARNINGS 2026-06-14)
+  // is invisible to the dep checks above: `new Set`/`new Map` silently dedupe, so a
+  // `Depends on: BC-44` resolves to *whichever* BC-44 won the map. Allocate the next free
+  // number (highest in use + 1), never an id already on the board.
+  it('no PBI id is used more than once (open or done)', () => {
+    const counts = new Map<string, number>();
+    for (const { id } of parseBacklog(md)) counts.set(id, (counts.get(id) ?? 0) + 1);
+    const duplicates = [...counts.entries()]
+      .filter(([, n]) => n > 1)
+      .map(([id, n]) => `${id}×${n}`);
+    expect(duplicates).toEqual([]);
+  });
 });
