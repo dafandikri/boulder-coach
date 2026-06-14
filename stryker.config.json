@@ -8,6 +8,6 @@
   "mutator": { "excludedMutations": ["StringLiteral"] },
   "coverageAnalysis": "perTest",
   "reporters": ["clear-text", "progress"],
-  "_comment_thresholds": "Current score ~90% (loadMetrics 95%, adaptation ~88%). break=88 leaves margin so the single timeout-killed mutant flipping on a faster CI runner can't flake the gate. Ratchet UP as survivors are killed; never lower.",
-  "thresholds": { "high": 95, "low": 88, "break": 88 }
+  "_comment_thresholds": "Measured 2026-06-14: score 90.13%. break ratcheted 88→89 — still outside the single-flip flake zone (90.13 − one ~0.6% timeout-mutant flip ≈ 89.5 > 89). To go higher, KILL the surviving adaptation.ts mutants (ConditionalExpression/LogicalOperator survivors) and ratchet to 92+; never lower. See docs/LEARNINGS.md 2026-06-14.",
+  "thresholds": { "high": 95, "low": 89, "break": 89 }
 }

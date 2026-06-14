@@ -250,7 +250,10 @@ export default function ProfilePage() {
             </div>
           </fieldset>
 
-          <fieldset className="space-y-2" style={{ border: 'none', padding: 0, margin: 0 }}>
+          <fieldset
+            className="space-y-2"
+            style={{ border: 'none', padding: 0, margin: 0, marginTop: 24 }}
+          >
             <legend style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, padding: 0 }}>
               Past injuries (optional)
             </legend>

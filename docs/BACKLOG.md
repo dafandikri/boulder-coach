@@ -946,6 +946,38 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   it relates to BC-18 (sync) so the two don't diverge. **No app code** until scheduled.
 - **Files:** `docs/specs/shareable-progress-design.md`
 
+### BC-44 · Indonesian-first i18n with EN/ID language toggle — `open` (design-first)
+
+- **Type:** ux/i18n · **Priority:** P2 · **Complexity:** L · **Depends on:** —
+- **Problem:** the primary audience is **Indonesian boulderers**, but every string is hardcoded
+  English across ~12 page/component files — there is no i18n seam. The app is also globally friendly,
+  so language must be a **toggle (ID + EN)**, with Indonesian as a first-class language (authored, not
+  a machine-translation afterthought). This is the home for the "less jargon / intuitive copy" request
+  (#6 of the 2026-06-14 batch): copy is rewritten **once, intuitively, in both languages** rather than
+  rewriting English now and re-translating later.
+- **Acceptance criteria:** **design spec first** (`docs/specs/`). Explore: a lightweight typed
+  dictionary (`src/app/lib/i18n.ts` — covered) vs a framework (next-intl); locale detection +
+  persistence (localStorage, respects `navigator.language` on first load); a string-extraction pass
+  that moves user-facing copy out of gate-blind `page.tsx` into covered modules where possible; a
+  toggle in the profile/settings screen; how ACWR/RPE and other domain terms read intuitively in ID
+  (plain-language gloss, not literal). A Tier-1 test asserts no untranslated key renders. **No bulk
+  string migration until the spec is approved.**
+- **Files:** `docs/specs/i18n-indonesian-design.md`
+
+### BC-45 · Nielsen-heuristics UX audit + jargon reduction — `open` (design-first)
+
+- **Type:** ux/design · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-44
+- **Problem:** beyond the ACWR/RPE explainers (handled in-app), copy across the product still leans on
+  technical terms and terse states that hurt comprehension for non-coach users. A structured pass
+  against Nielsen's 10 heuristics (visibility of system status, match to real-world language, error
+  recovery, recognition over recall, consistency) would lift the whole app's intuitiveness.
+- **Acceptance criteria:** **audit doc first** (`docs/specs/`): walk each primary screen against the 10
+  heuristics, list concrete violations + fixes, prioritise. Many copy fixes **fold into BC-44's
+  bilingual rewrite** (do them once, in both languages) — this PBI owns the audit + the non-copy
+  heuristic fixes (status feedback, error affordances, consistency). **No code until the audit is
+  reviewed.**
+- **Files:** `docs/specs/nielsen-ux-audit.md`
+
 ---
 
 ## Recommended order (dependency-aware)

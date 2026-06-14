@@ -30,6 +30,27 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-14 — vitest/lighthouse/stryker configs — CI ratchet (coverage/perf/mutation), not a failure
+
+- **Task:** "make CI strict toward 95–100%" — ratchet the three quality gates from measured headroom.
+- **What failed:** nothing failed — this records the _method_ so the next ratchet is principled, not a guess.
+- **Root cause (insight):** the floors were far below reality (global branch floor 80% vs measured
+  98.69%). Two would-be-higher floors are **capped by genuinely-defensive code, not weak tests**:
+  `periodization.ts` has two `default` branches for `SessionType === 'rest'` that `sessionPlanFor`
+  never emits (so unreachable via the public API; 93.18% branch). "Covering" them needs a TS cast =
+  coverage theatre. So the **domain branch floor is held at 92, not 95** — the limiter is defensive
+  code, and the honest move is to leave it, not fake-cover it.
+- **Fix:** measured each gate, set every floor _below_ the lowest real file with margin so nothing
+  flakes: coverage global branch 80→95 / lines·stmts 90→95, domain branch 90→92 (closed the one
+  _reachable_ gap, `backup.ts:95` non-string `exportedAt`, with a real test); Lighthouse perf 0.80→0.85,
+  a11y 0.90→0.95, BP 0.90→0.95 (measured mins 0.87/0.95/0.96, rule-based gates are deterministic);
+  Stryker break 88→89 (score 90.13 − one ~0.6% timeout-flip ≈ 89.5 > 89).
+- **Prevention:** **ratchet rule** — set a quality floor only from a measurement taken _this session_,
+  _below_ actual with margin; never round up to a number you haven't observed. To go higher you must
+  _earn_ it (kill survivors / cover a real branch), never just defensive-cast. Comments in each config
+  cite this entry.
+- **Attempts to green:** 1 (measured first, so the floors passed on the first run).
+
 ## 2026-06-14 — e2e/a11y.spec.ts — a11y blind spot (modal open state untested)
 
 - **Task:** Convert the RPE/ACWR explainers from an inline panel to a modal dialog (PR #42).
