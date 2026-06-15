@@ -28,6 +28,13 @@ import {
   INSTALL_DISMISS_KEY,
   type InstallPromptEventLike,
 } from '@/app/lib/install';
+import {
+  shouldRemindOnOpen,
+  reminderContent,
+  REMINDER_ENABLED_KEY,
+  REMINDER_LAST_KEY,
+} from '@/app/lib/reminders';
+import { localDateIso } from '@/app/lib/date';
 import { Button } from '@/app/components/Button';
 import { BlockSummary } from '@/app/components/BlockSummary';
 import { Callout } from '@/app/components/Callout';
@@ -182,6 +189,34 @@ export default function TodayPage() {
     localStorage.setItem(INSTALL_DISMISS_KEY, '1');
     setInstallDismissed(true);
   }
+
+  // BC-20 — best-effort training-day reminder. Backendless PWAs can't OS-schedule a
+  // push, so we nudge when the climber opens the app on a training-day morning and
+  // hasn't been reminded today. The fire/skip decision is the covered, tested
+  // shouldRemindOnOpen; the page only does the Notification + localStorage I/O.
+  useEffect(() => {
+    if (today === null || typeof Notification === 'undefined') return;
+    const now = new Date();
+    const todayIso = localDateIso(now);
+    const due = shouldRemindOnOpen({
+      enabled: localStorage.getItem(REMINDER_ENABLED_KEY) === '1',
+      permission: Notification.permission,
+      isTrainingDay: today.session.type !== 'rest',
+      hour: now.getHours(),
+      lastRemindedIso: localStorage.getItem(REMINDER_LAST_KEY),
+      todayIso,
+    });
+    if (!due) return;
+    const { title, body } = reminderContent(today.session.type);
+    try {
+      new Notification(title, { body });
+      localStorage.setItem(REMINDER_LAST_KEY, todayIso); // stamp only when it actually fired
+    } catch {
+      // Some engines require notifications via the SW registration; a direct
+      // `new Notification()` can throw. Best-effort by design — the in-app session is
+      // still visible, and we don't stamp, so a later open can retry.
+    }
+  }, [today]);
 
   // BC-27: the climber confirmed a measured level-up. Re-anchor the profile at the
   // new grade and regenerate the next mesocycle (BC-06's regen path), then reload

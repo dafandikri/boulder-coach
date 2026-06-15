@@ -11,6 +11,7 @@ import {
 } from '@/app/lib/bootstrap';
 import { exportBackup, importBackup, backupFilename, BackupError } from '@/app/lib/backup';
 import { LAST_EXPORT_KEY, NUDGE_SNOOZE_KEY } from '@/app/lib/backupReminder';
+import { REMINDER_ENABLED_KEY } from '@/app/lib/reminders';
 import { Card } from '@/app/components/Card';
 import { Chip } from '@/app/components/Chip';
 import { Button } from '@/app/components/Button';
@@ -67,7 +68,39 @@ export default function ProfilePage() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  // BC-20 — reflect the persisted reminders opt-in. Lazy SSR-safe read (no
+  // effect-driven setState — satisfies Next 16's react-hooks/set-state-in-effect,
+  // the same rule BC-39's install CTA respects). The settings section only renders
+  // after `loaded` flips, so there's no hydration mismatch on first paint.
+  const [remindersOn, setRemindersOn] = useState<boolean>(
+    () => typeof window !== 'undefined' && localStorage.getItem(REMINDER_ENABLED_KEY) === '1',
+  );
+  const [reminderMsg, setReminderMsg] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  async function toggleReminders(): Promise<void> {
+    if (remindersOn) {
+      localStorage.removeItem(REMINDER_ENABLED_KEY);
+      setRemindersOn(false);
+      setReminderMsg('Reminders off.');
+      return;
+    }
+    if (typeof Notification === 'undefined') {
+      setReminderMsg('This browser doesn’t support notifications.');
+      return;
+    }
+    const permission =
+      Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission === 'granted') {
+      localStorage.setItem(REMINDER_ENABLED_KEY, '1');
+      setRemindersOn(true);
+      setReminderMsg('Reminders on — I’ll nudge you to check in on training-day mornings.');
+    } else {
+      setReminderMsg(
+        'Notifications are blocked. Allow them in your browser settings, then try again.',
+      );
+    }
+  }
 
   useEffect(() => {
     void getRepo()
@@ -368,6 +401,36 @@ export default function ProfilePage() {
           {backupMsg && (
             <p style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' }}>
               {backupMsg}
+            </p>
+          )}
+        </section>
+      )}
+
+      {!isFirstRun && (
+        <section
+          className="space-y-3"
+          style={{ borderTop: '2px solid var(--border)', paddingTop: 20 }}
+        >
+          <div>
+            <h2 style={{ fontSize: 'var(--fs-md)', fontWeight: 800 }}>Training-day reminders</h2>
+            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginTop: 2 }}>
+              A morning nudge to check in on your training days. Best-effort — it fires when you
+              open the app in the morning (this app has no server to push notifications).
+            </p>
+          </div>
+          <Button
+            variant={remindersOn ? 'primary' : 'secondary'}
+            icon="calendar-check"
+            fullWidth
+            onClick={() => {
+              void toggleReminders();
+            }}
+          >
+            {remindersOn ? 'Reminders on — tap to turn off' : 'Turn on training-day reminders'}
+          </Button>
+          {reminderMsg && (
+            <p style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' }}>
+              {reminderMsg}
             </p>
           )}
         </section>
