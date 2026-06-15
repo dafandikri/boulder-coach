@@ -9,8 +9,15 @@ import {
   pyramidTarget,
   pyramidGaps,
   describePyramidGap,
+  loadSeries,
+  acwrSeries,
+  sorenessFrequency,
   type Insights,
+  type LoadPoint,
+  type AcwrPoint,
+  type SorenessCount,
 } from '@/domain/insights';
+import { Sparkline } from '@/app/components/Sparkline';
 import { formatGrade } from '@/domain/grade';
 import { loadAdaptationLog } from '@/app/lib/bootstrap';
 import type { AdaptationLogEntry, UserProfile } from '@/domain/types';
@@ -39,6 +46,9 @@ function acwrTone(acwr: number): { color: string; label: string } {
 export default function InsightsPage() {
   const [insights, setInsights] = useState<Insights | null>(null);
   const [acwr, setAcwr] = useState(0);
+  const [loadPts, setLoadPts] = useState<LoadPoint[]>([]);
+  const [acwrPts, setAcwrPts] = useState<AcwrPoint[]>([]);
+  const [soreFreq, setSoreFreq] = useState<SorenessCount[]>([]);
   const [decisionLog, setDecisionLog] = useState<AdaptationLogEntry[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,9 +62,14 @@ export default function InsightsPage() {
         loadAdaptationLog(repo), // already sorted newest-first (BC-07)
         repo.getProfile(),
       ]);
-      const metrics = computeLoadMetrics(logs, new Date());
+      const asOf = new Date();
+      const metrics = computeLoadMetrics(logs, asOf);
       setAcwr(metrics.acwr);
       setInsights(computeInsights(logs, checkIns));
+      // BC-38 — trend series (all logic in the covered domain layer; the page only renders).
+      setLoadPts(loadSeries(logs, asOf));
+      setAcwrPts(acwrSeries(logs, asOf));
+      setSoreFreq(sorenessFrequency(checkIns, asOf));
       setDecisionLog(adaptationLog);
       setProfile(prof ?? null);
     }
@@ -142,6 +157,51 @@ export default function InsightsPage() {
         </div>
       </Card>
 
+      {insights.totalSessions > 0 && (
+        <Card>
+          <div className="bc-eyebrow" style={{ marginBottom: 10 }}>
+            Load &amp; ACWR trend · last 6 weeks
+          </div>
+          <div className="space-y-4">
+            <div>
+              <div
+                style={{
+                  fontSize: 'var(--fs-xs)',
+                  color: 'var(--text-soft)',
+                  marginBottom: 4,
+                }}
+              >
+                Daily training load (sRPE × minutes)
+              </div>
+              <Sparkline
+                values={loadPts.map((p) => p.load)}
+                stroke="var(--brand)"
+                ariaLabel="Daily training load over the last six weeks, oldest to newest."
+              />
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 'var(--fs-xs)',
+                  color: 'var(--text-soft)',
+                  marginBottom: 4,
+                }}
+              >
+                ACWR trajectory · shaded band = healthy 0.8–1.3
+              </div>
+              <Sparkline
+                values={acwrPts.map((p) => p.acwr)}
+                stroke="var(--ink)"
+                band={{ from: 0.8, to: 1.3 }}
+                ariaLabel={`ACWR over the last six weeks; healthy band 0.8 to 1.3; now ${
+                  acwrPts.at(-1)?.acwr.toFixed(2) ?? '0'
+                }.`}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
+
       {insights.gradePyramid.length > 0 && (
         <Card>
           <div className="bc-eyebrow" style={{ marginBottom: 10 }}>
@@ -208,6 +268,44 @@ export default function InsightsPage() {
                   }}
                 >
                   {g.actual}/{g.target}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {soreFreq.length > 0 && (
+        <Card>
+          <div className="bc-eyebrow" style={{ marginBottom: 10 }}>
+            Soreness by body part · last 6 weeks
+          </div>
+          <div className="space-y-2">
+            {soreFreq.map((c) => (
+              <div key={c.bodyPart} className="flex items-center gap-3">
+                <span
+                  style={{ width: 80, flex: 'none', fontSize: 'var(--fs-xs)', fontWeight: 600 }}
+                >
+                  {c.bodyPart}
+                </span>
+                <div className="flex-1">
+                  <ProgressBar
+                    value={c.count}
+                    max={Math.max(1, ...soreFreq.map((s) => s.count))}
+                    tone="var(--warning-deep)"
+                    height={12}
+                  />
+                </div>
+                <span
+                  className="bc-mono"
+                  style={{
+                    width: 22,
+                    textAlign: 'right',
+                    fontSize: 'var(--fs-xs)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {c.count}
                 </span>
               </div>
             ))}

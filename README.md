@@ -51,6 +51,10 @@ The Vercel project is connected to this GitHub repo, so pushes to the connected 
 auto-deploy. (The Vercel **MCP** OAuth token authorizes read/manage tools only — it cannot upload a
 local build; use the CLI or git push to publish.)
 
+**Operating it:** deploy, rollback, the monitoring story (Analytics / Speed Insights / Lighthouse /
+bundle budgets), and the incident path are in [`docs/RUNBOOK.md`](docs/RUNBOOK.md). The reusable
+"is this ops change actually done?" checklist is [`skills/operating-and-deploying.md`](skills/operating-and-deploying.md).
+
 ## System architecture
 
 Layered, with pure domain logic decoupled from storage and UI:

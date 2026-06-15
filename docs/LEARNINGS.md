@@ -30,6 +30,28 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-15 — e2e/a11y.spec.ts — E2E a11y (test, CI-only, flaky)
+
+- **Task:** ops-runbook PR (docs-only) — `quality` CI failed on the axe a11y e2e even though the
+  branch changed no UI; `pnpm gate` was green locally (the inner gate doesn't run Playwright/axe).
+- **What failed:** `color-contrast (serious) ×12` on `/insights` etc., with one un-baselined pair
+  `#e84e1c|#ffe8dd` (`--brand-deep` on `--brand-tint`). `isBaselined()` requires EVERY failing node
+  to be a known pair, so one new pair fails the whole route.
+- **Root cause:** `<Callout tone="brand">` (BC-39 install/backup-nudge cards) renders
+  **conditionally** (engagement + `beforeinstallprompt` timing). Its brand-deep-on-brand-tint pair was
+  never added to `BASELINE_CONTRAST_PAIRS`, so the e2e flaked: it failed only on runs where the card
+  happened to render. A docs-only branch surfaced it by luck of timing, not by change.
+- **Fix:** baselined both conditional-Callout composited pairs — `#e84e1c|#ffe8dd` (brand
+  install/nudge) and `#bf4135|#ffe4e2` (danger error/data-damaged). **Key gotcha:** axe reports the
+  _composited_ colour (border/opacity blended over the bg), which differs from the raw CSS var
+  (danger-tint is `#ffe5e1` but axe sees `#ffe4e2`; danger-deep `#e0382a` → `#bf4135`). So baseline the
+  value **axe actually reports, read from the failing run** — not the value computed from `globals.css`.
+- **Prevention:** when adding any conditionally-rendered `<Callout>` (brand/danger/success/…), add its
+  axe-_composited_ `fg|bg` pair to the a11y baseline in the same change. The inner `pnpm gate` can't
+  catch this — it's CI-only — so these surfaces need the baseline updated proactively from the run log.
+- **Attempts to green:** 2 (added brand pair; a later run rendered the danger Callout instead, so added
+  that composited pair too — different conditional cards render on different runs).
+
 ## 2026-06-14 — MetricExplainer RpeScaleDiagram — SVG label clipping (gate-blind UI)
 
 - **Task:** PO report — "the RPE graph showed 'ry easy' and the hardest label is unreadable."
