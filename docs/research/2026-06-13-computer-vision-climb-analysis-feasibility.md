@@ -320,6 +320,159 @@ schema identical on both sides so a fixture recorded for the thesis is a test fi
 
 ---
 
+## 9. Competitive-landscape update (2026-06-15) — and why it _sharpens_ the thesis gap
+
+A market scan two days after the original findings surfaced a fresh, directly-competing consumer app
+and confirms the gap framing in §2/§4. **Nothing here changes the verdict — it strengthens both the
+product case (demand is proven) and the thesis case (the incumbents skip exactly what a thesis grades).**
+
+| App                       | Status                                                            | What it claims                                                                                                                                                              | Disclosed / validated method?           |
+| ------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Climbah** (climbah.com) | Shipping; iOS + Android; solo dev; launched ~Dec 2025; ~100 users | Upload clip → "move-by-move feedback" across **6 metrics**: Technique, Power, Endurance, Balance & Body Position, Problem-Solving, Flexibility; + AI plans, 24/7 coach chat | **No** — site is silent on the pipeline |
+| **Climbalyzer**           | Shipping app                                                      | "AI-powered 3D body-position and movement analysis" for coaches/self-coached                                                                                                | **No**                                  |
+| **Belay.ai**              | Beta (already in §1)                                              | body tracking, CoG, attempt compare                                                                                                                                         | **No** public numbers                   |
+
+**Reading of Climbah specifically.** A solo dev, a Dec-2025 launch, and a metric set that includes
+**"Flexibility" and "Problem-Solving Approach" scored from raw video** are together a strong tell that
+the engine is a **multimodal LLM narrating frames**, not a disclosed pose→geometric-rule pipeline:
+those two metrics are not measurable with classical CV from a single clip. That is impressive to demo
+and **structurally impossible to validate** — it cannot report accuracy, cannot be unit-tested, and
+will confidently hallucinate plausible advice. (See the §2 "validation honesty" wall — these apps live
+on the wrong side of it.)
+
+**Effect on the thesis gap.** The §5 framing #1 question gets a stronger _related-work foil_:
+
+> Commercial CV climbing coaches (Climbah, Climbalyzer, Belay.ai) now deliver per-move technique
+> feedback from phone video, but **none disclose or validate their method** — the breadth of their
+> claimed metrics is consistent with ungrounded LLM narration. This work builds a **transparent,
+> reproducible** pose-estimation pipeline (the six PMC10574944 geometric rules on monocular MediaPipe)
+> and **quantifies its accuracy** — the validation step the market skips.
+
+That converts a "reproduction study" into a "reproduction study _motivated by a real, named gap in
+shipping products_," which is the examiner-friendly framing §4 called for.
+
+**Effect on the product.** Demand is now de-risked (a competitor exists and is growing), but the
+incumbents are shallow and unvalidated. Boulder Coach's differentiator is **not** "also do AI coaching"
+— it is the §3 discipline: a _measurable, explainable_ pose→rule layer (`src/domain/technique.ts`),
+optionally narrated by an LLM **grounded on the numbers** (BC-42), never inventing the claims. Numbers
+first, words second.
+
+## 10. Milestone breakdown (S/M/L) — thesis track and app track
+
+Sized per the repo's complexity convention (S/M/L/XL, never hours/days). The two tracks share the rule
+functions and keypoint schema (§8 reuse contract), so work done once counts twice.
+
+### Thesis track (framing #1 — monocular-vs-LiDAR reliability study)
+
+| #   | Milestone                                                                                 | Size | Depends on | Output / gate                                 |
+| --- | ----------------------------------------------------------------------------------------- | ---- | ---------- | --------------------------------------------- |
+| T1  | Proposal + related-work + gap (PMC10574944 baseline, The Way Up occlusion, §9 incumbents) | S    | —          | Approved proposal; RQ + H1–H3 locked          |
+| T2  | Capture rig + dataset (2–3 routes, 6–10 climbers, front-90° + one offset angle)           | M    | T1         | `data/raw/**`; half-day filming               |
+| T3  | Coach ground-truth labelling (the trivial JSON schema, §8)                                | S    | T2         | `data/labels/**`; inter-rater on a subset     |
+| T4  | Pose extraction + caching across models (MediaPipe baseline; ViTPose/YOLO arm)            | S    | T2         | `data/keypoints/**` (pose runs once)          |
+| T5  | The six geometric rules + visibility gating + angular-velocity move segmentation          | M    | T4         | `src/rules/**` (the app-port target)          |
+| T6  | Eval: per-error P/R + timing IoU; ablate model × angle × height → H1/H2/H3 tables         | M    | T3, T5     | result tables/figures; the defensible numbers |
+| T7  | Write-up (chapter skeleton §7) + limitations                                              | M    | T6         | thesis draft                                  |
+
+Critical path: T1 → T2 → T3 → T6. T4/T5 parallel the labelling. **Total ≈ L** for one undergraduate
+over a project cycle (matches the Plymouth/UCSD precedent in §4).
+
+### App track (BC-24 MVP — only the occlusion-robust slice)
+
+| #   | Milestone                                                                                   | Size | Reuses | Notes                                                           |
+| --- | ------------------------------------------------------------------------------------------- | ---- | ------ | --------------------------------------------------------------- |
+| A1  | Design-only PBI written (sibling to BC-41/42/43): on-device MediaPipe, pure-domain analysis | S    | §3, §6 | gate-blind glue in `src/app/**`, logic in `src/domain/**`       |
+| A2  | Capture UI + MediaPipe Pose Landmarker wiring (WASM/WebGPU, in-browser, no upload)          | M    | —      | privacy-first; thin component                                   |
+| A3  | Port the thesis rule fns → `src/domain/technique.ts` (occlusion-robust subset only)         | M    | T5     | keypoint-array fixtures → per-file coverage, **no video in CI** |
+| A4  | Skeleton overlay + 3–5 flag UI + CoM path                                                   | M    | A2, A3 | the demoable MVP                                                |
+| A5  | (Optional) BC-42 LLM narration layered on the numeric findings only                         | M    | A4     | Vercel AI Gateway; LLM never invents claims                     |
+
+Hand-precision and hold-aware features stay **L–XL future work** (occlusion + per-gym generalisation,
+§2). **MVP = A1–A4 ≈ M–L.** A3's tests are satisfied by reusing T5/T6 fixtures — the thesis's measured
+P/R _is_ the feature's validation (§6 coupling).
+
+---
+
+## 11. Unified proposal — the four pillars (2026-06-15 synthesis)
+
+The goal of record: a proposal that is **academically rigorous**, **applies cleanly to the app**, is
+**genuinely great for users**, and carries a **competitive edge**. These are not four separate
+documents — they are one design choice (_measure first, narrate second_) viewed from four angles. The
+single thesis sentence:
+
+> **A transparent, validated, on-device pose→geometric-rule engine for bouldering technique feedback —
+> the explainable core that incumbents replace with an unvalidated LLM, packaged so a climber actually
+> uses it between attempts.**
+
+### Pillar 1 — Academic rigor (the contribution that earns the grade)
+
+Already specified in §5 (framing #1), §7 (RQ + H1–H3 + protocol), §8 (blueprint). The rigor lever is
+the **reproduction-with-measurement** design: re-implement PMC10574944's six rules on monocular
+MediaPipe and report per-error precision/recall + timing IoU against coach ground truth, ablated by
+camera angle/height. It is falsifiable, comparable to a published baseline, and names its limits
+(occlusion, no "optimal" ground truth). _This is the part the market cannot fake._
+
+### Pillar 2 — How it applies to the app (architecture-true, not bolted on)
+
+The rule functions are pure arithmetic on a keypoint array → they live in `src/domain/technique.ts`
+behind the existing pure-domain seam (§3), tested with JSON keypoint fixtures to the per-file coverage
+bar, **no video in CI**. Capture/inference glue stays thin in `src/app/**`; optional LLM narration is
+BC-42, grounded strictly on the numeric findings. The thesis fixtures _are_ the app test fixtures (§6
+coupling), so the research and the feature are one body of work, not two.
+
+### Pillar 3 — Great for users (the thread that was thin — now explicit)
+
+The academic core only matters if a climber _wants_ to open it. The user-facing design principles:
+
+- **One tap, between attempts.** Film → 5-second on-device analysis → a single overlay + 2–3 plain-language
+  flags ("hips drifting off the wall on move 4", "arm bent while placing your foot"). No upload, no
+  wait, no account. It fits the 2–4 minute rest between boulder attempts — the only moment a climber
+  will actually look at a phone.
+- **Explainable = trustworthy = retained.** Each flag points at a _specific frame and joint_ ("here,
+  0:06"), so the climber can verify it with their own eyes. Vague scores ("Technique: 6/10") don't
+  change behaviour; "your hip was 12 cm off the wall here" does. Explainability is not just academic
+  hygiene — it is the **retention mechanism**.
+- **Honest silence over confident noise.** When a keypoint is occluded (visibility-gated, §2), the app
+  says nothing rather than inventing a flag. Users learn the tool is _right when it speaks_ — the
+  opposite of an LLM that always has an opinion. Trust compounds; hallucinated advice erodes it.
+- **Progress that ties into the existing app.** Flags become a trend ("foot-cuts down 40% this month")
+  feeding the existing Insights/streak surfaces — the CV feature deepens the loop the app already has,
+  rather than being a novelty bolt-on.
+- **Accessible by default.** Free, offline-first, privacy-first (video never leaves the phone), works
+  on a mid-range Android. The published precedent (single phone, MediaPipe) proves no special hardware
+  is needed — unlike the iPad+LiDAR baseline.
+
+### Pillar 4 — Competitive edge (defensible, not just "we have AI too")
+
+| Axis              | Incumbents (Climbah / Climbalyzer / Belay.ai) | Boulder Coach                                             |
+| ----------------- | --------------------------------------------- | --------------------------------------------------------- |
+| Method            | Undisclosed; likely LLM-on-video              | Disclosed pose→geometric rules; LLM only narrates numbers |
+| Validation        | None public                                   | Published per-error P/R (the thesis)                      |
+| Explainability    | Scores / prose                                | Frame- and joint-anchored flags                           |
+| Privacy           | Upload implied                                | On-device, video never leaves the phone                   |
+| Cost / access     | Freemium / waitlist                           | Free, offline, mid-range hardware                         |
+| Failure behaviour | Always answers (can hallucinate)              | Stays silent when occluded                                |
+
+The edge is **trust + privacy + a published accuracy number** — none of which a competitor can copy by
+prompting a bigger model, and all of which fall out of the same _measure-first_ decision that earns the
+thesis. One choice, four payoffs.
+
+### One-paragraph proposal abstract (drop-in)
+
+> Consumer apps now offer AI bouldering-technique feedback from phone video, but none disclose or
+> validate their method, and their broad metric claims are consistent with ungrounded large-language-model
+> narration. This project builds and evaluates a **transparent, on-device pose-estimation pipeline** that
+> re-implements the six validated beginner-error rules of Beltrán Beltrán et al. (PMC10574944) — originally built
+> on iPad-Pro LiDAR depth — on a single ordinary phone camera using monocular pose estimation (MediaPipe),
+> and **quantifies the accuracy lost to monocular occlusion** across error types and camera conditions.
+> The resulting rule engine ships as an explainable, privacy-first technique-feedback feature in the
+> Boulder Coach PWA, where each flag is anchored to a specific frame and joint and the system stays silent
+> under occlusion rather than guessing. The contribution is the validation step the market skips, and the
+> deliverable is the same code in two forms: a measured research result and a feature climbers can use
+> between attempts.
+
+---
+
 ## References
 
 1. tjtl.io — _Bouldering and Computer Vision_ — https://blog.tjtl.io/bouldering-and-computer-vision/
@@ -338,9 +491,14 @@ schema identical on both sides so a fixture recorded for the thesis is a test fi
    96.3% mAP / 99.3% colour, angular-velocity move segmentation, avg RMSPE 0.266; occlusion →
    hallucinated-limb false positives named as the key failure) —
    https://kastner.ucsd.edu/ryan/.../rock-climbing-coach.pdf
-8. _Climbing Technique Evaluation by Means of Skeleton Video Stream Analysis_ (iPad+LiDAR, 6 beginner
+8. Beltrán Beltrán, R., Richter, J., Köstermeyer, G., Heinkel, U. — _Climbing Technique Evaluation by
+   Means of Skeleton Video Stream Analysis_, **Sensors** 23(19):8216, 2023 (iPad+LiDAR, 6 beginner
    errors, validated) — PMC10574944 — https://pmc.ncbi.nlm.nih.gov/articles/PMC10574944/
 9. _Survey of ML/DL for objective route-grading & the CV gap_ — PMC11881084 —
    https://pmc.ncbi.nlm.nih.gov/articles/PMC11881084/
 10. _The Way Up: A Dataset for Hold Usage Detection in Sport Climbing_, arXiv 2505.12854, 2025 —
     https://arxiv.org/html/2505.12854v1
+11. Climbah — _AI Rock Climbing Coach_ (shipping consumer app, ~Dec 2025; §9 competitive scan) —
+    https://climbah.com/ · App Store https://apps.apple.com/us/app/climbah-bouldering-climb-ai/id6755648466
+12. Climbalyzer — _AI 3D body-position & movement analysis_ (shipping consumer app; §9) — referenced
+    via market scan 2026-06-15
