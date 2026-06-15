@@ -23,15 +23,16 @@ already paid for.
 
 ## The skills
 
-| Skill                                                      | Use before…                               | Saves iterations on…                     |
-| ---------------------------------------------------------- | ----------------------------------------- | ---------------------------------------- |
-| [`universal-quality-bar.md`](universal-quality-bar.md)     | **anything, on any tool/model**           | the 3 bug classes that ship green        |
-| [`plan-a-change.md`](plan-a-change.md)                     | starting any non-trivial work             | building the wrong thing                 |
-| [`passing-the-gate.md`](passing-the-gate.md)               | writing/editing code                      | strict-TS, coverage, knip, alias gotchas |
-| [`test-driven-development.md`](test-driven-development.md) | writing tests/logic                       | weak or after-the-fact tests             |
-| [`safety-critical-change.md`](safety-critical-change.md)   | touching `adaptation.ts`/`loadMetrics.ts` | injury-safety bugs, coverage misses      |
-| [`debug-systematically.md`](debug-systematically.md)       | fixing a bug/failure                      | guess-and-check thrash                   |
-| [`verify-before-done.md`](verify-before-done.md)           | claiming "done"                           | shipping unverified work                 |
+| Skill                                                      | Use before…                                    | Saves iterations on…                     |
+| ---------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------- |
+| [`universal-quality-bar.md`](universal-quality-bar.md)     | **anything, on any tool/model**                | the 3 bug classes that ship green        |
+| [`plan-a-change.md`](plan-a-change.md)                     | starting any non-trivial work                  | building the wrong thing                 |
+| [`passing-the-gate.md`](passing-the-gate.md)               | writing/editing code                           | strict-TS, coverage, knip, alias gotchas |
+| [`test-driven-development.md`](test-driven-development.md) | writing tests/logic                            | weak or after-the-fact tests             |
+| [`safety-critical-change.md`](safety-critical-change.md)   | touching `adaptation.ts`/`loadMetrics.ts`      | injury-safety bugs, coverage misses      |
+| [`debug-systematically.md`](debug-systematically.md)       | fixing a bug/failure                           | guess-and-check thrash                   |
+| [`operating-and-deploying.md`](operating-and-deploying.md) | shipping/changing deploy, rollback, monitoring | un-operable releases, a stale runbook    |
+| [`verify-before-done.md`](verify-before-done.md)           | claiming "done"                                | shipping unverified work                 |
 
 The order they usually fire: **plan → (tdd + passing-the-gate) per task → verify**, with
 `safety-critical-change` layered on for dangerous files and `debug-systematically` whenever something
