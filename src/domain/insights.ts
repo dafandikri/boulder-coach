@@ -1,7 +1,23 @@
 import type { SessionLog, CheckIn, VGrade, BodyPart } from './types';
 import { formatGrade, VB } from './grade';
+import { computeLoadMetrics } from './loadMetrics';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Default trend window for the BC-38 charts — ~6 weeks, matching the load engine's history window. */
+const SERIES_DAYS = 42;
+
+function ageInDays(asOf: Date, dateIso: string): number {
+  return Math.floor((asOf.getTime() - new Date(dateIso).getTime()) / DAY_MS);
+}
+
+/** Pure local-calendar date key for a point `daysAgo` before `asOf` (domain can't import app's localDateIso). */
+function dayKey(asOf: Date, daysAgo: number): string {
+  const d = new Date(asOf.getTime() - daysAgo * DAY_MS);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
 
 export interface GradePyramidEntry {
   grade: VGrade;
@@ -31,6 +47,76 @@ export function computeInsights(logs: SessionLog[], checkIns: CheckIn[]): Insigh
       ? Math.round((logs.reduce((s, l) => s + l.sessionRPE, 0) / logs.length) * 10) / 10
       : 0;
   return { gradePyramid, sorenessTrends, totalSessions, averageSessionRPE };
+}
+
+/** BC-38 — one day's total training load (sRPE × duration) for the load sparkline. */
+export interface LoadPoint {
+  date: string; // local YYYY-MM-DD
+  load: number;
+}
+
+/** BC-38 — one day's EWMA-ACWR for the ACWR-trend sparkline. */
+export interface AcwrPoint {
+  date: string; // local YYYY-MM-DD
+  acwr: number;
+}
+
+/** BC-38 — how many soreness/pain flags a body part collected in the window. */
+export interface SorenessCount {
+  bodyPart: BodyPart;
+  count: number;
+}
+
+/**
+ * BC-38 — daily total-load series over the last `days`, oldest → newest (so index maps
+ * left → right on a chart). Rest days read 0; out-of-window and future logs are excluded.
+ * Pure + `asOf`-driven; empty-safe (a full run of zeros, never NaN).
+ */
+export function loadSeries(logs: SessionLog[], asOf: Date, days = SERIES_DAYS): LoadPoint[] {
+  const points: LoadPoint[] = [];
+  for (let daysAgo = days - 1; daysAgo >= 0; daysAgo--) {
+    const load = logs.reduce(
+      (sum, l) => (ageInDays(asOf, l.date) === daysAgo ? sum + l.sessionRPE * l.durationMin : sum),
+      0,
+    );
+    points.push({ date: dayKey(asOf, daysAgo), load });
+  }
+  return points;
+}
+
+/**
+ * BC-38 — daily EWMA-ACWR trajectory over the last `days`, oldest → newest, by running the
+ * *already-tested* `computeLoadMetrics` engine `asOf` each day (no ACWR re-implementation —
+ * the safety-relevant math stays in the one 100%-covered, mutation-tested file).
+ */
+export function acwrSeries(logs: SessionLog[], asOf: Date, days = SERIES_DAYS): AcwrPoint[] {
+  const points: AcwrPoint[] = [];
+  for (let daysAgo = days - 1; daysAgo >= 0; daysAgo--) {
+    const dayAsOf = new Date(asOf.getTime() - daysAgo * DAY_MS);
+    points.push({ date: dayKey(asOf, daysAgo), acwr: computeLoadMetrics(logs, dayAsOf).acwr });
+  }
+  return points;
+}
+
+/**
+ * BC-38 — soreness/pain flag frequency per body part within the last `days`, most-frequent
+ * first (ties broken alphabetically for a stable render order). Out-of-window and future
+ * check-ins are excluded. Pure + `asOf`-driven.
+ */
+export function sorenessFrequency(
+  checkIns: CheckIn[],
+  asOf: Date,
+  days = SERIES_DAYS,
+): SorenessCount[] {
+  const counts = new Map<BodyPart, number>();
+  for (const t of buildSorenessTrends(checkIns)) {
+    const age = ageInDays(asOf, t.date);
+    if (age < 0 || age >= days) continue;
+    counts.set(t.bodyPart, (counts.get(t.bodyPart) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([bodyPart, count]) => ({ bodyPart, count }))
+    .sort((a, b) => b.count - a.count || a.bodyPart.localeCompare(b.bodyPart));
 }
 
 /**

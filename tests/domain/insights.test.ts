@@ -6,9 +6,13 @@ import {
   pyramidGaps,
   biggestPyramidGap,
   describePyramidGap,
+  loadSeries,
+  acwrSeries,
+  sorenessFrequency,
   type Insights,
   type GradePyramidEntry,
 } from '../../src/domain/insights';
+import { computeLoadMetrics } from '../../src/domain/loadMetrics';
 import type { SessionLog, CheckIn } from '../../src/domain/types';
 
 // BC-51 — a deterministic, on-device coaching read over the same Insights data.
@@ -289,6 +293,102 @@ describe('computeInsights', () => {
   });
 });
 
+// BC-38 — trend series for the Insights charts. asOf is fixed so the windows are deterministic.
+const seriesAsOf = new Date('2026-06-15T12:00:00');
+function daysBefore(asOf: Date, n: number): string {
+  return new Date(asOf.getTime() - n * 24 * 60 * 60 * 1000).toISOString();
+}
+
+describe('loadSeries (BC-38)', () => {
+  it('returns one point per day in the window, all zero with no logs (empty-safe, never NaN)', () => {
+    const s = loadSeries([], seriesAsOf, 14);
+    expect(s).toHaveLength(14);
+    expect(s.every((p) => p.load === 0)).toBe(true);
+    expect(s.some((p) => Number.isNaN(p.load))).toBe(false);
+  });
+
+  it('places a session load on its own day (load = sessionRPE × durationMin), newest last', () => {
+    const logs = [mockLog(daysBefore(seriesAsOf, 0), 5, [])]; // today, 5 × 60 = 300
+    const s = loadSeries(logs, seriesAsOf, 7);
+    expect(s).toHaveLength(7);
+    expect(s.at(-1)?.load).toBe(300); // today is the last point
+    expect(s.slice(0, -1).every((p) => p.load === 0)).toBe(true);
+  });
+
+  it('sums multiple sessions on the same day', () => {
+    const logs = [
+      mockLog(daysBefore(seriesAsOf, 1), 4, []), // 240
+      mockLog(daysBefore(seriesAsOf, 1), 6, []), // 360
+    ];
+    const s = loadSeries(logs, seriesAsOf, 7);
+    expect(s.at(-2)?.load).toBe(600); // yesterday
+  });
+
+  it('excludes logs outside the window (older than days) and future-dated logs', () => {
+    const logs = [
+      mockLog(daysBefore(seriesAsOf, 30), 8, []), // older than a 7-day window
+      mockLog(daysBefore(seriesAsOf, -2), 8, []), // future
+    ];
+    const s = loadSeries(logs, seriesAsOf, 7);
+    expect(s.every((p) => p.load === 0)).toBe(true);
+  });
+});
+
+describe('acwrSeries (BC-38)', () => {
+  it('returns one ACWR point per day, all zero with no logs', () => {
+    const s = acwrSeries([], seriesAsOf, 14);
+    expect(s).toHaveLength(14);
+    expect(s.every((p) => p.acwr === 0)).toBe(true);
+  });
+
+  it("today's ACWR matches the engine computed asOf today (reuses computeLoadMetrics, not a re-impl)", () => {
+    const logs = [
+      mockLog(daysBefore(seriesAsOf, 10), 6, []),
+      mockLog(daysBefore(seriesAsOf, 3), 7, []),
+      mockLog(daysBefore(seriesAsOf, 0), 8, []),
+    ];
+    const s = acwrSeries(logs, seriesAsOf, 14);
+    expect(s.at(-1)?.acwr).toBe(computeLoadMetrics(logs, seriesAsOf).acwr);
+  });
+});
+
+describe('sorenessFrequency (BC-38)', () => {
+  it('returns an empty array with no check-ins', () => {
+    expect(sorenessFrequency([], seriesAsOf, 42)).toEqual([]);
+  });
+
+  it('counts soreness + pain flags per body part within the window, most-frequent first', () => {
+    const checkIns = [
+      mockCheckIn(daysBefore(seriesAsOf, 1), { soreness: { pip: 2 } }),
+      mockCheckIn(daysBefore(seriesAsOf, 3), { soreness: { pip: 1 }, pain: { shoulder: 2 } }),
+      mockCheckIn(daysBefore(seriesAsOf, 5), { pain: { pip: 3 } }),
+    ];
+    expect(sorenessFrequency(checkIns, seriesAsOf, 42)).toEqual([
+      { bodyPart: 'pip', count: 3 },
+      { bodyPart: 'shoulder', count: 1 },
+    ]);
+  });
+
+  it('breaks count ties alphabetically by body part for a stable order', () => {
+    const checkIns = [
+      mockCheckIn(daysBefore(seriesAsOf, 1), { soreness: { shoulder: 2 } }),
+      mockCheckIn(daysBefore(seriesAsOf, 2), { soreness: { elbow: 2 } }),
+    ];
+    expect(sorenessFrequency(checkIns, seriesAsOf, 42).map((c) => c.bodyPart)).toEqual([
+      'elbow',
+      'shoulder',
+    ]);
+  });
+
+  it('ignores flags outside the window (too old) and future-dated check-ins', () => {
+    const checkIns = [
+      mockCheckIn(daysBefore(seriesAsOf, 60), { soreness: { pip: 2 } }), // too old
+      mockCheckIn(daysBefore(seriesAsOf, -1), { soreness: { 'wrist-tfcc': 2 } }), // future
+    ];
+    expect(sorenessFrequency(checkIns, seriesAsOf, 42)).toEqual([]);
+  });
+});
+
 function mockLog(date: string, rpe: number, blocks: SessionLog['blocks']): SessionLog {
   return {
     id: `log-${date}`,
@@ -297,5 +397,16 @@ function mockLog(date: string, rpe: number, blocks: SessionLog['blocks']): Sessi
     blocks,
     sessionRPE: rpe,
     durationMin: 60,
+  };
+}
+
+function mockCheckIn(date: string, partial: Partial<Pick<CheckIn, 'soreness' | 'pain'>>): CheckIn {
+  return {
+    date,
+    sleepQuality: 4,
+    overallFatigue: 2,
+    motivation: 4,
+    soreness: partial.soreness ?? {},
+    pain: partial.pain ?? {},
   };
 }
