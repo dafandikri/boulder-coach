@@ -153,6 +153,128 @@
   --app-max: 28rem;
 }
 
+/* ===========================================================================
+   DARK THEME — "the gym at night"  (BC-25)
+   Authored by the Boulder Coach Design System (tokens/colors.css). Not a flat
+   gray dark mode: a warm basalt-tinted near-black room, holds that still glow
+   off the wall, and the coral brand intact. Activated by `data-theme="dark"` on
+   <html> (set before paint by the inline script in layout.tsx; toggled at
+   runtime via src/app/lib/theme.ts).
+
+   Why it overrides the RAW ramps (chalk-*, basalt-*), not just the semantic
+   aliases: some components read the ramp vars directly (tracks, grooves, hover
+   tints, the basalt-900 ink outline). On dark, `--basalt-900` flips from dark
+   ink to a warm CHALK outline, and `--pop-shadow` is decoupled to a true dark
+   offset so the sticker "pop" reads as depth, not a hole. The `-deep` tones
+   become the LIGHT readable foreground; the `-tint` tones become DARK
+   translucent surfaces (callout fills) — deep-on-tint pairs land ~7–10:1.
+   =========================================================================== */
+:root[data-theme='dark'],
+[data-theme='dark'] {
+  /* ---- Climbing-hold palette ----
+     base = vivid-but-comfortable wall color · deep = LIGHT foreground on dark
+     · tint = DARK translucent surface (alert/callout fill) */
+  --hold-red: #ff6d5f;
+  --hold-red-deep: #ffa79c;
+  --hold-red-tint: #2e1714;
+
+  --hold-tangerine: #ff944a;
+  --hold-tangerine-deep: #ffbb87;
+  --hold-tangerine-tint: #2d1c10;
+
+  --hold-sunshine: #ffc94f;
+  --hold-sunshine-deep: #ffdd84;
+  --hold-sunshine-tint: #2c2410;
+
+  --hold-lime: #84d94e;
+  --hold-lime-deep: #aceb84;
+  --hold-lime-tint: #1d2a12;
+
+  --hold-teal: #2eccbc;
+  --hold-teal-deep: #74e2d5;
+  --hold-teal-tint: #0f2823;
+
+  --hold-sky: #4aa8f0;
+  --hold-sky-deep: #93cdf8;
+  --hold-sky-tint: #122433;
+
+  --hold-grape: #a877ec;
+  --hold-grape-deep: #c9a8f4;
+  --hold-grape-tint: #221834;
+
+  --hold-pink: #ff6fad;
+  --hold-pink-deep: #ffa3ca;
+  --hold-pink-tint: #2e1623;
+
+  /* ---- Brand: deep enough that hard-coded white CTA text clears AA (4.6:1),
+          still unmistakably the chalk-bag coral. ---- */
+  --brand: #c84d1b;
+  --brand-deep: #9e3a10; /* darker — pressed primary fill (white stays ~6.9:1) */
+  --brand-tint: #2c1a13; /* dark coral surface — ghost hover / action tint */
+
+  /* ---- Warm neutrals re-cast for night ----
+     chalk ramp = dark surfaces & grooves · basalt ramp = inks & text.
+     --basalt-900 is now a warm CHALK OUTLINE (the inverted "ink" line). */
+  --chalk-50: #241d30; /* faint raised tint */
+  --chalk-100: #1b1622; /* app background level */
+  --chalk-200: #13101a; /* sunk grooves / track fills */
+  --chalk-300: #38303f; /* default border level */
+  --chalk-400: #4a4356; /* stronger neutral */
+
+  --basalt-900: #ddd2c4; /* chalk outline (was darkest ink) */
+  --basalt-700: #cbc1d6;
+  --basalt-500: #a79db4;
+  --basalt-400: #978da3;
+  --basalt-300: #7a7186;
+
+  --white: #ffffff; /* white still rides on brand/hold fills */
+
+  /* =====================  SEMANTIC ALIASES  ===================== */
+  /* Surfaces & ink */
+  --bg: #1b1622;
+  --bg-sunk: #13101a;
+  --surface: #241e30;
+  --surface-tint: #2b2438;
+  --text: #f6efe6; /* warm chalk-white — 15.5:1 on --bg */
+  --text-muted: #b6abc4; /* ~7.4:1 on --surface */
+  --text-soft: #978da3; /* ~5.1:1 on --surface */
+  --text-on-brand: #ffffff; /* ~4.6:1 on --brand */
+  --border: #38303f;
+  --border-strong: #786e84; /* ~3:1 divider against surface */
+
+  /* Interactive */
+  --action: var(--brand);
+  --action-press: #ff8a5c; /* LIGHT coral — links + ghost text on dark (7.6:1) */
+  --action-tint: var(--brand-tint);
+  --ring: #ff7a45;
+  --focus-ring: color-mix(in srgb, #ff7a45 55%, transparent);
+
+  /* Feedback (point at the retuned holds: base/deep-light/tint-dark) */
+  --success: var(--hold-lime);
+  --success-deep: var(--hold-lime-deep);
+  --success-tint: var(--hold-lime-tint);
+  --warning: var(--hold-sunshine);
+  --warning-deep: var(--hold-sunshine-deep);
+  --warning-tint: var(--hold-sunshine-tint);
+  --danger: var(--hold-red);
+  --danger-deep: var(--hold-red-deep);
+  --danger-tint: var(--hold-red-tint);
+  --info: var(--hold-sky);
+  --info-deep: var(--hold-sky-deep);
+  --info-tint: var(--hold-sky-tint);
+
+  /* Session-type accents follow the wall tags */
+  --session-limit: var(--hold-red);
+  --session-power: var(--hold-tangerine);
+  --session-volume: var(--hold-sky);
+  --session-prehab: var(--hold-grape);
+  --session-rest: var(--hold-lime);
+
+  /* The "sticker" pop offset — a true dark drop, decoupled from the chalk
+     outline so it reads as depth on dark, never a hole. */
+  --pop-shadow: #07050b;
+}
+
 /* ===========================  Base / reset  =========================== */
 html {
   -webkit-text-size-adjust: 100%;
@@ -173,6 +295,27 @@ body {
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Dark body field (BC-25): deep base + two very subtle darker hold-tinted glows,
+   mirroring the light theme's chalk + sky/grape glow. The light-theme `body`
+   above uses the `--*-tint` vars, which become dark surfaces in dark mode — so
+   the glow is re-derived from the live hold colors here instead. */
+:root[data-theme='dark'] body,
+[data-theme='dark'] body {
+  background:
+    radial-gradient(
+      circle at 12% 14%,
+      color-mix(in srgb, var(--hold-sky) 12%, transparent),
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 88% 86%,
+      color-mix(in srgb, var(--hold-grape) 13%, transparent),
+      transparent 44%
+    ),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 h1,

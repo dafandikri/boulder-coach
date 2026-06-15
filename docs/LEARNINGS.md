@@ -30,6 +30,25 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-15 — src/app/components/ThemeToggle.tsx — lint (lint)
+
+- **Task:** BC-25 dark mode — the Settings theme toggle.
+- **What failed:** `@typescript-eslint/no-unnecessary-condition` ×2 on
+  `window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false` — "unnecessary optional
+  chain / `??` left side is never nullish".
+- **Root cause:** `lib.dom` types `Window.matchMedia` as **non-optional** and `.matches` as a plain
+  `boolean`, so the `?.` and `?? false` are provably dead per the types — and the gate's strict-type
+  ESLint config flags dead conditionals as errors. The runtime "matchMedia might be missing" defence
+  is real for ancient engines but the type system doesn't know it, and the surrounding
+  `typeof window === 'undefined'` guard already covers SSR.
+- **Fix:** call it directly — `const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;`
+  (inside the existing `typeof window` guard). The pure `resolveTheme(stored, prefersDark)` in
+  `theme.ts` still owns the decision and is unit-tested.
+- **Prevention:** don't defensively `?.`/`??` against DOM APIs the lib types mark non-optional — the
+  strict-type lint rule treats it as dead code. Guard the real uncertainty (`typeof window`) once, then
+  use the typed API plainly.
+- **Attempts to green:** 1
+
 ## 2026-06-15 — e2e/a11y.spec.ts — E2E a11y (test, CI-only, flaky)
 
 - **Task:** ops-runbook PR (docs-only) — `quality` CI failed on the axe a11y e2e even though the

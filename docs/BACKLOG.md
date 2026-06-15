@@ -82,8 +82,27 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
   build. This promotes the HANDOFF's top gate-blind risk to Tier-1.
 - **Files:** `e2e/`, `.github/workflows/ci.yml`, possibly `playwright.config.ts`.
 
-### BC-25 · Dark mode (token theme + toggle) — `open` (design-first)
+### BC-25 · Dark mode (token theme + toggle) — `done`
 
+- **Shipped:** a full **"gym at night"** dark theme authored by the Boulder Coach Design System
+  (delivered as `tokens/colors.css`, brand-owner contrast pass done — every fg/bg pair WCAG-AA, e.g.
+  `--text` 15.5:1 on `--bg`, white-on-`--brand` 4.6:1). It layers over BC-23's variables under
+  `:root[data-theme='dark']`, overriding both the **raw ramps** (`chalk-*`/`basalt-*` — read directly
+  by tracks/grooves/the ink outline) and the **semantic aliases**: on dark, `--basalt-900` flips from
+  dark ink to a warm chalk outline, `--pop-shadow` decouples to a true dark offset (the sticker "pop"
+  reads as depth, not a hole), the `-deep` tones become the LIGHT foreground and the `-tint` tones
+  become DARK callout surfaces. A token-driven dark body field keeps the two subtle hold-glows.
+  - **Decision logic in a covered layer (`src/app/lib/theme.ts`, 100%):** `resolveTheme` (explicit
+    stored choice wins, else `prefers-color-scheme`), `nextTheme`, `isTheme`, and `applyTheme` (DOM via
+    a structural `ThemeRoot` seam so it's unit-tested). `layout.tsx` runs the same logic in a tiny
+    **no-flash inline `<script>`** (first in `<body>`, sets `data-theme` + `color-scheme` before paint).
+  - **Toggle:** gate-blind `src/app/components/ThemeToggle.tsx` (Settings → **Appearance**) reads the
+    initial state via a lazy SSR-safe `useState` initialiser (no effect `setState` — Next 16's
+    `react-hooks/set-state-in-effect`, the BC-39/BC-20 trap) and only does DOM/storage I/O. New `sun`
+    icon added to `Icon.tsx`.
+  - **Verified** in a real prod build (Playwright): light + dark render correctly app-wide, the toggle
+    flips live (`data-theme`/`color-scheme`/localStorage) with correct `aria-pressed`. The CI a11y scan
+    runs in the default light scheme, so the BC-37 baseline is untouched. `pnpm gate` green (bundle 167.8 KB).
 - **Type:** ux/design · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-23
 - **Problem:** the delivered design system ships **light** chalk/basalt tokens only. A real dark theme
   still matters for an "installable PWA you open at the gym" in low light.
@@ -92,7 +111,8 @@ log, backup, rest timer, off-wall work, and the brand design system all exist an
   `prefers-color-scheme` on first load; theme/toggle logic in a covered `src/app/lib/theme.ts`, not
   scattered across components; **no gate regression**. Coordinate hold-color contrast with the brand
   owner before shipping.
-- **Files:** `src/app/globals.css`, `src/app/layout.tsx`, `src/app/lib/theme.ts`
+- **Files:** `src/app/globals.css`, `src/app/layout.tsx`, `src/app/lib/theme.ts`,
+  `src/app/components/ThemeToggle.tsx`, `src/app/components/Icon.tsx`, `src/app/profile/page.tsx`
 
 ### BC-26 · Tier-1 guard: dev-only tooling must stay out of production `dependencies` — `done`
 
