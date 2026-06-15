@@ -24,6 +24,27 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-15 (PO backlog triage: reminders flaw + CV LAN-offload — docs only, last touched by: Claude Opus 4.8)
+
+- **PO-driven backlog grooming (no app code).** Evaluated two PO concerns and recorded them in `docs/BACKLOG.md`:
+  - **BC-20 reminders are backwards (confirmed flaw).** `shouldRemindOnOpen` only fires _on app-open_ — a
+    reminder's job is to pull the user back when they're NOT in the app, so it delivers ~none of its value.
+    BC-20 stays `done` (toggle/copy/decision groundwork); added a ⚠️ gap note pointing to **BC-58**.
+  - **BC-58 (new, P3 design-first, depends on BC-20):** the real fix — **Web Push (VAPID) + Vercel Cron →
+    service-worker-decides** (cron sends a daily "wake" push, SW reads the local IndexedDB schedule and
+    decides whether to show it → schedule stays on-device, server holds no personal data). Records the dead
+    ends (Notification Triggers API removed; Periodic Background Sync = Chromium-only/no iOS) + the iOS
+    installed-PWA Web Push caveat. Open question left for PO: tiny backend + VAPID env var cuts against the
+    no-backend selling point — alternative is to drop the BC-20 toggle rather than ship a non-reminding reminder.
+  - **BC-24 CV phone→laptop LAN offload — evaluated, deferred (annotation, not a new PBI).** Feasible but not
+    worth the MVP: (1) a PWA can't do LAN/mDNS discovery from JS (needs native app or manual pair); (2)
+    mixed-content blocks HTTPS PWA → `http://192.168.x.x`; (3) on-device MediaPipe already covers the compute.
+    Cheaper fallbacks noted: serverless upload, or a desktop Python pipeline for the thesis.
+- **Files touched:** `docs/BACKLOG.md` (BC-58 added; BC-20 + BC-24 annotated; recommended-order refreshed).
+  `tests/crew/backlog-hygiene.test.ts` green (BC-58 `Depends on: BC-20` resolves, `Files:` declared). `pnpm gate` green.
+- **Next:** BC-58 is the highest-value reminders follow-up when a milestone schedules push; otherwise unchanged —
+  remaining open code P2 is BC-25 (dark mode, M, design-first).
+
 ## Current state — 2026-06-15 (ops runbook + BC-38 charts + BC-20 reminders — merged via PRs #50/#53/#54, last touched by: Claude Opus 4.8)
 
 - **Shipped three things to `main` this session, each its own green-CI PR:**

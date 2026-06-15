@@ -900,10 +900,35 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   the morning rather than at a fixed time — a future Periodic Background Sync / push-server upgrade could
   make it time-scheduled. TDD: `tests/app/reminders.test.ts` (9) cover every decision branch + per-type
   content. `pnpm gate` green.
+- **⚠️ Known gap (PO-flagged 2026-06-15) → see BC-58:** the on-open mechanism is a logical
+  contradiction — a reminder should pull the user back when they're _not_ in the app; firing it only
+  _after_ they open the app delivers ~none of the intended value. BC-58 designs the real fix (Web Push
+  - Vercel Cron + SW-decides). BC-20 stays `done` for the toggle/copy/decision groundwork it shipped.
 - **Type:** feature · **Complexity:** M
 - Local notifications (PWA Notification + service worker) on `availableWeekdays` mornings:
   "Limit day today — check in first." Depends on BC-03 (real schedule) and BC-15 (HTTPS origin).
 - **Files:** `src/app/lib/reminders.ts`, `src/app/page.tsx`, `src/app/profile/page.tsx`
+
+### BC-58 · Reminders that fire when the app is CLOSED (BC-20's core value is missing) — `open` (design-first)
+
+- **Type:** system-design · **Priority:** P3 · **Complexity:** L · **Depends on:** BC-20
+- **Problem (PO-flagged 2026-06-15):** BC-20 only nudges _on app-open_, which is backwards — a
+  reminder's entire purpose is to pull the user back when they're **not** in the app. If they already
+  opened it, they didn't need reminding. As shipped, the feature delivers ~none of its intended value;
+  it's a toggle + copy with no real trigger.
+- **The real mechanism (and why it fits this stack):** a backendless PWA genuinely can't OS-schedule a
+  notification, but a _minimal_ serverless cron can — the app already runs on Vercel. Proposed design:
+  **Web Push (VAPID) + a Vercel Cron** firing a daily "wake" push; the **service worker** reads the
+  local schedule (IndexedDB) and decides whether to show the training-day notification — so the schedule
+  stays on-device and the server only sends a dumb daily ping (no personal data server-side). Record the
+  dead ends so nobody retries them: **Notification Triggers API** (never standardized / removed) and
+  **Periodic Background Sync** (Chromium-only, unreliable, no iOS). iOS caveat: Web Push works only for
+  **installed** PWAs (iOS 16.4+).
+- **Acceptance criteria:** **design spec only** (`docs/specs/`). Explore: push-subscription storage
+  (minimal), VAPID key handling, the cron→push→SW-decides flow, the iOS installed-PWA constraint, and
+  the trade-off of introducing a tiny backend vs keeping BC-20's honest on-open nudge. **No app code**
+  until a milestone schedules it.
+- **Files:** `docs/specs/reminders-push-design.md`
 
 ### BC-21 · Single repo instance — `done`
 
@@ -946,6 +971,19 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   — the design-only deliverable above is now written (scope, on-device MediaPipe decision, pure
   `src/domain/technique.ts` shape, occlusion-robust flag subset, evaluation plan). **Pending PO review;
   still no app code** until a milestone schedules it.
+- **PO idea evaluated (2026-06-15) — phone→laptop LAN offload:** the idea was to record on the phone,
+  auto-discover a laptop on the same Wi-Fi, and stream the clip there for heavier analysis.
+  **Verdict: feasible but not worth it for the MVP — keep as a documented fallback only.** Three walls:
+  (1) a **PWA cannot do LAN/mDNS discovery from JavaScript** — "automatically knows" needs a native
+  app or a manual pair step (QR scan / type the laptop's local IP); (2) **mixed content** — the HTTPS
+  PWA can't call `http://192.168.x.x`, so transfer needs WebRTC or a self-signed-cert local server
+  (real user friction); (3) it solves a compute problem that **on-device MediaPipe already largely
+  solves** (the research found ~30fps pose on a modern phone; heavy models like ViTPose-large /
+  hold detection are the explicitly out-of-scope XL tail). If heavier compute is ever genuinely needed,
+  **uploading the clip to a serverless function** (already on Vercel) sidesteps discovery + mixed-content
+  entirely; for the **thesis**, a plain desktop Python pipeline over a recorded file is the
+  lowest-friction path. So on-device stays the MVP/thesis default; LAN/cloud offload is a future option,
+  not a near-term PBI.
 - **Files:** `docs/specs/cv-technique-coach-design.md`
 
 ### BC-41 · Health-data import → auto-fill check-in — `open` (design only)
@@ -1057,7 +1095,7 @@ Content depth (PO feedback, foundation 1st): BC-46 → then BC-47 · BC-49 · BC
 Content-fidelity fixes (PO round 2, do next): BC-52 (warm-up/cooldown detail) → BC-54 (shared BlockSummary) · BC-53 (program week differs)  [BC-52/54 + BC-53 both edit program/page.tsx + periodization.ts → run SEQUENTIALLY]
 Coach intelligence:                          BC-28 → BC-30 → BC-51 (Insights summary) → BC-27 → BC-29 (BC-29 = safety protocol)
 Polish (after BC-14 icons / brand settled):  BC-14 → BC-38 → BC-40 → BC-39 · BC-25 (dark mode)
-P3 design specs, when a milestone schedules them: BC-18 · BC-20 · BC-21 · BC-24 · BC-41 · BC-42 · BC-43   (BC-19 absorbed by BC-48)
+P3 design specs, when a milestone schedules them: BC-18 · BC-24 · BC-41 · BC-42 · BC-43 · BC-55 · BC-56 · BC-57 · BC-58 (real reminders, supersedes BC-20's gap)   (BC-19 absorbed by BC-48; BC-20/BC-21 done)
 ```
 
 > Good disjoint pairs for parallel Crew runs (no shared `Files:`): **BC-35 + BC-30**,
