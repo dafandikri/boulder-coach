@@ -950,6 +950,53 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   until a milestone schedules it.
 - **Files:** `docs/specs/reminders-push-design.md`
 
+### BC-59 · Streak/progress counts a rolling 7-day window, not a program week (shows 2/3 at week start) — `open`
+
+- **Type:** bug · **Priority:** P2 · **Complexity:** M
+- **Problem (user-reported 2026-06-16):** after a climber hits their weekly target (e.g. 3/3) and earns
+  a 1-week streak, the **next** week opens showing `2/3` instead of `0/3`. Root cause: `computeConsistency`
+  (`src/domain/consistency.ts:42`) counts sessions in a **rolling 7-day window ending `asOf`**
+  (`countInWeek(0)`), which never resets on a week boundary — so sessions logged 3–6 days ago (the tail of
+  the previous week) still count toward the new week. The streak walk (`offset` loop) inherits the same
+  drift. The doc comment calls the rolling window intentional, but it contradicts the user's mental model
+  of a week that resets.
+- **Decision (PO, 2026-06-16):** anchor weeks to the **program week** — `floor((sessionDay − startDate)/7)`,
+  the same bucket `programPosition` already derives (`src/domain/programClock.ts`, `daysSinceStart/7`). Not
+  calendar weeks, not rolling. This reuses the existing program clock so a week boundary is exactly a
+  program-week boundary; the in-progress week still joins the streak only once it meets target and never
+  breaks it mid-week (preserve the current invariant).
+- **Acceptance criteria:**
+  - `computeConsistency` buckets sessions by program week anchored on `startDate` (signature gains the
+    program start anchor; today it only takes `logs, profile, asOf`). At the first moment of a new program
+    week, `weekDoneCount === 0` even if the prior week was full.
+  - The streak counts **consecutive completed program weeks**; a full prior week → next week opens at
+    `0/3` with streak intact, and the streak only increments once a week actually completes target.
+  - Logic stays in `src/domain/**` (it already does) — **no** counting logic added to `page.tsx`.
+  - TDD: a failing test first that reproduces the `2/3`-at-week-start symptom across a week boundary, plus
+    the existing invariants (in-progress week never inflates/breaks). `adaptation.ts`/`loadMetrics.ts`
+    untouched, so no safety-reviewer needed; `consistency.ts` holds ≥ 92% branch.
+- **Files:** `src/domain/consistency.ts`, `tests/domain/consistency.test.ts`, `src/app/page.tsx`
+
+### BC-60 · "Sets completed" number field can't be cleared and shows leading zero (`08`) — `open`
+
+- **Type:** bug · **Priority:** P2 · **Complexity:** S
+- **Problem (user-reported 2026-06-16):** the "Sets completed" input in the session player can't be
+  emptied — deleting the value leaves a `0` that can't be removed, and typing `8` over it yields `08`.
+  Root cause: `value={entry.setsCompleted}` is a `number` so the field can never hold `""`, and
+  `onChange` does `Math.max(0, Number(e.target.value))` (`src/app/session/page.tsx:322-329`), where
+  `Number('')` collapses "empty" into `0`. The coercion also lives inline in gate-blind `page.tsx`.
+- **Acceptance criteria:**
+  - The field can be cleared to empty while editing (no stuck `0`, no leading-zero `08`); typing `8`
+    shows `8`.
+  - An empty/blank field normalizes to `0` on blur (or on save) — "outside the field it's 0", per the
+    user — and values stay clamped to the existing `min 0 / max 20`.
+  - The parse/normalize/clamp logic moves into a **covered helper** (`src/app/lib/**`, e.g. a
+    `normalizeCount`/`parseSetsInput`), not inline in `page.tsx` (logic-in-covered-layers rule). The
+    component holds the raw string for display and calls the helper.
+  - TDD: failing test first on the helper for `''`, `'0'`, `'08'`, `'8'`, `'25'` (clamp), negative input;
+    helper ≥ 95% branch.
+- **Files:** `src/app/lib/sessionInput.ts` (new), `tests/app/sessionInput.test.ts` (new), `src/app/session/page.tsx`
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**
