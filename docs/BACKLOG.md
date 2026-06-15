@@ -929,9 +929,12 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   "Limit day today — check in first." Depends on BC-03 (real schedule) and BC-15 (HTTPS origin).
 - **Files:** `src/app/lib/reminders.ts`, `src/app/page.tsx`, `src/app/profile/page.tsx`
 
-### BC-58 · Reminders that fire when the app is CLOSED (BC-20's core value is missing) — `open` (design-first)
+### BC-58 · Reminders that fire when the app is CLOSED (BC-20's core value is missing) — `open`
 
-- **Type:** system-design · **Priority:** P3 · **Complexity:** L · **Depends on:** BC-20
+- **Type:** feature/system-design · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-20
+- **PO demand (2026-06-16):** product owner explicitly wants reminders to **actually work on iOS,
+  Android, and everything** — escalated from design-first P3 to buildable P2. iOS works only for an
+  **installed** PWA (16.4+), which is exactly the owner's add-to-home-screen case (see also BC-61).
 - **Problem (PO-flagged 2026-06-15):** BC-20 only nudges _on app-open_, which is backwards — a
   reminder's entire purpose is to pull the user back when they're **not** in the app. If they already
   opened it, they didn't need reminding. As shipped, the feature delivers ~none of its intended value;
@@ -944,11 +947,21 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   dead ends so nobody retries them: **Notification Triggers API** (never standardized / removed) and
   **Periodic Background Sync** (Chromium-only, unreliable, no iOS). iOS caveat: Web Push works only for
   **installed** PWAs (iOS 16.4+).
-- **Acceptance criteria:** **design spec only** (`docs/specs/`). Explore: push-subscription storage
-  (minimal), VAPID key handling, the cron→push→SW-decides flow, the iOS installed-PWA constraint, and
-  the trade-off of introducing a tiny backend vs keeping BC-20's honest on-open nudge. **No app code**
-  until a milestone schedules it.
-- **Files:** `docs/specs/reminders-push-design.md`
+- **Acceptance criteria (spec → build):**
+  - Design spec first (`docs/specs/reminders-push-design.md`): push-subscription storage (minimal),
+    VAPID key handling, the cron→push→SW-decides flow, the iOS installed-PWA constraint, and the
+    backend trade-off vs BC-20's on-open nudge.
+  - Then implement: a Vercel Cron route fires a daily "wake" push (VAPID); the **service worker**
+    reads the on-device schedule (IndexedDB) and decides whether to show the training-day
+    notification — **no personal schedule data leaves the device**, the server only sends a dumb ping.
+  - Subscribe/unsubscribe is wired into the existing reminders opt-in (`src/app/lib/reminders.ts` +
+    profile toggle); push subscription persists and survives reload.
+  - Decision logic lives in covered layers (`src/app/lib/**` / `src/domain/**`) with TDD — the
+    SW-decides predicate (training-day? already-shown-today?) is unit-tested, not buried in `sw.js`.
+  - e2e/manual: an installed PWA on iOS 16.4+ and Android Chrome receives a training-day notification
+    while the app is closed. Record the dead ends (Notification Triggers API, Periodic Background Sync).
+- **Files:** `docs/specs/reminders-push-design.md`, `src/app/lib/reminders.ts`,
+  `src/app/api/push/route.ts` (new), `public/sw.js`, `src/app/profile/page.tsx`
 
 ### BC-59 · Streak/progress counts a rolling 7-day window, not a program week (shows 2/3 at week start) — `open`
 
@@ -996,6 +1009,25 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   - TDD: failing test first on the helper for `''`, `'0'`, `'08'`, `'8'`, `'25'` (clamp), negative input;
     helper ≥ 95% branch.
 - **Files:** `src/app/lib/sessionInput.ts` (new), `tests/app/sessionInput.test.ts` (new), `src/app/session/page.tsx`
+
+### BC-61 · Installed iOS PWA: bottom nav crowds the home indicator (missing `viewport-fit=cover`) — `open`
+
+- **Type:** bug · **Priority:** P2 · **Complexity:** S
+- **Problem (user-reported 2026-06-16):** added to the iOS home screen, the bottom tab bar sits right
+  against the iPhone home indicator / gesture bar. Root cause: `BottomNav.tsx:37` already pads with
+  `calc(10px + env(safe-area-inset-bottom))`, but iOS reports `env(safe-area-inset-*)` as **0** unless
+  the viewport declares `viewport-fit=cover`. `src/app/layout.tsx` has **no `viewport` export**, so Next
+  injects only its default viewport (no `viewport-fit=cover`) and the inset collapses to 0.
+- **Acceptance criteria:**
+  - Add a Next 16 `viewport` export in `src/app/layout.tsx` with `viewportFit: 'cover'` (alongside the
+    existing default width/scale). The bottom nav's existing `env(safe-area-inset-bottom)` padding then
+    lifts tap targets clear of the home indicator on an installed iOS PWA.
+  - Enabling `cover` also activates the **top** inset — ensure the app shell doesn't slide under the
+    status bar/notch: apply `env(safe-area-inset-top)` padding to the top of the mobile column
+    (`layout.tsx` wrapper) so content stays clear in standalone mode.
+  - **Tier-1 guard:** extend `tests/pwa/manifest.test.ts` (or a sibling viewport test) to assert the
+    `viewport` export sets `viewportFit: 'cover'`, so a future edit can't silently drop it.
+- **Files:** `src/app/layout.tsx`, `src/app/components/BottomNav.tsx`, `tests/pwa/manifest.test.ts`
 
 ### BC-21 · Single repo instance — `done`
 
