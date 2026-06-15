@@ -30,6 +30,11 @@ const BASELINE_CONTRAST_PAIRS = new Set([
   '#579d2d|#e9f8e0', // success-ish on tint
   '#51ad1f|#e6f8d6', // success on tint
   '#1c80cd|#dbeefc', // info on tint
+  // Conditionally-rendered Callouts (install prompt, error/data-damaged) — their deep-on-tint
+  // pairs only appear on runs where the card renders, so axe's *composited* values must be
+  // baselined explicitly or the a11y e2e flakes. Composited ≠ raw CSS var (border/opacity blend).
+  '#e84e1c|#ffe8dd', // --brand-deep on --brand-tint (<Callout tone="brand"> — BC-39 install/nudge)
+  '#bf4135|#ffe4e2', // --danger-deep on --danger-tint, composited (<Callout tone="danger"> — error/data-damaged)
 ]);
 
 function contrastPairs(node: ViolationNode): string[] {
