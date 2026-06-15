@@ -24,7 +24,31 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
-## Current state — 2026-06-15 (BC-21 single repo instance — branch `refactor/bc21-single-repo-instance`, last touched by: Claude Opus 4.8)
+## Current state — 2026-06-15 (ops runbook + BC-38 charts + BC-20 reminders — merged via PRs #50/#53/#54, last touched by: Claude Opus 4.8)
+
+- **Shipped three things to `main` this session, each its own green-CI PR:**
+  - **Ops/operability (PR #50):** `docs/RUNBOOK.md` (deploy/rollback/monitoring/incident/honest-gaps) +
+    `skills/operating-and-deploying.md` (tool-neutral "is this ops change done?" checklist). Documents the
+    already-wired `@vercel/analytics` + Speed Insights + Lighthouse/bundle/offline gates as the monitoring
+    story. Crash telemetry stays deferred per BC-57.
+  - **BC-38 (PR #53):** Insights trend charts — pure `loadSeries`/`acwrSeries`/`sorenessFrequency` in
+    `insights.ts` + a no-dep inline-SVG `Sparkline` component. `acwrSeries` reuses `computeLoadMetrics`.
+  - **BC-20 (PR #54):** opt-in training-day reminders — pure `src/app/lib/reminders.ts`
+    (`shouldRemindOnOpen`/`reminderContent`) + a profile toggle + a best-effort fire-on-open from Today.
+    Honest limitation: no push backend, so it nudges on morning app-open, not a fixed time.
+- **Gate-blind trap hit + fixed (PR #51, logged in LEARNINGS 2026-06-15):** the axe a11y e2e flaked on
+  **conditionally-rendered `<Callout>` cards** (brand install prompt, danger error) whose **composited**
+  contrast pairs (`#e84e1c|#ffe8dd`, `#bf4135|#ffe4e2`) weren't baselined. Composited ≠ raw CSS var — read
+  the failing run log for the value axe reports. The inner `pnpm gate` can't catch this (CI-only). When you
+  add any brand/danger/success-tinted `<Callout>`, add its composited pair to `BASELINE_CONTRAST_PAIRS`.
+- **Also recovered from a tooling hiccup:** a `git commit` chained with other commands while lint-staged's
+  stash ran left `core.bare=true` in `.git/config` (every `git status` then failed "must be run in a work
+  tree"). Fix: `git config --local core.bare false`. Don't chain `git commit … && <more>` — let the hook
+  finish alone.
+- **Next:** remaining open code P2s: BC-25 (dark mode, M — design-first, needs brand-owner contrast pass).
+  Design-first P2s: BC-55 (i18n), BC-56 (Nielsen audit). `pnpm gate` green (9/9, bundle 167.8/200 KB).
+
+### Prior — 2026-06-15 (BC-21 single repo instance)
 
 - **BC-21 DONE — one shared repository instance.** `src/data/repoInstance.ts` exports `getRepo():
 IClimbRepo`, a lazily-constructed singleton (`instance ??= new DexieClimbRepo()`). All 15

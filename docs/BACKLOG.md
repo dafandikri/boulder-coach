@@ -416,8 +416,18 @@ sessionsSinceExport)` fires when there is meaningful un-backed-up data (≥`NUDG
 
 > **— Design & UX polish (make it feel finished) —**
 
-### BC-38 · Insights data visualizations (trends over time) — `open`
+### BC-38 · Insights data visualizations (trends over time) — `done (PR #53)`
 
+- **Shipped:** three pure, `asOf`-windowed series-builders in `src/domain/insights.ts` —
+  `loadSeries` (daily sRPE × min, oldest→newest, empty-safe), `acwrSeries` (daily EWMA-ACWR by running
+  the already-tested `computeLoadMetrics` per day — no ACWR re-implementation, so the safety math stays
+  in the one 100%-covered/mutation-tested file), and `sorenessFrequency` (per-body-part flag counts,
+  desc, tie-broken alphabetically). New presentational `src/app/components/Sparkline.tsx` (inline SVG,
+  no charting dep — bundle held at 167.8/200 KB) is `role="img"` with a word-trend `aria-label` (BC-37:
+  not colour-only). Insights renders a "Load & ACWR trend" card (ACWR sparkline shades the healthy
+  0.8–1.3 band) + a "Soreness by body part" frequency card; all logic in the covered domain, the page
+  only renders. TDD: 10 new tests cover windowing, same-day summing, future/old exclusion,
+  engine-consistency, and tie-breaks. `pnpm gate` green.
 - **Type:** ux/design · **Priority:** P2 · **Complexity:** M · **Depends on:** —
 - **Problem:** Insights shows `StatCard`s + `ProgressBar`s — point-in-time numbers. The actual coaching
   signal is _trend_: load over weeks, ACWR trajectory toward/away from the red band, soreness frequency
@@ -877,12 +887,23 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   player. Closes the "no technique development" original problem beyond a passive library.
 - **Files:** `src/domain/drills.ts`, `src/app/session/page.tsx`
 
-### BC-20 · Training-day reminders — `open`
+### BC-20 · Training-day reminders — `done (PR #54)`
 
+- **Shipped:** opt-in local notifications nudging a check-in on training-day mornings. Pure
+  `src/app/lib/reminders.ts` (covered) — `shouldRemindOnOpen()` fires only when opted-in, permission
+  granted, it's a training-day morning, and not already nudged today; `reminderContent()` gives
+  per-session copy ("Limit day today 🔥 — check in first."). Profile has an opt-in toggle that requests
+  Notification permission + persists the choice (lazy SSR-safe read — no effect `setState`, per Next 16's
+  `react-hooks/set-state-in-effect`, matching BC-39). Today fires the nudge on open via the covered
+  decision, stamping the date only when it actually shows. **Honest limitation (documented in
+  `reminders.ts`):** a backendless local-first PWA can't OS-schedule a push, so it nudges on app-open in
+  the morning rather than at a fixed time — a future Periodic Background Sync / push-server upgrade could
+  make it time-scheduled. TDD: `tests/app/reminders.test.ts` (9) cover every decision branch + per-type
+  content. `pnpm gate` green.
 - **Type:** feature · **Complexity:** M
 - Local notifications (PWA Notification + service worker) on `availableWeekdays` mornings:
   "Limit day today — check in first." Depends on BC-03 (real schedule) and BC-15 (HTTPS origin).
-- **Files:** `src/app/lib/reminders.ts`
+- **Files:** `src/app/lib/reminders.ts`, `src/app/page.tsx`, `src/app/profile/page.tsx`
 
 ### BC-21 · Single repo instance — `done`
 
