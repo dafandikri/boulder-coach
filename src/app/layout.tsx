@@ -40,6 +40,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full">
+        {/* BC-25 — set the theme before first paint to avoid a light→dark flash.
+            Runs synchronously as the first thing in <body>: an explicit stored
+            choice wins, else the OS prefers-color-scheme. This is the canonical
+            logic from src/app/lib/theme.ts (resolveTheme + applyTheme), inlined
+            in plain JS because it must run before the bundle loads — keep the two
+            in sync. The toggle (profile → Appearance) drives it at runtime. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var d=document.documentElement,t=localStorage.getItem('bc:theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}d.setAttribute('data-theme',t);d.style.colorScheme=t;}catch(e){}})();`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href={FONTS_HREF} />

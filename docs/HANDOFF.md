@@ -24,6 +24,33 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-15 (BC-25 dark mode shipped — branch `feat/bc25-dark-mode`, last touched by: Claude Opus 4.8)
+
+- **BC-25 DONE — the app has a full "gym at night" dark theme + a Settings toggle.** The palette was
+  authored by the Boulder Coach Design System (delivered as a zip `tokens/colors.css`, brand-owner
+  contrast pass complete — every fg/bg pair WCAG-AA) and dropped into `globals.css` under
+  `:root[data-theme='dark']`. It overrides BOTH the raw ramps (`chalk-*`/`basalt-*`, read directly by
+  tracks/grooves/the ink outline) and the semantic aliases: `--basalt-900` flips to a warm chalk
+  outline, `--pop-shadow` decouples to a true dark offset, `-deep` tones become the LIGHT foreground,
+  `-tint` tones become DARK callout surfaces; a token-driven dark body keeps the two hold-glows.
+- **Architecture (logic-in-covered-layers):** `src/app/lib/theme.ts` (100%) owns the decision —
+  `resolveTheme` (explicit stored choice wins, else `prefers-color-scheme`), `nextTheme`, `isTheme`,
+  `applyTheme` (DOM via a structural `ThemeRoot` seam, unit-tested). `layout.tsx` runs the same logic
+  in a **no-flash inline `<script>`** (first in `<body>`, sets `data-theme` + `color-scheme` before
+  paint). Gate-blind `ThemeToggle.tsx` (Settings → Appearance) reads its initial state via a lazy
+  SSR-safe `useState` initialiser (no effect `setState` — the Next 16 `react-hooks/set-state-in-effect`
+  rule, BC-39/BC-20's trap) and only does DOM/storage I/O. New `sun` icon in `Icon.tsx`.
+- **Verified in a real prod build (Playwright):** light + dark render correctly app-wide; the toggle
+  flips live (`data-theme`/`color-scheme`/localStorage) with correct `aria-pressed`. The CI a11y scan
+  runs in the default LIGHT scheme, so the BC-37 baseline is untouched (no new dark pairs to baseline
+  unless a future a11y spec forces `colorScheme: 'dark'`). `pnpm gate` green (9/9, bundle 167.8 KB).
+- **LEARNINGS appended:** don't defensively `?.`/`??` against DOM APIs the lib types mark non-optional
+  (`window.matchMedia`) — strict-type ESLint flags it as dead code; guard the real uncertainty
+  (`typeof window`) once, then use the typed API plainly.
+- **Next:** push → PR → agent review → merge. **No open code PBIs remain** — everything else open is
+  P3 design-first/docs (BC-18/24/41/42/43/55/56/57/58) or deferred (BC-57). BC-55 (i18n) / BC-56
+  (Nielsen audit) are the next P2s but are design-spec-first.
+
 ## Current state — 2026-06-15 (PO backlog triage: reminders flaw + CV LAN-offload — docs only, last touched by: Claude Opus 4.8)
 
 - **PO-driven backlog grooming (no app code).** Evaluated two PO concerns and recorded them in `docs/BACKLOG.md`:

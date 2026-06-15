@@ -16,6 +16,7 @@ import { Card } from '@/app/components/Card';
 import { Chip } from '@/app/components/Chip';
 import { Button } from '@/app/components/Button';
 import { Callout } from '@/app/components/Callout';
+import { ThemeToggle } from '@/app/components/ThemeToggle';
 import { HoldMark } from '@/app/components/HoldMark';
 import { Spinner } from '@/app/components/Spinner';
 import { VB, MAX_GRADE, formatGrade } from '@/domain/grade';
@@ -354,6 +355,22 @@ export default function ProfilePage() {
       >
         {isFirstRun ? 'Start training' : 'Save'}
       </Button>
+
+      {!isFirstRun && (
+        <section
+          className="space-y-3"
+          style={{ borderTop: '2px solid var(--border)', paddingTop: 20 }}
+        >
+          <div>
+            <h2 style={{ fontSize: 'var(--fs-md)', fontWeight: 800 }}>Appearance</h2>
+            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginTop: 2 }}>
+              Dark mode for low-light gyms. Follows your device by default; your choice is
+              remembered on this device.
+            </p>
+          </div>
+          <ThemeToggle />
+        </section>
+      )}
 
       {!isFirstRun && (
         <section
