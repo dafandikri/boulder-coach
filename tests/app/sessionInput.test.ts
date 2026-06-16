@@ -67,6 +67,12 @@ describe('normalizeCount (BC-60 — value stored outside the field)', () => {
     expect(normalizeCount('-3')).toBe(SETS_MIN);
   });
 
+  it('normalizes non-numeric junk to the min (NaN-safe parse contract)', () => {
+    // normalizeCount is exported and parses an arbitrary string; a non-numeric
+    // value must never leak NaN into the stored count.
+    expect(normalizeCount('abc')).toBe(SETS_MIN);
+  });
+
   it('exposes the canonical 0..20 sets range', () => {
     expect(SETS_MIN).toBe(0);
     expect(SETS_MAX).toBe(20);
