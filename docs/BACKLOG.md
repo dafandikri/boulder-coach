@@ -1031,8 +1031,17 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
     helper ≥ 95% branch.
 - **Files:** `src/app/lib/sessionInput.ts` (new), `tests/app/sessionInput.test.ts` (new), `src/app/session/page.tsx`
 
-### BC-61 · Installed iOS PWA: bottom nav crowds the home indicator (missing `viewport-fit=cover`) — `open`
+### BC-61 · Installed iOS PWA: bottom nav crowds the home indicator (missing `viewport-fit=cover`) — `done`
 
+- **Shipped:** added a Next 16 `viewport` export to `src/app/layout.tsx`
+  (`viewportFit: 'cover'` + explicit `width: 'device-width'`/`initialScale: 1`), so iOS stops
+  reporting `env(safe-area-inset-*)` as 0 and BottomNav's existing
+  `calc(10px + env(safe-area-inset-bottom))` padding lifts the tab bar clear of the home indicator.
+  Enabling `cover` also activates the TOP inset, so the mobile column now pads
+  `env(safe-area-inset-top)` to keep content clear of the status bar/notch in standalone mode.
+  **Tier-1 guard:** `tests/pwa/manifest.test.ts` asserts the `viewport` export sets
+  `viewportFit: 'cover'` (source-text check, like the sibling `sw.js` guards) so a future edit
+  can't silently drop it. `pnpm gate` green (bundle 167.8 KB).
 - **Type:** bug · **Priority:** P2 · **Complexity:** S
 - **Problem (user-reported 2026-06-16):** added to the iOS home screen, the bottom tab bar sits right
   against the iPhone home indicator / gesture bar. Root cause: `BottomNav.tsx:37` already pads with
