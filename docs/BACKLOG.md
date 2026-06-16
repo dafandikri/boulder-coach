@@ -1029,6 +1029,47 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
     `viewport` export sets `viewportFit: 'cover'`, so a future edit can't silently drop it.
 - **Files:** `src/app/layout.tsx`, `src/app/components/BottomNav.tsx`, `tests/pwa/manifest.test.ts`
 
+### BC-62 · Consolidate the content catalog into `src/domain/content/` + Tier-1 content-validation gate — `open`
+
+- **Type:** infra/refactor · **Priority:** P2 · **Complexity:** M
+- **Problem (PO-raised 2026-06-16):** all instructional content is hardcoded as typed TS literal
+  arrays mixed into the domain _logic_ files — `DRILLS` (`drills.ts`), `OFF_WALL_EXERCISES`
+  (`offWallExercises.ts`), warmup blocks (`warmup.ts`), technique drills (`periodization.ts`). It's
+  pure + typed (good), but (a) there's no single "here's where content lives" home, and (b) nothing
+  validates a new entry. **Concrete gap proving (b):** several drills reference `imageId`s
+  (`deadpoint`, `smear`, `ecu-pronation`, `tendon-glide`, `pushup`) that have **no matching SVG** in
+  `public/exercises/` — the cards silently fall back to the placeholder and no gate catches it.
+- **Goal:** make adding drills/exercises _easy and safe_ — additive data edits in one place, with the
+  gate catching malformed/duplicate/broken-image entries by filename.
+- **Acceptance criteria:**
+  - Move the catalogs (drills, off-wall, warmup data, technique drills) into a dedicated
+    `src/domain/content/` subfolder — **inside** domain so it stays pure and importable by
+    `periodization.ts` (a top-level `src/content/` would force a domain→content edge that violates
+    `domain-stays-pure`). Keep them as **typed TS** (not JSON) to preserve compile-time shape safety;
+    `ExerciseContent`/`Drill`/`OffWallExercise` types stay the contract. Update importers' paths.
+  - **Tier-1 validation test** (`tests/domain/content-catalog.test.ts`): unique `id`s across each
+    catalog; non-empty `steps`/`cues`/`commonMistakes`; valid `category`/`purpose`; `dosage` present
+    for prehab + off-wall; and **every referenced `imageId` resolves to a real file in
+    `public/exercises/`** (or is omitted). A malformed/duplicate/missing-image entry fails the gate.
+  - Authoring guide `skills/authoring-content.md` (+ `skills/README.md` index entry): the one
+    documented way to add a drill/exercise, referenced from the content folder.
+  - Behavior-preserving: same content renders identically; `pnpm gate` green; coverage unaffected
+    (data has no branches; the validator test is the new covered logic).
+- **Out of scope / future direction (noted, not now — YAGNI):**
+  - **Motion media (PO-raised 2026-06-16):** today an `imageId` is a single hand-authored **static
+    SVG** diagram (`public/exercises/<id>.svg`, 320×200). Technique drills are about _motion_, so a
+    short gif/MP4/Lottie would teach better — but it's heavier (bundle-size / Lighthouse / offline
+    budgets) and the convention assumes one SVG per `imageId`. A future enhancement could let an
+    exercise carry an optional motion asset alongside the SVG poster; decide format + budget first.
+  - Remote/CMS-driven content behind an `IContentSource` seam (only if non-deploy content edits are
+    ever wanted).
+  - The 5 missing SVGs found above (`deadpoint`, `smear`, `ecu-pronation`, `tendon-glide`, `pushup`)
+    can be drawn in a separate content task.
+  - Structured content also unblocks **BC-55** (i18n) by making the translatable surface explicit.
+- **Files:** `src/domain/drills.ts`, `src/domain/offWallExercises.ts`, `src/domain/warmup.ts`,
+  `src/domain/periodization.ts`, `tests/domain/content-catalog.test.ts`, `skills/authoring-content.md`,
+  `skills/README.md`
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**
