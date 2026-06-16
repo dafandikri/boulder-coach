@@ -13,7 +13,6 @@
 import type { SessionLog, UserProfile } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
 
 export interface ConsistencyResult {
   /** Sessions logged in the current PROGRAM week (resets on the week boundary). */
@@ -47,9 +46,12 @@ export function computeConsistency(
   const startMs = isoDayStart(startDate);
   const asOfStart = localDayStart(asOf);
 
-  // The program week (0-based) a given local-midnight day falls in. Days before the
-  // program started are negative and never match a counted week.
-  const weekOf = (dayMs: number): number => Math.floor((dayMs - startMs) / WEEK_MS);
+  // The program week (0-based) a given local-midnight day falls in — derived the SAME
+  // way programPosition does (`daysSinceStart / 7`): floor to whole days first, then
+  // integer-divide by 7. The day-granularity floor absorbs any DST hour, so a week
+  // boundary here is byte-for-byte the same boundary the program clock uses. Days
+  // before the program started are negative and never match a counted week.
+  const weekOf = (dayMs: number): number => Math.floor(Math.floor((dayMs - startMs) / DAY_MS) / 7);
   const currentWeek = weekOf(asOfStart);
 
   // Only sessions up to and including today count — future-dated logs are ignored.
