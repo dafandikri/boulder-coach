@@ -1070,6 +1070,94 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   `src/domain/periodization.ts`, `tests/domain/content-catalog.test.ts`, `skills/authoring-content.md`,
   `skills/README.md`
 
+> **Backlog extended 2026-06-16 (Claude Opus 4.8, PO end-to-end diagnosis):** BC-63 + BC-64 added —
+> two gaps **created by the seams between already-`done` PBIs**, each traced to an exact line, not
+> assumed. (1) BC-44/45 made **beginners** a supported audience (VB/V0, 1–7×) but the periodization
+> engine was never taught to program for them, so a VB climber still gets a V6's RPE-9 limit day — a
+> coaching **and** injury-safety defect. (2) BC-04's session player became the **only** `SessionLog`
+> writer, so off-plan/rest-day/other-gym climbing is uncapturable — silently starving ACWR, the streak,
+> and Insights of real load (and weakening the deload-safety math, which underestimates risk on partial
+> data). Both are verified against the code below.
+
+### BC-63 · Beginner-aware program content — a VB/V0 climber still gets a V6's RPE-9 limit day — `open`
+
+- **Type:** feature/safety · **Priority:** P2 (high) · **Complexity:** M · **Depends on:** BC-44, BC-45
+- **Problem (PO-diagnosed 2026-06-16, verified against code):** BC-44 lowered the onboarding floor to
+  **VB/V0** and BC-45 opened frequency to **1–7×**, but the program engine never learned to _coach_ a
+  beginner. `sessionPlanFor` (`periodization.ts:94`) and `mainBlocksFor` (`periodization.ts:202`) are
+  **structurally grade-agnostic** — a VB climber gets the **identical** rotation as a V6: a
+  **`limit-boulder`** day at **`targetRPE: 9`** ("a problem at your absolute limit", `mainContentFor`
+  ~line 116) and a **`4×4 power-endurance`** day. (Even the session player's `gradeChoices` defaults to
+  V4 — `session/page.tsx:68`.) This is **miscoaching** — a true beginner needs easy-mileage volume +
+  movement technique, not max-effort limit work or power-endurance intervals — **and** an **injury
+  vector**: RPE-9 limit bouldering on undeveloped tendons/skin/pulleys is precisely the A2/PIP risk the
+  app's core promise ("keeps you out of injury") exists to prevent. The spec scoped v1 to intermediate
+  V4–V6 (§Goal), so this gap was _created_ the moment BC-44 made beginners a supported audience without
+  extending the engine.
+- **Value:** the largest under-served segment BC-44 deliberately onboarded (true beginners) finally gets
+  a _credible, safe_ program instead of an intermediate's plan that could hurt them — closing the
+  onboarding promise the app now makes to them.
+- **Acceptance criteria:**
+  - A pure `gradeBand(currentGrade) → 'beginner' | 'intermediate'` (e.g. beginner = `currentGrade ≤ 2`,
+    i.e. VB/V0/V1/V2) in `periodization.ts` (or `grade.ts`), tested at the boundary.
+  - For the **beginner** band, `sessionPlanFor`/`mainBlocksFor` produce a beginner-appropriate plan:
+    **no max-effort `limit-boulder` (RPE 9) and no `4×4 power-endurance` day**; the week skews to
+    volume-technique + simple antagonist-prehab, and the one "try-hard" stimulus is a sub-limit
+    _projecting_ block at a **capped RPE (≤ 7)**, not RPE 9. Frequency guidance (BC-45) still applies.
+  - **Additive-safety invariant (the safety dimension, tested):** for any profile, a **beginner**
+    program's per-block intensity (`targetRPE`) and max-effort exposure is **≤** what the current
+    grade-agnostic code produces — beginner content may only _lower_ intensity/volume, never raise it.
+    This keeps the change **out of** `adaptation.ts`/`loadMetrics.ts` (no safety-reviewer gate needed),
+    mirroring BC-29's injury-baseline contract.
+  - **Intermediate band unchanged (regression test):** a V5 profile's generated program is
+    byte-identical to today's output — no behavior change for the spec's original audience.
+  - Tested: a VB and a V0 profile **never** produce a block with `targetRPE > 7` or a
+    `limit-boulder`/`power-endurance` main; a V3+ profile still does; the band boundary (V2 vs V3) is
+    asserted. `periodization.ts` holds ≥ 92% branch.
+- **Files:** `src/domain/periodization.ts`, `src/domain/grade.ts`, `tests/domain/periodization.test.ts`
+- **Sequencing:** edits `periodization.ts`, which **BC-62** also moves/edits — run **sequentially** with
+  BC-62 (ideally after BC-62's content move lands), never as a parallel Crew pair.
+
+### BC-64 · Freeform / quick session logging — off-plan climbing never gets captured — `open`
+
+- **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-04, BC-10
+- **Problem (PO-diagnosed 2026-06-16, verified against code):** the **only** writer of a `SessionLog` is
+  the planned-session player — `/session` loads today's _planned_ session via `getTodaySession` and
+  saves through `createSessionLog` (`session/page.tsx`). `/history` is **read-only** (`history/page.tsx`
+  only calls `getLogs()`), and `BottomNav` has **no "log" affordance**. So a climber who trains
+  **off-plan** — an extra session, climbing on a scheduled **rest day** (Today only offers "See mobility
+  & prehab"), a quick gym drop-in, or a session at another gym — **cannot record it**. Every such
+  session is invisible to the engine: `computeLoadMetrics` (ACWR), `computeConsistency` (streak /
+  this-week), and Insights all **silently undercount real training load**. This is not just a logbook
+  gap — **ACWR computed on partial load underestimates injury risk**, weakening the deload-safety
+  guarantee the app sells, and the streak/insights read dishonestly (a climber who trained 4× sees
+  "2/3"). The data model **already supports** a planned-session-less log (`SessionLog.plannedSessionId?`
+  is optional; `createSessionLog` passes it through), so only the **write path + UI** are missing.
+- **Value:** every real session counts → adaptation, ACWR-safety, streak, and Insights reflect what the
+  climber actually did; "I just climbed, let me log it" becomes a 15-second capture instead of an
+  impossibility — a retention + data-quality win that compounds across every downstream feature.
+- **Acceptance criteria:**
+  - A **"Log a session"** entry point reachable from **Today** (especially the **rest-day** card) and
+    **/history** opens a lightweight freeform log: date (default today), duration, session RPE (reuse the
+    RPE scale UI), optional grades sent, optional note. No planned session required.
+  - It writes through the same `IClimbRepo` path so `loadMetrics`/`consistency`/`insights` pick it up
+    with **no engine change**; the freeform log round-trips through backup (BC-10) and passes the BC-32
+    integrity validator.
+  - **Fix the log-id collision (verified latent bug):** `createSessionLog` keys `id` as
+    **`` `log-${date}` ``** (`sessionLog.ts:36`), so a freeform log on a day that also has a
+    planned-session log would **overwrite** it. The id scheme must disambiguate **multiple logs per local
+    day** (e.g. append a counter/uuid) without breaking existing single-per-day logs or the BC-32
+    integrity/migration path.
+  - Parse/normalize/validate logic lives in a **covered helper** (`src/app/lib/quickLog.ts`), not inline
+    in the gate-blind page (logic-in-covered-layers); the page only does I/O.
+  - Tested: a freeform log (no `plannedSessionId`) is valid, contributes to ACWR/consistency/Insights,
+    survives backup export→import, and two logs on the same date coexist (no overwrite). Helper ≥ 95%
+    branch.
+- **Files:** `src/app/lib/quickLog.ts` (new), `src/app/log/page.tsx` (new), `src/app/history/page.tsx`,
+  `src/app/page.tsx`, `src/domain/sessionLog.ts`, `tests/app/quickLog.test.ts` (new)
+- **Sequencing:** edits `src/app/page.tsx` (Today), so it must run **sequentially** with other
+  `page.tsx`-touching PBIs (BC-59); also edits `sessionLog.ts` (the id fix).
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**
@@ -1236,7 +1324,17 @@ Content-fidelity fixes (PO round 2, do next): BC-52 (warm-up/cooldown detail) �
 Coach intelligence:                          BC-28 → BC-30 → BC-51 (Insights summary) → BC-27 → BC-29 (BC-29 = safety protocol)
 Polish (after BC-14 icons / brand settled):  BC-14 → BC-38 → BC-40 → BC-39 · BC-25 (dark mode)
 P3 design specs, when a milestone schedules them: BC-18 · BC-24 · BC-41 · BC-42 · BC-43 · BC-55 · BC-56 · BC-57 · BC-58 (real reminders, supersedes BC-20's gap)   (BC-19 absorbed by BC-48; BC-20/BC-21 done)
+
+Open P2 (PO-filed 2026-06-16, do next — user-reported bugs + audience/data gaps):
+  Real bugs (cheap, high-trust):   BC-60 (sets-input, S) · BC-61 (iOS safe-area, S) · BC-59 (streak window, M)
+  Audience & data integrity:       BC-63 (beginner program content — VB/V0 still gets RPE-9 limit, M, after BC-62) · BC-64 (freeform logging — off-plan climbing uncapturable, M)
+  Infra/reminders:                 BC-62 (content catalog + validation, M) · BC-58 (reminders that fire when closed, L)
 ```
+
+> **Why BC-63/BC-64 rank high:** both are _correctness_ gaps in the core promise, not polish. BC-63 is a
+> safety+credibility defect for an audience the app _already onboards_ (a novice handed RPE-9 limit work).
+> BC-64 starves every downstream signal (ACWR-safety, streak, Insights) of real load — it compounds. Ship
+> the two `S` bug fixes (BC-60/61) first for quick trust wins, then these.
 
 > Good disjoint pairs for parallel Crew runs (no shared `Files:`): **BC-35 + BC-30**,
 > **BC-36 + BC-28**, **BC-37 + BC-32**. Once **BC-46** lands, **BC-49** (`drills.ts`/`/drills`) +

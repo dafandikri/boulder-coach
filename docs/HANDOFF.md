@@ -24,6 +24,32 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-16 (PO end-to-end diagnosis: 2 seam-gap PBIs filed — docs only, last touched by: Claude Opus 4.8)
+
+- **PO backlog grooming (no app code).** End-to-end diagnosis of the shipped app vs the spec's audience
+  promise + the engine's data dependency surfaced **two correctness gaps created by the seams between
+  already-`done` PBIs**, each verified against an exact line. Filed **BC-63** and **BC-64** (P2):
+  - **BC-63 — beginner program content.** BC-44/45 made VB/V0 + 1–7× a supported audience, but
+    `sessionPlanFor`/`mainBlocksFor` (`periodization.ts:94`/`:202`) are **grade-agnostic**: a VB climber
+    gets a V6's **`limit-boulder` at `targetRPE: 9`** + a `4×4 power-endurance` day. Coaching **and**
+    injury-safety defect (RPE-9 limit work on a novice = the A2/PIP risk the app exists to prevent). Fix
+    = a `gradeBand` branch in `periodization.ts`, **additive-safety** (beginner intensity ≤ today's, so
+    `adaptation.ts`/`loadMetrics.ts` untouched — no safety-reviewer), intermediate output byte-identical.
+    **Sequence after/with BC-62** (both edit `periodization.ts`).
+  - **BC-64 — freeform/quick logging.** The planned-session player is the **only** `SessionLog` writer;
+    `/history` is read-only; no nav "log" affordance. Off-plan / rest-day / other-gym climbing is
+    **uncapturable** → ACWR, streak, and Insights silently undercount real load (and ACWR-on-partial-data
+    underestimates injury risk). Model already supports it (`plannedSessionId?` optional). Also fixes a
+    **verified latent bug**: `createSessionLog` keys `id` as `` `log-${date}` `` (`sessionLog.ts:36`) →
+    two logs on one day collide. Decision logic in a covered `src/app/lib/quickLog.ts`.
+- **Files touched:** `docs/BACKLOG.md` (BC-63/BC-64 added + recommended-order refreshed),
+  `docs/HANDOFF.md`. `tests/crew/backlog-hygiene.test.ts` green (4/4 — deps resolve to done BC-04/10/44/45,
+  `Files:` declared, ids unique). **No code changed; not pushed** — a supervised push/PR is the next step
+  if the human wants it on `main`.
+- **Next (PO-recommended order):** ship the two `S` user-reported bug fixes first for quick trust wins
+  (**BC-60** sets-input, **BC-61** iOS safe-area), then **BC-59** (streak window), then the audience/data
+  correctness pair **BC-63 → BC-64**, with **BC-62** (content catalog) sequenced ahead of BC-63.
+
 ## Current state — 2026-06-15 (BC-25 dark mode shipped — branch `feat/bc25-dark-mode`, last touched by: Claude Opus 4.8)
 
 - **BC-25 DONE — the app has a full "gym at night" dark theme + a Settings toggle.** The palette was
