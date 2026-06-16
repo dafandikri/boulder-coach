@@ -929,9 +929,22 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   "Limit day today — check in first." Depends on BC-03 (real schedule) and BC-15 (HTTPS origin).
 - **Files:** `src/app/lib/reminders.ts`, `src/app/page.tsx`, `src/app/profile/page.tsx`
 
-### BC-58 · Reminders that fire when the app is CLOSED (BC-20's core value is missing) — `open`
+### BC-58 · Reminders that fire when the app is CLOSED (BC-20's core value is missing) — `open` (**design spec drafted 2026-06-16**)
 
 - **Type:** feature/system-design · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-20
+- **Design spec drafted (2026-06-16):** [`docs/specs/reminders-push-design.md`](specs/reminders-push-design.md)
+  — the spec-first deliverable below is written. Grounded in current `web-push`/Vercel-Cron docs
+  (Context7). Key decisions: **content-less wake push + SW-decides from on-device IndexedDB** (schedule
+  never leaves the device; server stores only an opaque, pseudonymous push subscription in **Upstash Redis**
+  via the Vercel Marketplace); a single **audience-tuned daily cron** (~23:00 UTC ≈ 06:00 WIB) covers the
+  Indonesian primary audience on Hobby, with multi-fire global coverage as a documented Pro/external-cron
+  scale path (a push only shows when it _arrives_ — the SW can't defer it, so morning coverage is a
+  timezone/cron problem). Honest limitations recorded: the `userVisibleOnly` silent-push budget, iOS 16.4+
+  installed-PWA-only, and the env-var/backend trade-off vs the no-backend posture. Pure decision predicates
+  (`buildReminderPlan`/`pickReminderForDay` in `src/domain/reminderSchedule.ts`) keep the logic out of the
+  gate-blind `sw.js` (a drift guard asserts the SW copy ≡ the tested module). Implementation is sliced
+  (pure core → store+API+cron → client+SW) so each slice is gate-green. **Pending PO review; no app code
+  until a milestone schedules it.**
 - **PO demand (2026-06-16):** product owner explicitly wants reminders to **actually work on iOS,
   Android, and everything** — escalated from design-first P3 to buildable P2. iOS works only for an
   **installed** PWA (16.4+), which is exactly the owner's add-to-home-screen case (see also BC-61).
@@ -1028,6 +1041,200 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   - **Tier-1 guard:** extend `tests/pwa/manifest.test.ts` (or a sibling viewport test) to assert the
     `viewport` export sets `viewportFit: 'cover'`, so a future edit can't silently drop it.
 - **Files:** `src/app/layout.tsx`, `src/app/components/BottomNav.tsx`, `tests/pwa/manifest.test.ts`
+
+### BC-62 · Consolidate the content catalog into `src/domain/content/` + Tier-1 content-validation gate — `open`
+
+- **Type:** infra/refactor · **Priority:** P2 · **Complexity:** M
+- **Problem (PO-raised 2026-06-16):** all instructional content is hardcoded as typed TS literal
+  arrays mixed into the domain _logic_ files — `DRILLS` (`drills.ts`), `OFF_WALL_EXERCISES`
+  (`offWallExercises.ts`), warmup blocks (`warmup.ts`), technique drills (`periodization.ts`). It's
+  pure + typed (good), but (a) there's no single "here's where content lives" home, and (b) nothing
+  validates a new entry. **Concrete gap proving (b):** several drills reference `imageId`s
+  (`deadpoint`, `smear`, `ecu-pronation`, `tendon-glide`, `pushup`) that have **no matching SVG** in
+  `public/exercises/` — the cards silently fall back to the placeholder and no gate catches it.
+- **Goal:** make adding drills/exercises _easy and safe_ — additive data edits in one place, with the
+  gate catching malformed/duplicate/broken-image entries by filename.
+- **Acceptance criteria:**
+  - Move the catalogs (drills, off-wall, warmup data, technique drills) into a dedicated
+    `src/domain/content/` subfolder — **inside** domain so it stays pure and importable by
+    `periodization.ts` (a top-level `src/content/` would force a domain→content edge that violates
+    `domain-stays-pure`). Keep them as **typed TS** (not JSON) to preserve compile-time shape safety;
+    `ExerciseContent`/`Drill`/`OffWallExercise` types stay the contract. Update importers' paths.
+  - **Tier-1 validation test** (`tests/domain/content-catalog.test.ts`): unique `id`s across each
+    catalog; non-empty `steps`/`cues`/`commonMistakes`; valid `category`/`purpose`; `dosage` present
+    for prehab + off-wall; and **every referenced `imageId` resolves to a real file in
+    `public/exercises/`** (or is omitted). A malformed/duplicate/missing-image entry fails the gate.
+  - Authoring guide `skills/authoring-content.md` (+ `skills/README.md` index entry): the one
+    documented way to add a drill/exercise, referenced from the content folder.
+  - Behavior-preserving: same content renders identically; `pnpm gate` green; coverage unaffected
+    (data has no branches; the validator test is the new covered logic).
+- **Out of scope / future direction (noted, not now — YAGNI):**
+  - **Motion media (PO-raised 2026-06-16):** today an `imageId` is a single hand-authored **static
+    SVG** diagram (`public/exercises/<id>.svg`, 320×200). Technique drills are about _motion_, so a
+    short gif/MP4/Lottie would teach better — but it's heavier (bundle-size / Lighthouse / offline
+    budgets) and the convention assumes one SVG per `imageId`. A future enhancement could let an
+    exercise carry an optional motion asset alongside the SVG poster; decide format + budget first.
+  - Remote/CMS-driven content behind an `IContentSource` seam (only if non-deploy content edits are
+    ever wanted).
+  - The 5 missing SVGs found above (`deadpoint`, `smear`, `ecu-pronation`, `tendon-glide`, `pushup`)
+    can be drawn in a separate content task.
+  - Structured content also unblocks **BC-55** (i18n) by making the translatable surface explicit.
+- **Files:** `src/domain/drills.ts`, `src/domain/offWallExercises.ts`, `src/domain/warmup.ts`,
+  `src/domain/periodization.ts`, `tests/domain/content-catalog.test.ts`, `skills/authoring-content.md`,
+  `skills/README.md`
+
+> **Backlog extended 2026-06-16 (Claude Opus 4.8, PO end-to-end diagnosis):** BC-63 + BC-64 added —
+> two gaps **created by the seams between already-`done` PBIs**, each traced to an exact line, not
+> assumed. (1) BC-44/45 made **beginners** a supported audience (VB/V0, 1–7×) but the periodization
+> engine was never taught to program for them, so a VB climber still gets a V6's RPE-9 limit day — a
+> coaching **and** injury-safety defect. (2) BC-04's session player became the **only** `SessionLog`
+> writer, so off-plan/rest-day/other-gym climbing is uncapturable — silently starving ACWR, the streak,
+> and Insights of real load (and weakening the deload-safety math, which underestimates risk on partial
+> data). Both are verified against the code below.
+
+### BC-63 · Beginner-aware program content — a VB/V0 climber still gets a V6's RPE-9 limit day — `open`
+
+- **Type:** feature/safety · **Priority:** P2 (high) · **Complexity:** M · **Depends on:** BC-44, BC-45
+- **Problem (PO-diagnosed 2026-06-16, verified against code):** BC-44 lowered the onboarding floor to
+  **VB/V0** and BC-45 opened frequency to **1–7×**, but the program engine never learned to _coach_ a
+  beginner. `sessionPlanFor` (`periodization.ts:94`) and `mainBlocksFor` (`periodization.ts:202`) are
+  **structurally grade-agnostic** — a VB climber gets the **identical** rotation as a V6: a
+  **`limit-boulder`** day at **`targetRPE: 9`** ("a problem at your absolute limit", `mainContentFor`
+  ~line 116) and a **`4×4 power-endurance`** day. (Even the session player's `gradeChoices` defaults to
+  V4 — `session/page.tsx:68`.) This is **miscoaching** — a true beginner needs easy-mileage volume +
+  movement technique, not max-effort limit work or power-endurance intervals — **and** an **injury
+  vector**: RPE-9 limit bouldering on undeveloped tendons/skin/pulleys is precisely the A2/PIP risk the
+  app's core promise ("keeps you out of injury") exists to prevent. The spec scoped v1 to intermediate
+  V4–V6 (§Goal), so this gap was _created_ the moment BC-44 made beginners a supported audience without
+  extending the engine.
+- **Value:** the largest under-served segment BC-44 deliberately onboarded (true beginners) finally gets
+  a _credible, safe_ program instead of an intermediate's plan that could hurt them — closing the
+  onboarding promise the app now makes to them.
+- **Acceptance criteria:**
+  - A pure `gradeBand(currentGrade) → 'beginner' | 'intermediate'` (e.g. beginner = `currentGrade ≤ 2`,
+    i.e. VB/V0/V1/V2) in `periodization.ts` (or `grade.ts`), tested at the boundary.
+  - For the **beginner** band, `sessionPlanFor`/`mainBlocksFor` produce a beginner-appropriate plan:
+    **no max-effort `limit-boulder` (RPE 9) and no `4×4 power-endurance` day**; the week skews to
+    volume-technique + simple antagonist-prehab, and the one "try-hard" stimulus is a sub-limit
+    _projecting_ block at a **capped RPE (≤ 7)**, not RPE 9. Frequency guidance (BC-45) still applies.
+  - **Additive-safety invariant (the safety dimension, tested):** for any profile, a **beginner**
+    program's per-block intensity (`targetRPE`) and max-effort exposure is **≤** what the current
+    grade-agnostic code produces — beginner content may only _lower_ intensity/volume, never raise it.
+    This keeps the change **out of** `adaptation.ts`/`loadMetrics.ts` (no safety-reviewer gate needed),
+    mirroring BC-29's injury-baseline contract.
+  - **Intermediate band unchanged (regression test):** a V5 profile's generated program is
+    byte-identical to today's output — no behavior change for the spec's original audience.
+  - Tested: a VB and a V0 profile **never** produce a block with `targetRPE > 7` or a
+    `limit-boulder`/`power-endurance` main; a V3+ profile still does; the band boundary (V2 vs V3) is
+    asserted. `periodization.ts` holds ≥ 92% branch.
+- **Files:** `src/domain/periodization.ts`, `src/domain/grade.ts`, `tests/domain/periodization.test.ts`
+- **Sequencing:** edits `periodization.ts`, which **BC-62** also moves/edits — run **sequentially** with
+  BC-62 (ideally after BC-62's content move lands), never as a parallel Crew pair.
+
+### BC-64 · Freeform / quick session logging — off-plan climbing never gets captured — `open`
+
+- **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-04, BC-10
+- **Problem (PO-diagnosed 2026-06-16, verified against code):** the **only** writer of a `SessionLog` is
+  the planned-session player — `/session` loads today's _planned_ session via `getTodaySession` and
+  saves through `createSessionLog` (`session/page.tsx`). `/history` is **read-only** (`history/page.tsx`
+  only calls `getLogs()`), and `BottomNav` has **no "log" affordance**. So a climber who trains
+  **off-plan** — an extra session, climbing on a scheduled **rest day** (Today only offers "See mobility
+  & prehab"), a quick gym drop-in, or a session at another gym — **cannot record it**. Every such
+  session is invisible to the engine: `computeLoadMetrics` (ACWR), `computeConsistency` (streak /
+  this-week), and Insights all **silently undercount real training load**. This is not just a logbook
+  gap — **ACWR computed on partial load underestimates injury risk**, weakening the deload-safety
+  guarantee the app sells, and the streak/insights read dishonestly (a climber who trained 4× sees
+  "2/3"). The data model **already supports** a planned-session-less log (`SessionLog.plannedSessionId?`
+  is optional; `createSessionLog` passes it through), so only the **write path + UI** are missing.
+- **Value:** every real session counts → adaptation, ACWR-safety, streak, and Insights reflect what the
+  climber actually did; "I just climbed, let me log it" becomes a 15-second capture instead of an
+  impossibility — a retention + data-quality win that compounds across every downstream feature.
+- **Acceptance criteria:**
+  - A **"Log a session"** entry point reachable from **Today** (especially the **rest-day** card) and
+    **/history** opens a lightweight freeform log: date (default today), duration, session RPE (reuse the
+    RPE scale UI), optional grades sent, optional note. No planned session required.
+  - It writes through the same `IClimbRepo` path so `loadMetrics`/`consistency`/`insights` pick it up
+    with **no engine change**; the freeform log round-trips through backup (BC-10) and passes the BC-32
+    integrity validator.
+  - **Fix the log-id collision (verified latent bug):** `createSessionLog` keys `id` as
+    **`` `log-${date}` ``** (`sessionLog.ts:36`), so a freeform log on a day that also has a
+    planned-session log would **overwrite** it. The id scheme must disambiguate **multiple logs per local
+    day** (e.g. append a counter/uuid) without breaking existing single-per-day logs or the BC-32
+    integrity/migration path.
+  - Parse/normalize/validate logic lives in a **covered helper** (`src/app/lib/quickLog.ts`), not inline
+    in the gate-blind page (logic-in-covered-layers); the page only does I/O.
+  - Tested: a freeform log (no `plannedSessionId`) is valid, contributes to ACWR/consistency/Insights,
+    survives backup export→import, and two logs on the same date coexist (no overwrite). Helper ≥ 95%
+    branch.
+- **Files:** `src/app/lib/quickLog.ts` (new), `src/app/log/page.tsx` (new), `src/app/history/page.tsx`,
+  `src/app/page.tsx`, `src/domain/sessionLog.ts`, `tests/app/quickLog.test.ts` (new)
+- **Sequencing:** edits `src/app/page.tsx` (Today), so it must run **sequentially** with other
+  `page.tsx`-touching PBIs (BC-59); also edits `sessionLog.ts` (the id fix).
+
+### BC-65 · Attempts/sends logging — enforce `sends ≤ attempts` + explain what they mean — `open`
+
+- **Type:** bug/ux · **Priority:** P2 (high) · **Complexity:** M · **Depends on:** BC-04
+- **Problem (PO + user-reported 2026-06-16, verified against code):** the session player tallies
+  **attempts** and **sends** per grade as **two fully independent counters** with no relationship between
+  them, and **nothing in the app explains what either word means** — so the data is both _enterable wrong_
+  and _understood by nobody_. Concretely:
+  1. **`sends > attempts` is freely enterable (the headline logical error).** `adjustTally`
+     (`session/page.tsx:178-188`) increments `attempts[grade]` and `sends[grade]` separately, each clamped
+     only by `Math.max(0, …)`. There is **no invariant** that `sends[g] ≤ attempts[g]`. A climber can log
+     **0 attempts and 5 sends** at V6. In bouldering a **send is a successful attempt** — every send _is_
+     an attempt, so `sends > attempts` is physically impossible, yet the UI allows it.
+  2. **No validation at any layer.** `expandTally` (`sessionForm.ts:17`) just expands counts;
+     `createSessionLog` (`sessionLog.ts:27`) does no semantic check; `validateLog` (`integrity.ts:28`)
+     explicitly only guards top-level shape ("_Block-level contents are not deep-validated_"). So a log
+     with `gradesSent` that has no matching `gradesAttempted` passes straight through to storage and
+     analytics.
+  3. **The corruption is safety-adjacent, not cosmetic.** `gradesSent` feeds (a) Insights' `gradePyramid`
+     (an inflatable pyramid) and (b) **BC-27's `assessBenchmark`** — which measures a level-up from "the
+     highest grade _sent_ in ≥2 sessions" and, on accept, **re-anchors `currentGrade` and rescales the
+     whole program's training load**. A few stray "send" taps with no real attempts can
+     **phantom-level-up** a climber so the engine prescribes load for a grade they can't actually climb —
+     degrading the injury-prevention promise through a data-entry slip.
+  4. **Zero explanation in the UI (the user's own confusion).** The two columns are bare lowercase
+     `attempts` / `sends` headers (`session/page.tsx:349-350`) with no definition, tooltip, or example.
+     ACWR and RPE each got a tap-to-open `MetricExplainer` "(i)" modal; attempts/sends got **nothing**.
+     The product owner says plainly "I don't understand it too" — and a beginner (BC-44) or the
+     Indonesian-first audience (BC-55) has no way to learn the attempt↔send relationship, which is _why_
+     the inconsistent data gets entered in the first place.
+  - **Secondary ambiguity to resolve while here:** "attempt" is itself undefined — total goes (incl. the
+    successful one) vs failed-only. Pick the standard convention (**attempts = all goes; a flash = 1
+    attempt / 1 send; sends ⊆ attempts**) and make both the UI and the copy reflect it.
+- **Value:** the logbook becomes **trustworthy** — the pyramid, the BC-27 level-up, and every send-based
+  insight reflect real climbing — and the climber finally **understands what they're logging**, so they
+  enter it correctly. Fixes a credibility _and_ safety-adjacent defect with one change.
+- **Acceptance criteria:**
+  - **Enforce the invariant at the domain boundary (covers every writer, incl. BC-64):** a pure helper
+    (e.g. `clampSendsToAttempts` in `sessionForm.ts`, or normalisation inside `createSessionLog`) so a
+    persisted log can **never** have `sends[g] > attempts[g]`. Choose the model: **a send implies an
+    attempt** — recording a send ensures at least that many attempts at the grade.
+  - **Make it unreachable in the UI, live:** in the stepper interaction, **+1 send** auto-ensures
+    `attempts[g] ≥ sends[g]` (bump an attempt if needed), and **−1 attempt** cannot drop `attempts[g]`
+    below `sends[g]` (clamps). The climber sees a coupled, sensible counter — never a contradictory state.
+  - **Repair, don't just quarantine, legacy/imported data:** a corrupt `sends > attempts` log read back
+    is **sanitised** (sends clamped to attempts) rather than dropped — it's recoverable, unlike the
+    NaN-shape cases BC-32 quarantines. So `assessBenchmark`/`gradePyramid` only ever see valid data.
+  - **Explain it in-app:** add an attempt/send explainer via the existing `MetricExplainer` pattern (an
+    "(i)" by the attempts/sends header) with plain-language copy in a covered `explainers.ts` entry, e.g.
+    _"An **attempt** is one go at a problem. A **send** is a go you finished clean (topped out). Every
+    send is also an attempt — a flash is 1 attempt, 1 send. Tally all your goes as attempts and mark the
+    ones you topped as sends."_ (Authored to translate cleanly for BC-55.)
+  - **Logic in covered layers:** the clamp/normalise/explainer-copy logic lives in `src/app/lib/**`
+    (`sessionForm.ts` / `explainers.ts`) or `src/domain/sessionLog.ts`, **not** inline in the gate-blind
+    page. `adaptation.ts`/`loadMetrics.ts` are untouched (the fix is at the data-entry boundary), so no
+    safety-rule-reviewer is required — but note the BC-27 load-scaling path is _why_ this matters.
+  - **Tested:** the clamp helper for `sends > attempts`, `sends = attempts`, `sends < attempts`, and the
+    empty case; a UI-level test that +send couples an attempt and −attempt can't go below sends; a
+    round-trip test that a sanitised legacy log feeds a correct pyramid/benchmark. Helper ≥ 95% branch.
+- **Files:** `src/app/lib/sessionForm.ts`, `src/domain/sessionLog.ts`, `src/app/lib/explainers.ts`,
+  `src/app/components/MetricExplainer.tsx`, `src/app/session/page.tsx`, `src/app/lib/integrity.ts`,
+  `tests/app/sessionForm.test.ts`
+- **Sequencing:** edits `session/page.tsx` (and `sessionLog.ts`), overlapping **BC-60** (sets-input) and
+  **BC-64** (freeform logging) — run **sequentially** with those; cleanest **after BC-60** since both
+  touch the same logging form.
 
 ### BC-21 · Single repo instance — `done`
 
@@ -1195,7 +1402,23 @@ Content-fidelity fixes (PO round 2, do next): BC-52 (warm-up/cooldown detail) �
 Coach intelligence:                          BC-28 → BC-30 → BC-51 (Insights summary) → BC-27 → BC-29 (BC-29 = safety protocol)
 Polish (after BC-14 icons / brand settled):  BC-14 → BC-38 → BC-40 → BC-39 · BC-25 (dark mode)
 P3 design specs, when a milestone schedules them: BC-18 · BC-24 · BC-41 · BC-42 · BC-43 · BC-55 · BC-56 · BC-57 · BC-58 (real reminders, supersedes BC-20's gap)   (BC-19 absorbed by BC-48; BC-20/BC-21 done)
+
+Open P2 (PO-filed 2026-06-16, do next — user-reported bugs + audience/data gaps):
+  Real bugs (cheap, high-trust):   BC-60 (sets-input, S) · BC-61 (iOS safe-area, S) · BC-59 (streak window, M)
+  Logging correctness & clarity:   BC-65 (attempts/sends — sends can exceed attempts + no explainer, M, after BC-60)
+  Audience & data integrity:       BC-63 (beginner program content — VB/V0 still gets RPE-9 limit, M, after BC-62) · BC-64 (freeform logging — off-plan climbing uncapturable, M)
+  Infra/reminders:                 BC-62 (content catalog + validation, M) · BC-58 (reminders that fire when closed, L)
 ```
+
+> **The logging form is now a cluster — sequence it.** BC-60 (sets-input), BC-64 (freeform log), and
+> BC-65 (attempts/sends invariant + explainer) all edit `src/app/session/page.tsx` and the log write
+> path. Do them **sequentially**, ideally BC-60 → BC-65 → BC-64, so the same form is touched once per
+> concern, not three-way merged.
+
+> **Why BC-63/BC-64 rank high:** both are _correctness_ gaps in the core promise, not polish. BC-63 is a
+> safety+credibility defect for an audience the app _already onboards_ (a novice handed RPE-9 limit work).
+> BC-64 starves every downstream signal (ACWR-safety, streak, Insights) of real load — it compounds. Ship
+> the two `S` bug fixes (BC-60/61) first for quick trust wins, then these.
 
 > Good disjoint pairs for parallel Crew runs (no shared `Files:`): **BC-35 + BC-30**,
 > **BC-36 + BC-28**, **BC-37 + BC-32**. Once **BC-46** lands, **BC-49** (`drills.ts`/`/drills`) +

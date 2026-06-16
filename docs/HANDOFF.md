@@ -24,6 +24,75 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-16 (BC-58 reminders push — design spec drafted via brainstorming — docs only, last touched by: Claude Opus 4.8)
+
+- **BC-58 design spec written:** [`docs/specs/reminders-push-design.md`](specs/reminders-push-design.md)
+  (brainstorming session, library facts grounded via Context7: `web-push` + Vercel Cron). The mechanism
+  for waking a CLOSED PWA cross-platform is **Web Push** (the only one that works — Notification Triggers
+  removed, Periodic Background Sync no-iOS). Design keeps the schedule **on-device**: a content-less daily
+  "wake" push → the **service worker reads the IndexedDB ReminderPlan and decides** (pure
+  `buildReminderPlan`/`pickReminderForDay` in `src/domain/reminderSchedule.ts`, SW-drift-guarded). Server
+  stores only an **opaque push subscription** in Upstash Redis (Vercel Marketplace) — no health/schedule
+  data leaves the device. **Timezone crux:** a push only shows when it _arrives_, so a single daily cron
+  tuned to ~23:00 UTC ≈ 06:00 WIB covers the **Indonesian** audience on Hobby; global = more cron fires
+  (Pro/external) — a config scale path, not a redesign. Honest limits recorded: `userVisibleOnly` silent-
+  push budget, iOS 16.4+ installed-PWA-only, and the first-ever env-vars/backend trade-off vs the
+  no-backend posture (deemed worth it — a reminder that never reminds is dead weight).
+- **BC-58 backlog entry updated** to "design spec drafted"; implementation sliced (pure core → store+API+
+  cron → client+SW) so each slice is gate-green. **No app code** until a milestone schedules it.
+- **Next:** PO review of the spec; when scheduled, build slice 1 (`reminderSchedule.ts`, pure, no backend)
+  first behind the existing BC-20 toggle. This session's docs (BC-58 spec + BC-62→65 grooming) are being
+  committed → pushed → PR'd → merged on the PO's instruction.
+
+## Current state — 2026-06-16 (PO: attempts/sends logical-error PBI filed — docs only, last touched by: Claude Opus 4.8)
+
+- **PO backlog grooming (no app code), follow-up to the seam-gap session below.** Filed **BC-65** from a
+  direct PO question ("can sends be bigger than attempts?") — a **verified logical error** in the session
+  player's climb tally:
+  - **`sends > attempts` is freely enterable.** `adjustTally` (`session/page.tsx:178`) increments
+    `attempts[g]` and `sends[g]` independently, each only `Math.max(0,…)`-clamped — no `sends ≤ attempts`
+    invariant. A send _is_ a finished attempt, so this is physically impossible yet allowed.
+  - **No guard downstream.** `validateLog` (`integrity.ts`) only checks top-level shape; corrupt
+    `gradesSent` flows into Insights' `gradePyramid` **and** BC-27's `assessBenchmark`, which re-anchors
+    `currentGrade` and **rescales training load** → a phantom level-up makes the engine prescribe for a
+    grade the climber can't climb (safety-adjacent).
+  - **No explanation in-app.** attempts/sends are bare headers (`session/page.tsx:349`); ACWR/RPE both
+    got `MetricExplainer` modals, this got none — which is _why_ the data is entered wrong.
+  - **Fix:** enforce `sends ≤ attempts` at the domain boundary (covers BC-64 too) + couple the steppers
+    live + sanitise (not quarantine) legacy logs + add a `MetricExplainer` attempt/send definition.
+- **Committed BC-63/BC-64** as `d4d987f` on branch **`docs/bc63-bc64-po-diagnosis`** (stacked on the
+  unmerged BC-62 branch). **BC-65 edits below are uncommitted** pending a follow-up commit.
+- **Logging-form cluster (sequence it):** BC-60 (sets-input), BC-64 (freeform log), BC-65 (attempts/sends)
+  all edit `session/page.tsx` + the write path — do them BC-60 → BC-65 → BC-64, not in parallel.
+- **Next:** commit BC-65; `tests/crew/backlog-hygiene.test.ts` green; not pushed (supervised push/PR is
+  the next step if wanted on `main`).
+
+## Current state — 2026-06-16 (PO end-to-end diagnosis: 2 seam-gap PBIs filed — docs only, last touched by: Claude Opus 4.8)
+
+- **PO backlog grooming (no app code).** End-to-end diagnosis of the shipped app vs the spec's audience
+  promise + the engine's data dependency surfaced **two correctness gaps created by the seams between
+  already-`done` PBIs**, each verified against an exact line. Filed **BC-63** and **BC-64** (P2):
+  - **BC-63 — beginner program content.** BC-44/45 made VB/V0 + 1–7× a supported audience, but
+    `sessionPlanFor`/`mainBlocksFor` (`periodization.ts:94`/`:202`) are **grade-agnostic**: a VB climber
+    gets a V6's **`limit-boulder` at `targetRPE: 9`** + a `4×4 power-endurance` day. Coaching **and**
+    injury-safety defect (RPE-9 limit work on a novice = the A2/PIP risk the app exists to prevent). Fix
+    = a `gradeBand` branch in `periodization.ts`, **additive-safety** (beginner intensity ≤ today's, so
+    `adaptation.ts`/`loadMetrics.ts` untouched — no safety-reviewer), intermediate output byte-identical.
+    **Sequence after/with BC-62** (both edit `periodization.ts`).
+  - **BC-64 — freeform/quick logging.** The planned-session player is the **only** `SessionLog` writer;
+    `/history` is read-only; no nav "log" affordance. Off-plan / rest-day / other-gym climbing is
+    **uncapturable** → ACWR, streak, and Insights silently undercount real load (and ACWR-on-partial-data
+    underestimates injury risk). Model already supports it (`plannedSessionId?` optional). Also fixes a
+    **verified latent bug**: `createSessionLog` keys `id` as `` `log-${date}` `` (`sessionLog.ts:36`) →
+    two logs on one day collide. Decision logic in a covered `src/app/lib/quickLog.ts`.
+- **Files touched:** `docs/BACKLOG.md` (BC-63/BC-64 added + recommended-order refreshed),
+  `docs/HANDOFF.md`. `tests/crew/backlog-hygiene.test.ts` green (4/4 — deps resolve to done BC-04/10/44/45,
+  `Files:` declared, ids unique). **No code changed; not pushed** — a supervised push/PR is the next step
+  if the human wants it on `main`.
+- **Next (PO-recommended order):** ship the two `S` user-reported bug fixes first for quick trust wins
+  (**BC-60** sets-input, **BC-61** iOS safe-area), then **BC-59** (streak window), then the audience/data
+  correctness pair **BC-63 → BC-64**, with **BC-62** (content catalog) sequenced ahead of BC-63.
+
 ## Current state — 2026-06-15 (BC-25 dark mode shipped — branch `feat/bc25-dark-mode`, last touched by: Claude Opus 4.8)
 
 - **BC-25 DONE — the app has a full "gym at night" dark theme + a Settings toggle.** The palette was
