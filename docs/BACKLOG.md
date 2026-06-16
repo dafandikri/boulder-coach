@@ -1332,9 +1332,23 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   it relates to BC-18 (sync) so the two don't diverge. **No app code** until scheduled.
 - **Files:** `docs/specs/shareable-progress-design.md`
 
-### BC-55 · Indonesian-first i18n with EN/ID language toggle — `open` (design-first)
+### BC-55 · Indonesian-first i18n with EN/ID language toggle — `open` (**design spec + plan drafted 2026-06-16**)
 
 - **Type:** ux/i18n · **Priority:** P2 · **Complexity:** L · **Depends on:** —
+- **Design spec + implementation plan drafted (2026-06-16):**
+  [`docs/specs/i18n-indonesian-design.md`](specs/i18n-indonesian-design.md) +
+  [`docs/plans/i18n-indonesian-plan.md`](plans/i18n-indonesian-plan.md) (brainstorming session; next-intl
+  weighed via Context7). **Decision: a typed dictionary (`src/app/lib/i18n.ts`), not next-intl** — this is
+  a client-rendered, no-URL-routing, statically-exported PWA where locale is a Settings toggle, so
+  next-intl's server/routing-centric value is wasted and risks the 200 KB budget. The seam is the i18n
+  sibling of BC-25's `theme.ts` (`resolveLocale`/`nextLocale`/`isLocale` + a `LocaleProvider`/`useT` hook +
+  a `LanguageToggle` beside the theme toggle + a no-flash `<html lang>` inline script). A **Tier-1 parity
+  test** makes "no untranslated key renders" executable (EN/ID key + `{placeholder}` parity). Indonesian is
+  authored intuitively (folds BC-56's jargon reduction — §8 glossary). Sliced: seam+gate → toggle → chrome
+  extraction → coaching surface → an **isolated safety slice** that restructures `AdaptationChange.reason`
+  → `{messageKey, params}` (touches `adaptation.ts`, needs safety-rule-reviewer). Instructional content
+  catalog (drills/exercise steps) is **out of scope** (separate large surface; follows BC-62). **Pending PO
+  review; no bulk string migration until approved.**
 - **Problem:** the primary audience is **Indonesian boulderers**, but every string is hardcoded
   English across ~12 page/component files — there is no i18n seam. The app is also globally friendly,
   so language must be a **toggle (ID + EN)**, with Indonesian as a first-class language (authored, not
