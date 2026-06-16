@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { BottomNav } from './components/BottomNav';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -17,6 +17,18 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-touch-icon.png',
   },
+};
+
+// BC-61: an installed iOS PWA reports env(safe-area-inset-*) as 0 UNLESS the
+// viewport declares viewport-fit=cover. BottomNav already pads with
+// env(safe-area-inset-bottom); without this export Next injected only its default
+// viewport, the inset collapsed to 0, and the tab bar crowded the home indicator.
+// Declaring `cover` activates the insets (we add a top inset on the column below so
+// content doesn't slide under the status bar/notch in standalone mode).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 // Brand webfonts (Baloo 2 / Nunito / Space Mono) load via a real document <link>
@@ -54,8 +66,15 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href={FONTS_HREF} />
-        {/* Mobile-first column (max 28rem) with room for the fixed bottom nav. */}
-        <div className="mx-auto flex min-h-dvh w-full max-w-[28rem] flex-col pb-24">{children}</div>
+        {/* Mobile-first column (max 28rem) with room for the fixed bottom nav.
+            BC-61: pad the top by env(safe-area-inset-top) so that, once viewport-fit=cover
+            is on, content stays clear of the status bar/notch in a standalone iOS PWA. */}
+        <div
+          className="mx-auto flex min-h-dvh w-full max-w-[28rem] flex-col pb-24"
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        >
+          {children}
+        </div>
         <BottomNav />
         <SpeedInsights />
         <Analytics />

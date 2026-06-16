@@ -51,6 +51,24 @@ describe('PWA manifest is installable', () => {
   });
 });
 
+// BC-61: an installed iOS PWA reports env(safe-area-inset-*) as 0 unless the
+// viewport declares viewport-fit=cover. BottomNav already pads with
+// env(safe-area-inset-bottom), but with no `viewport` export Next injected only its
+// default viewport, so the inset collapsed to 0 and the tab bar crowded the home
+// indicator. Guard the invariant by source text (same approach as the sw.js checks
+// below) so a future edit can't silently drop viewportFit and reintroduce the bug.
+describe('viewport opts iOS PWAs into the safe-area insets (BC-61)', () => {
+  const layout = readFileSync(root('src/app/layout.tsx'), 'utf8');
+
+  it('exports a Next viewport config', () => {
+    expect(layout).toMatch(/export const viewport\s*:/);
+  });
+
+  it('sets viewportFit: "cover" so env(safe-area-inset-*) is non-zero on iOS', () => {
+    expect(layout).toMatch(/viewportFit:\s*['"]cover['"]/);
+  });
+});
+
 describe('service worker is update-safe', () => {
   const sw = readFileSync(root('public/sw.js'), 'utf8');
 
