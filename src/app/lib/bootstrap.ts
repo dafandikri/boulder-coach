@@ -211,7 +211,9 @@ export async function getTodaySession(
   // surfaced so the user can re-import a backup instead of hitting a silent crash.
   const { valid: logs, quarantined } = partitionLogs(await repo.getLogs());
   const dataIssues = quarantined.length;
-  const consistency = computeConsistency(logs, profile, asOf);
+  // BC-59: anchor the week to the PROGRAM week (program.startDate), so a new week
+  // opens at 0 instead of dragging the previous week's tail forward via a rolling window.
+  const consistency = computeConsistency(logs, profile, program.startDate, asOf);
 
   // BC-27: re-measure the baseline grade from recent sends, independent of today's
   // prescription, so the level-up prompt shows on training AND rest days.
