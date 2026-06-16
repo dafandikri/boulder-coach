@@ -7,6 +7,7 @@ import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { localDateIso } from '@/app/lib/date';
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
 import { canFinishSession, expandTally, warmupDone } from '@/app/lib/sessionForm';
+import { sanitizeCountInput, normalizeCount } from '@/app/lib/sessionInput';
 import {
   formatRest,
   restConfigFor,
@@ -58,6 +59,9 @@ type Tally = Partial<Record<VGrade, number>>;
  *  flat VGrade[] the log stores only at save time (see expandTally). */
 interface BlockEntry {
   setsCompleted: number;
+  /** BC-60: raw display string so the field can be momentarily empty while editing
+   *  (a bare `number` can never hold ""). Snapped back to the stored count on blur. */
+  setsRaw: string;
   rpe: number;
   attempts: Tally;
   sends: Tally;
@@ -145,7 +149,13 @@ export default function SessionPage() {
         setLoad(toLoadState({ ok: true, data: t }));
         const seed: Record<string, BlockEntry> = {};
         for (const b of t.session.blocks) {
-          seed[b.id] = { setsCompleted: b.sets, rpe: b.targetRPE, attempts: {}, sends: {} };
+          seed[b.id] = {
+            setsCompleted: b.sets,
+            setsRaw: String(b.sets),
+            rpe: b.targetRPE,
+            attempts: {},
+            sends: {},
+          };
         }
         setEntries(seed);
       },
@@ -167,11 +177,26 @@ export default function SessionPage() {
     });
   }, []);
 
-  const setSets = useCallback((blockId: string, sets: number): void => {
+  // BC-60: while editing, the field shows a sanitized raw string (may be empty, no
+  // leading zero) and we keep the stored count in sync; on blur we snap the display
+  // back to the normalized count so "outside the field it's 0".
+  const editSets = useCallback((blockId: string, raw: string): void => {
+    const display = sanitizeCountInput(raw);
     setEntries((prev) => {
       const cur = prev[blockId];
       if (!cur) return prev;
-      return { ...prev, [blockId]: { ...cur, setsCompleted: sets } };
+      return {
+        ...prev,
+        [blockId]: { ...cur, setsRaw: display, setsCompleted: normalizeCount(display) },
+      };
+    });
+  }, []);
+
+  const blurSets = useCallback((blockId: string): void => {
+    setEntries((prev) => {
+      const cur = prev[blockId];
+      if (!cur) return prev;
+      return { ...prev, [blockId]: { ...cur, setsRaw: String(cur.setsCompleted) } };
     });
   }, []);
 
@@ -320,12 +345,16 @@ export default function SessionPage() {
                 >
                   Sets completed
                   <input
-                    type="number"
-                    min={0}
-                    max={20}
-                    value={entry.setsCompleted}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    aria-label="Sets completed"
+                    value={entry.setsRaw}
                     onChange={(e) => {
-                      setSets(b.id, Math.max(0, Number(e.target.value)));
+                      editSets(b.id, e.target.value);
+                    }}
+                    onBlur={() => {
+                      blurSets(b.id);
                     }}
                     style={{
                       width: 64,
