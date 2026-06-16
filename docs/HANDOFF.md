@@ -24,6 +24,35 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-16 (three user-reported bug fixes shipped — BC-59/60/61 merged via PRs #62/#63/#64, last touched by: Claude Opus 4.8)
+
+- **Shipped the PO's three "quick trust win" bug fixes, each TDD → green gate → own PR → CI green
+  (quality + lighthouse + mutation) → agent-reviewed → squash-merged to `main`:**
+  - **BC-60 (PR #62)** — the session player's "Sets completed" field couldn't be cleared and showed
+    a leading-zero `08`. New covered helper `src/app/lib/sessionInput.ts` (`sanitizeCountInput` for the
+    raw display string, `normalizeCount` for the stored value: empty→0, clamp 0..20, NaN/negative→floor).
+    The field now binds to a raw string (`type="text" inputMode="numeric"`), syncs the count live, and
+    snaps to the normalized value on blur. Logic left the gate-blind page.
+  - **BC-61 (PR #63)** — installed iOS PWA bottom nav crowded the home indicator. Added a Next 16
+    `viewport` export (`viewportFit: 'cover'`) so `env(safe-area-inset-*)` stops reporting 0; padded the
+    mobile column top by `env(safe-area-inset-top)`. Tier-1 guard in `tests/pwa/manifest.test.ts`.
+  - **BC-59 (PR #64)** — streak/progress counted a rolling 7-day window, so a new week opened at 2/3.
+    `computeConsistency` now anchors weeks to the **program week** (`floor(floor((day−startDate)/DAY_MS)/7)`,
+    the exact bucket `programPosition` derives); signature gained `startDate`, bootstrap passes
+    `program.startDate`. Domain stayed pure; `adaptation.ts`/`loadMetrics.ts` untouched.
+- **Review gotcha worth keeping (no ledger entry needed — verified, not a mistake):** the code-review
+  agent flagged a DST divergence in BC-59's week bucket. Verified a **false positive** by the floor
+  identity `floor(floor(x/a)/b) == floor(x/(a·b))` for integer ms (0 mismatches over 400 days × ±DST-hour
+  drift) — `consistency`'s bucket is provably identical to `programPosition`'s. Code now uses the verbatim
+  two-step floor so the "same bucket" guarantee is self-evident rather than relying on the identity. The
+  agent's BC-60 finding (uncovered `Number.isFinite` branch risking the per-file 95% gate) was real and
+  fixed with a NaN-contract test.
+- **Next (PO-recommended order):** the logging cluster — **BC-65** (attempts/sends `sends ≤ attempts`
+  invariant + explainer, after BC-60) then **BC-64** (freeform/quick logging). Audience correctness:
+  **BC-62** (content catalog + validation gate) → **BC-63** (beginner-aware program content). All edit
+  `session/page.tsx` or `periodization.ts`, so sequence them, don't parallelize. `pnpm gate` green
+  (bundle 167.8 KB).
+
 ## Current state — 2026-06-16 (BC-55 i18n — design spec + implementation plan drafted — docs only, last touched by: Claude Opus 4.8)
 
 - **BC-55 design spec + plan written** (brainstorming → writing-plans):
