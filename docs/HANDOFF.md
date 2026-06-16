@@ -24,6 +24,22 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-16 (BC-55 i18n — design spec + implementation plan drafted — docs only, last touched by: Claude Opus 4.8)
+
+- **BC-55 design spec + plan written** (brainstorming → writing-plans):
+  [`docs/specs/i18n-indonesian-design.md`](specs/i18n-indonesian-design.md) +
+  [`docs/plans/i18n-indonesian-plan.md`](plans/i18n-indonesian-plan.md). **Library decision (Context7):
+  typed dictionary, NOT next-intl** — this is a client-rendered, no-URL-routing, static PWA where locale is
+  a localStorage toggle, so next-intl's server/routing model is wasted + risks the 200 KB budget. The seam
+  mirrors BC-25's `theme.ts` exactly (`resolveLocale`/`nextLocale`/`isLocale` + `LocaleProvider`/`useT` +
+  `LanguageToggle` + no-flash `<html lang>` script). A **Tier-1 EN/ID key+placeholder parity test** makes
+  "no untranslated key" executable. Plan is 7 TDD tasks across 5 slices; Tasks 1–4 ship a working toggle on
+  one surface; Task 7 is the **isolated safety slice** (`AdaptationChange.reason` → `{messageKey, params}`,
+  touches `adaptation.ts` → safety-rule-reviewer). Content catalog (drills/exercise steps) is out of scope.
+- **BC-55 backlog entry** → "design spec + plan drafted". **No app code** until a milestone schedules it.
+- **Next:** PO review of spec+plan; when scheduled, execute Tasks 1–4 first (working toggle, no safety
+  surface). This session's docs are being committed → pushed → PR'd → merged on the PO's instruction.
+
 ## Current state — 2026-06-16 (BC-58 reminders push — design spec drafted via brainstorming — docs only, last touched by: Claude Opus 4.8)
 
 - **BC-58 design spec written:** [`docs/specs/reminders-push-design.md`](specs/reminders-push-design.md)
