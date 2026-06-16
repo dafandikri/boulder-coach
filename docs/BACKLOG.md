@@ -976,8 +976,19 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
 - **Files:** `docs/specs/reminders-push-design.md`, `src/app/lib/reminders.ts`,
   `src/app/api/push/route.ts` (new), `public/sw.js`, `src/app/profile/page.tsx`
 
-### BC-59 · Streak/progress counts a rolling 7-day window, not a program week (shows 2/3 at week start) — `open`
+### BC-59 · Streak/progress counts a rolling 7-day window, not a program week (shows 2/3 at week start) — `done`
 
+- **Shipped:** `computeConsistency` now anchors weeks to the **program week** —
+  `floor((day − startDate) / 7)`, the exact bucket `programPosition` derives — instead of a rolling
+  7-day window ending `asOf`. The signature gained the program `startDate`; bootstrap passes
+  `program.startDate`. At the first moment of a new program week `weekDoneCount === 0` even if the
+  prior week was full (no more dragging the tail forward), and the streak counts consecutive
+  **completed program weeks** down to week 0 — a full prior week → next week opens `0/3` with the
+  streak intact, and the in-progress week still joins only once it meets target (never breaks it).
+  The walk is bounded by `week >= 0` so a degenerate target ≤ 0 still terminates. All logic stayed in
+  `src/domain/consistency.ts`; the page only renders. TDD: `consistency.test.ts` (10) reproduces the
+  open-at-0-not-2/3 symptom across a week boundary + keeps the in-progress / multi-week / break
+  invariants. `adaptation.ts`/`loadMetrics.ts` untouched. `pnpm gate` green (bundle 167.8 KB).
 - **Type:** bug · **Priority:** P2 · **Complexity:** M
 - **Problem (user-reported 2026-06-16):** after a climber hits their weekly target (e.g. 3/3) and earns
   a 1-week streak, the **next** week opens showing `2/3` instead of `0/3`. Root cause: `computeConsistency`

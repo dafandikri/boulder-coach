@@ -2,18 +2,25 @@
 // of consecutive weeks hitting the climber's session target. Consistency is the
 // strongest predictor of progress, so surfacing it (supportively, never guilt-trippy)
 // reinforces the core behaviour. Pure: no I/O, no React, `asOf`-driven.
+//
+// BC-59 — weeks are anchored to the PROGRAM week, not a rolling 7-day window. A week
+// is `floor((day − startDate) / 7)`, the exact bucket `programPosition` derives from
+// `daysSinceStart / 7`. The rolling window never reset on a week boundary, so the tail
+// of a completed week leaked into the next one (a new week opened at 2/3 instead of 0/3,
+// and the streak inherited the drift). Anchoring to the program week makes a week
+// boundary == a program-week boundary.
 
 import type { SessionLog, UserProfile } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface ConsistencyResult {
-  /** Sessions logged in the current rolling 7-day window. */
+  /** Sessions logged in the current PROGRAM week (resets on the week boundary). */
   weekDoneCount: number;
   /** The climber's weekly session target (`profile.sessionsPerWeek`). */
   weekTarget: number;
-  /** Consecutive weeks meeting target — the current week counts only once it does,
-   *  so an in-progress week never inflates *or* breaks the streak. */
+  /** Consecutive program weeks meeting target — the current week counts only once it
+   *  does, so an in-progress week never inflates *or* breaks the streak. */
   currentStreakWeeks: number;
 }
 
@@ -31,33 +38,34 @@ function isoDayStart(iso: string): number {
 export function computeConsistency(
   logs: SessionLog[],
   profile: UserProfile,
+  /** The program's `startDate` (ISO) — the anchor every program week counts from. */
+  startDate: string,
   asOf: Date,
 ): ConsistencyResult {
   const weekTarget = profile.sessionsPerWeek;
+  const startMs = isoDayStart(startDate);
   const asOfStart = localDayStart(asOf);
-  const logDays = logs.map((l) => isoDayStart(l.date));
 
-  // Sessions whose local date falls in week `offset` back from asOf (offset 0 = the
-  // 7 days ending today). Future-dated logs fall outside every window and are ignored.
-  const countInWeek = (offset: number): number => {
-    const hi = asOfStart - offset * 7 * DAY_MS;
-    const lo = hi - 6 * DAY_MS;
-    let n = 0;
-    for (const t of logDays) {
-      if (t >= lo && t <= hi) n++;
-    }
-    return n;
-  };
+  // The program week (0-based) a given local-midnight day falls in — derived the SAME
+  // way programPosition does (`daysSinceStart / 7`): floor to whole days first, then
+  // integer-divide by 7. The day-granularity floor absorbs any DST hour, so a week
+  // boundary here is byte-for-byte the same boundary the program clock uses. Days
+  // before the program started are negative and never match a counted week.
+  const weekOf = (dayMs: number): number => Math.floor(Math.floor((dayMs - startMs) / DAY_MS) / 7);
+  const currentWeek = weekOf(asOfStart);
 
-  const weekDoneCount = countInWeek(0);
+  // Only sessions up to and including today count — future-dated logs are ignored.
+  const logWeeks = logs.map((l) => weekOf(isoDayStart(l.date))).filter((w) => w <= currentWeek);
+  const countInWeek = (week: number): number => logWeeks.filter((w) => w === week).length;
+
+  const weekDoneCount = countInWeek(currentWeek);
 
   // The current week joins the streak only when it has already met target; either way
-  // it never breaks it (the week isn't over). Then walk back over completed weeks.
-  // The `offset <= logDays.length` bound guarantees termination: a genuine k-week
-  // streak needs at least k logged sessions (target ≥ 1), so the bound can never
-  // truncate a real streak — it only stops a degenerate target ≤ 0 from looping forever.
+  // it never breaks it (the week isn't over). Then walk back over completed program
+  // weeks down to week 0 (the program start) — the loop is bounded by `week >= 0`, so
+  // it always terminates regardless of a degenerate target ≤ 0.
   let currentStreakWeeks = weekDoneCount >= weekTarget ? 1 : 0;
-  for (let offset = 1; offset <= logDays.length && countInWeek(offset) >= weekTarget; offset++) {
+  for (let week = currentWeek - 1; week >= 0 && countInWeek(week) >= weekTarget; week--) {
     currentStreakWeeks++;
   }
 
