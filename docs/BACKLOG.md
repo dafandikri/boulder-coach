@@ -1158,6 +1158,71 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
 - **Sequencing:** edits `src/app/page.tsx` (Today), so it must run **sequentially** with other
   `page.tsx`-touching PBIs (BC-59); also edits `sessionLog.ts` (the id fix).
 
+### BC-65 · Attempts/sends logging — enforce `sends ≤ attempts` + explain what they mean — `open`
+
+- **Type:** bug/ux · **Priority:** P2 (high) · **Complexity:** M · **Depends on:** BC-04
+- **Problem (PO + user-reported 2026-06-16, verified against code):** the session player tallies
+  **attempts** and **sends** per grade as **two fully independent counters** with no relationship between
+  them, and **nothing in the app explains what either word means** — so the data is both _enterable wrong_
+  and _understood by nobody_. Concretely:
+  1. **`sends > attempts` is freely enterable (the headline logical error).** `adjustTally`
+     (`session/page.tsx:178-188`) increments `attempts[grade]` and `sends[grade]` separately, each clamped
+     only by `Math.max(0, …)`. There is **no invariant** that `sends[g] ≤ attempts[g]`. A climber can log
+     **0 attempts and 5 sends** at V6. In bouldering a **send is a successful attempt** — every send _is_
+     an attempt, so `sends > attempts` is physically impossible, yet the UI allows it.
+  2. **No validation at any layer.** `expandTally` (`sessionForm.ts:17`) just expands counts;
+     `createSessionLog` (`sessionLog.ts:27`) does no semantic check; `validateLog` (`integrity.ts:28`)
+     explicitly only guards top-level shape ("_Block-level contents are not deep-validated_"). So a log
+     with `gradesSent` that has no matching `gradesAttempted` passes straight through to storage and
+     analytics.
+  3. **The corruption is safety-adjacent, not cosmetic.** `gradesSent` feeds (a) Insights' `gradePyramid`
+     (an inflatable pyramid) and (b) **BC-27's `assessBenchmark`** — which measures a level-up from "the
+     highest grade _sent_ in ≥2 sessions" and, on accept, **re-anchors `currentGrade` and rescales the
+     whole program's training load**. A few stray "send" taps with no real attempts can
+     **phantom-level-up** a climber so the engine prescribes load for a grade they can't actually climb —
+     degrading the injury-prevention promise through a data-entry slip.
+  4. **Zero explanation in the UI (the user's own confusion).** The two columns are bare lowercase
+     `attempts` / `sends` headers (`session/page.tsx:349-350`) with no definition, tooltip, or example.
+     ACWR and RPE each got a tap-to-open `MetricExplainer` "(i)" modal; attempts/sends got **nothing**.
+     The product owner says plainly "I don't understand it too" — and a beginner (BC-44) or the
+     Indonesian-first audience (BC-55) has no way to learn the attempt↔send relationship, which is _why_
+     the inconsistent data gets entered in the first place.
+  - **Secondary ambiguity to resolve while here:** "attempt" is itself undefined — total goes (incl. the
+    successful one) vs failed-only. Pick the standard convention (**attempts = all goes; a flash = 1
+    attempt / 1 send; sends ⊆ attempts**) and make both the UI and the copy reflect it.
+- **Value:** the logbook becomes **trustworthy** — the pyramid, the BC-27 level-up, and every send-based
+  insight reflect real climbing — and the climber finally **understands what they're logging**, so they
+  enter it correctly. Fixes a credibility _and_ safety-adjacent defect with one change.
+- **Acceptance criteria:**
+  - **Enforce the invariant at the domain boundary (covers every writer, incl. BC-64):** a pure helper
+    (e.g. `clampSendsToAttempts` in `sessionForm.ts`, or normalisation inside `createSessionLog`) so a
+    persisted log can **never** have `sends[g] > attempts[g]`. Choose the model: **a send implies an
+    attempt** — recording a send ensures at least that many attempts at the grade.
+  - **Make it unreachable in the UI, live:** in the stepper interaction, **+1 send** auto-ensures
+    `attempts[g] ≥ sends[g]` (bump an attempt if needed), and **−1 attempt** cannot drop `attempts[g]`
+    below `sends[g]` (clamps). The climber sees a coupled, sensible counter — never a contradictory state.
+  - **Repair, don't just quarantine, legacy/imported data:** a corrupt `sends > attempts` log read back
+    is **sanitised** (sends clamped to attempts) rather than dropped — it's recoverable, unlike the
+    NaN-shape cases BC-32 quarantines. So `assessBenchmark`/`gradePyramid` only ever see valid data.
+  - **Explain it in-app:** add an attempt/send explainer via the existing `MetricExplainer` pattern (an
+    "(i)" by the attempts/sends header) with plain-language copy in a covered `explainers.ts` entry, e.g.
+    _"An **attempt** is one go at a problem. A **send** is a go you finished clean (topped out). Every
+    send is also an attempt — a flash is 1 attempt, 1 send. Tally all your goes as attempts and mark the
+    ones you topped as sends."_ (Authored to translate cleanly for BC-55.)
+  - **Logic in covered layers:** the clamp/normalise/explainer-copy logic lives in `src/app/lib/**`
+    (`sessionForm.ts` / `explainers.ts`) or `src/domain/sessionLog.ts`, **not** inline in the gate-blind
+    page. `adaptation.ts`/`loadMetrics.ts` are untouched (the fix is at the data-entry boundary), so no
+    safety-rule-reviewer is required — but note the BC-27 load-scaling path is _why_ this matters.
+  - **Tested:** the clamp helper for `sends > attempts`, `sends = attempts`, `sends < attempts`, and the
+    empty case; a UI-level test that +send couples an attempt and −attempt can't go below sends; a
+    round-trip test that a sanitised legacy log feeds a correct pyramid/benchmark. Helper ≥ 95% branch.
+- **Files:** `src/app/lib/sessionForm.ts`, `src/domain/sessionLog.ts`, `src/app/lib/explainers.ts`,
+  `src/app/components/MetricExplainer.tsx`, `src/app/session/page.tsx`, `src/app/lib/integrity.ts`,
+  `tests/app/sessionForm.test.ts`
+- **Sequencing:** edits `session/page.tsx` (and `sessionLog.ts`), overlapping **BC-60** (sets-input) and
+  **BC-64** (freeform logging) — run **sequentially** with those; cleanest **after BC-60** since both
+  touch the same logging form.
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**
@@ -1327,9 +1392,15 @@ P3 design specs, when a milestone schedules them: BC-18 · BC-24 · BC-41 · BC-
 
 Open P2 (PO-filed 2026-06-16, do next — user-reported bugs + audience/data gaps):
   Real bugs (cheap, high-trust):   BC-60 (sets-input, S) · BC-61 (iOS safe-area, S) · BC-59 (streak window, M)
+  Logging correctness & clarity:   BC-65 (attempts/sends — sends can exceed attempts + no explainer, M, after BC-60)
   Audience & data integrity:       BC-63 (beginner program content — VB/V0 still gets RPE-9 limit, M, after BC-62) · BC-64 (freeform logging — off-plan climbing uncapturable, M)
   Infra/reminders:                 BC-62 (content catalog + validation, M) · BC-58 (reminders that fire when closed, L)
 ```
+
+> **The logging form is now a cluster — sequence it.** BC-60 (sets-input), BC-64 (freeform log), and
+> BC-65 (attempts/sends invariant + explainer) all edit `src/app/session/page.tsx` and the log write
+> path. Do them **sequentially**, ideally BC-60 → BC-65 → BC-64, so the same form is touched once per
+> concern, not three-way merged.
 
 > **Why BC-63/BC-64 rank high:** both are _correctness_ gaps in the core promise, not polish. BC-63 is a
 > safety+credibility defect for an audience the app _already onboards_ (a novice handed RPE-9 limit work).

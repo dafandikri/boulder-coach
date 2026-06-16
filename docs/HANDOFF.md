@@ -24,6 +24,29 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-16 (PO: attempts/sends logical-error PBI filed — docs only, last touched by: Claude Opus 4.8)
+
+- **PO backlog grooming (no app code), follow-up to the seam-gap session below.** Filed **BC-65** from a
+  direct PO question ("can sends be bigger than attempts?") — a **verified logical error** in the session
+  player's climb tally:
+  - **`sends > attempts` is freely enterable.** `adjustTally` (`session/page.tsx:178`) increments
+    `attempts[g]` and `sends[g]` independently, each only `Math.max(0,…)`-clamped — no `sends ≤ attempts`
+    invariant. A send _is_ a finished attempt, so this is physically impossible yet allowed.
+  - **No guard downstream.** `validateLog` (`integrity.ts`) only checks top-level shape; corrupt
+    `gradesSent` flows into Insights' `gradePyramid` **and** BC-27's `assessBenchmark`, which re-anchors
+    `currentGrade` and **rescales training load** → a phantom level-up makes the engine prescribe for a
+    grade the climber can't climb (safety-adjacent).
+  - **No explanation in-app.** attempts/sends are bare headers (`session/page.tsx:349`); ACWR/RPE both
+    got `MetricExplainer` modals, this got none — which is _why_ the data is entered wrong.
+  - **Fix:** enforce `sends ≤ attempts` at the domain boundary (covers BC-64 too) + couple the steppers
+    live + sanitise (not quarantine) legacy logs + add a `MetricExplainer` attempt/send definition.
+- **Committed BC-63/BC-64** as `d4d987f` on branch **`docs/bc63-bc64-po-diagnosis`** (stacked on the
+  unmerged BC-62 branch). **BC-65 edits below are uncommitted** pending a follow-up commit.
+- **Logging-form cluster (sequence it):** BC-60 (sets-input), BC-64 (freeform log), BC-65 (attempts/sends)
+  all edit `session/page.tsx` + the write path — do them BC-60 → BC-65 → BC-64, not in parallel.
+- **Next:** commit BC-65; `tests/crew/backlog-hygiene.test.ts` green; not pushed (supervised push/PR is
+  the next step if wanted on `main`).
+
 ## Current state — 2026-06-16 (PO end-to-end diagnosis: 2 seam-gap PBIs filed — docs only, last touched by: Claude Opus 4.8)
 
 - **PO backlog grooming (no app code).** End-to-end diagnosis of the shipped app vs the spec's audience
