@@ -929,9 +929,22 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   "Limit day today — check in first." Depends on BC-03 (real schedule) and BC-15 (HTTPS origin).
 - **Files:** `src/app/lib/reminders.ts`, `src/app/page.tsx`, `src/app/profile/page.tsx`
 
-### BC-58 · Reminders that fire when the app is CLOSED (BC-20's core value is missing) — `open`
+### BC-58 · Reminders that fire when the app is CLOSED (BC-20's core value is missing) — `open` (**design spec drafted 2026-06-16**)
 
 - **Type:** feature/system-design · **Priority:** P2 · **Complexity:** L · **Depends on:** BC-20
+- **Design spec drafted (2026-06-16):** [`docs/specs/reminders-push-design.md`](specs/reminders-push-design.md)
+  — the spec-first deliverable below is written. Grounded in current `web-push`/Vercel-Cron docs
+  (Context7). Key decisions: **content-less wake push + SW-decides from on-device IndexedDB** (schedule
+  never leaves the device; server stores only an opaque, pseudonymous push subscription in **Upstash Redis**
+  via the Vercel Marketplace); a single **audience-tuned daily cron** (~23:00 UTC ≈ 06:00 WIB) covers the
+  Indonesian primary audience on Hobby, with multi-fire global coverage as a documented Pro/external-cron
+  scale path (a push only shows when it _arrives_ — the SW can't defer it, so morning coverage is a
+  timezone/cron problem). Honest limitations recorded: the `userVisibleOnly` silent-push budget, iOS 16.4+
+  installed-PWA-only, and the env-var/backend trade-off vs the no-backend posture. Pure decision predicates
+  (`buildReminderPlan`/`pickReminderForDay` in `src/domain/reminderSchedule.ts`) keep the logic out of the
+  gate-blind `sw.js` (a drift guard asserts the SW copy ≡ the tested module). Implementation is sliced
+  (pure core → store+API+cron → client+SW) so each slice is gate-green. **Pending PO review; no app code
+  until a milestone schedules it.**
 - **PO demand (2026-06-16):** product owner explicitly wants reminders to **actually work on iOS,
   Android, and everything** — escalated from design-first P3 to buildable P2. iOS works only for an
   **installed** PWA (16.4+), which is exactly the owner's add-to-home-screen case (see also BC-61).

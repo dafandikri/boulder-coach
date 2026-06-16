@@ -24,6 +24,26 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-16 (BC-58 reminders push — design spec drafted via brainstorming — docs only, last touched by: Claude Opus 4.8)
+
+- **BC-58 design spec written:** [`docs/specs/reminders-push-design.md`](specs/reminders-push-design.md)
+  (brainstorming session, library facts grounded via Context7: `web-push` + Vercel Cron). The mechanism
+  for waking a CLOSED PWA cross-platform is **Web Push** (the only one that works — Notification Triggers
+  removed, Periodic Background Sync no-iOS). Design keeps the schedule **on-device**: a content-less daily
+  "wake" push → the **service worker reads the IndexedDB ReminderPlan and decides** (pure
+  `buildReminderPlan`/`pickReminderForDay` in `src/domain/reminderSchedule.ts`, SW-drift-guarded). Server
+  stores only an **opaque push subscription** in Upstash Redis (Vercel Marketplace) — no health/schedule
+  data leaves the device. **Timezone crux:** a push only shows when it _arrives_, so a single daily cron
+  tuned to ~23:00 UTC ≈ 06:00 WIB covers the **Indonesian** audience on Hobby; global = more cron fires
+  (Pro/external) — a config scale path, not a redesign. Honest limits recorded: `userVisibleOnly` silent-
+  push budget, iOS 16.4+ installed-PWA-only, and the first-ever env-vars/backend trade-off vs the
+  no-backend posture (deemed worth it — a reminder that never reminds is dead weight).
+- **BC-58 backlog entry updated** to "design spec drafted"; implementation sliced (pure core → store+API+
+  cron → client+SW) so each slice is gate-green. **No app code** until a milestone schedules it.
+- **Next:** PO review of the spec; when scheduled, build slice 1 (`reminderSchedule.ts`, pure, no backend)
+  first behind the existing BC-20 toggle. This session's docs (BC-58 spec + BC-62→65 grooming) are being
+  committed → pushed → PR'd → merged on the PO's instruction.
+
 ## Current state — 2026-06-16 (PO: attempts/sends logical-error PBI filed — docs only, last touched by: Claude Opus 4.8)
 
 - **PO backlog grooming (no app code), follow-up to the seam-gap session below.** Filed **BC-65** from a
