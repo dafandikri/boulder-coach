@@ -1003,8 +1003,16 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
     untouched, so no safety-reviewer needed; `consistency.ts` holds ≥ 92% branch.
 - **Files:** `src/domain/consistency.ts`, `tests/domain/consistency.test.ts`, `src/app/page.tsx`
 
-### BC-60 · "Sets completed" number field can't be cleared and shows leading zero (`08`) — `open`
+### BC-60 · "Sets completed" number field can't be cleared and shows leading zero (`08`) — `done`
 
+- **Shipped:** pure `src/app/lib/sessionInput.ts` — `sanitizeCountInput` (display while editing:
+  digits-only, drops leading zeros so "08" → "8" and the stuck "0" deletes to "") + `normalizeCount`
+  (stored value: empty → 0, clamped to `SETS_MIN`/`SETS_MAX` = 0/20; negatives clamp to the floor). The
+  session player now binds the field to a raw `setsRaw` display string (`type="text" inputMode="numeric"`)
+  so it can be momentarily empty, syncs the stored count live, and snaps the display back to the
+  normalized count on blur ("outside the field it's 0"). All parse/clamp logic left the gate-blind page.
+  TDD: `tests/app/sessionInput.test.ts` (13) covers `''`/`'0'`/`'08'`/`'8'`/`'25'`(clamp)/negative for
+  both helpers. `pnpm gate` green (bundle 167.8 KB).
 - **Type:** bug · **Priority:** P2 · **Complexity:** S
 - **Problem (user-reported 2026-06-16):** the "Sets completed" input in the session player can't be
   emptied — deleting the value leaves a `0` that can't be removed, and typing `8` over it yields `08`.
