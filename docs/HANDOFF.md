@@ -12,6 +12,31 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-17 (BC-65 attempts/sends invariant + explainer shipped — last touched by: OpenCode)
+
+- **BC-65 DONE — the session player now enforces the physical `sends ≤ attempts` invariant and explains
+  what the two words mean.** The logging form was the last place the user could silently corrupt the
+  pyramid and the BC-27 benchmark level-up; that path is now closed at every layer:
+  - **UI coupling:** `adjustTally` in `src/app/session/page.tsx` now routes every increment/decrement
+    through the covered `normalizeTallies` helper in `src/app/lib/sessionForm.ts`. +1 send auto-bumps
+    attempts; −1 attempt cannot drop below sends. The field never shows a contradictory state.
+  - **Domain boundary:** `createSessionLog` normalizes each block via `clampSentToAttempted`
+    (`src/domain/sessionLog.ts`), so any writer (BC-64 included) persists only valid `gradesSent`.
+  - **Legacy repair:** `partitionLogs` (`src/app/lib/integrity.ts`) sanitizes stored logs with
+    `sends > attempts` instead of quarantining them — recoverable corruption is repaired.
+  - **In-app explanation:** the existing `MetricExplainer` pattern now sits beside the "sends" header
+    with plain-language copy in `src/app/lib/explainers.ts` (`explainAttemptsSends`).
+- **TDD:** new tests in `tests/domain/sessionForm.test.ts` (`normalizeTallies`),
+  `tests/domain/sessionLog.test.ts` (`clampSentToAttempted` + round-trip), `tests/app/integrity.test.ts`
+  (legacy sanitization), and `tests/app/explainers.test.ts` (explainer copy). `pnpm gate` green
+  (490 tests, bundle 167.8 KB).
+- **Next:** the logging cluster continues with **BC-64** (freeform / quick session logging) — it overlaps
+  `session/page.tsx` and `sessionLog.ts`, so sequence it after BC-65, not in parallel. After that, the
+  audience-correctness pair **BC-62 → BC-63** (content catalog → beginner-aware program content) both edit
+  `periodization.ts` and should also run sequentially.
+
+---
+
 ## How to continue (every agent, every session)
 
 1. `pnpm onboard` — load context (this file + recent learnings + gate/git state).

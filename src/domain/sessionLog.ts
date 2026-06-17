@@ -1,5 +1,35 @@
 import type { LoggedBlock, SessionLog, VGrade } from './types';
 
+function countByGrade(grades: VGrade[]): Record<VGrade, number> {
+  const counts: Record<VGrade, number> = {};
+  for (const g of grades) {
+    counts[g] = (counts[g] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * BC-65 — enforce the physical invariant that a send is a successful attempt:
+ * for each grade, the number of sends cannot exceed the number of attempts.
+ * Preserves the order of `sent` up to the clamp so downstream analytics are stable.
+ */
+export function clampSentToAttempted(attempted: VGrade[], sent: VGrade[]): VGrade[] {
+  const attemptedCounts = countByGrade(attempted);
+  const consumed: Record<VGrade, number> = {};
+  const result: VGrade[] = [];
+
+  for (const g of sent) {
+    const limit = attemptedCounts[g] ?? 0;
+    const used = consumed[g] ?? 0;
+    if (used < limit) {
+      result.push(g);
+      consumed[g] = used + 1;
+    }
+  }
+
+  return result;
+}
+
 export interface BlockActual {
   blockId: string;
   setsCompleted: number;
@@ -29,7 +59,7 @@ export function createSessionLog(input: SessionLogInput): SessionLog {
     blockId: b.blockId,
     setsCompleted: b.setsCompleted,
     gradesAttempted: b.gradesAttempted,
-    gradesSent: b.gradesSent,
+    gradesSent: clampSentToAttempted(b.gradesAttempted, b.gradesSent),
     rpe: b.rpe,
   }));
   return {

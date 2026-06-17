@@ -6,7 +6,7 @@ import { getRepo } from '@/data/repoInstance';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { localDateIso } from '@/app/lib/date';
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
-import { canFinishSession, expandTally, warmupDone } from '@/app/lib/sessionForm';
+import { canFinishSession, expandTally, normalizeTallies, warmupDone } from '@/app/lib/sessionForm';
 import { sanitizeCountInput, normalizeCount } from '@/app/lib/sessionInput';
 import {
   formatRest,
@@ -27,6 +27,8 @@ import { BackLink } from '@/app/components/BackLink';
 import { Spinner } from '@/app/components/Spinner';
 import { ExerciseDetail } from '@/app/components/ExerciseDetail';
 import { BlockSummary } from '@/app/components/BlockSummary';
+import { MetricExplainer } from '@/app/components/MetricExplainer';
+import { explainAttemptsSends } from '@/app/lib/explainers';
 import { hasRichContent } from '@/domain/exerciseContent';
 
 /** Audible + haptic "rest over" cue. Lives in the (gate-blind) component because
@@ -205,8 +207,12 @@ export default function SessionPage() {
       setEntries((prev) => {
         const cur = prev[blockId];
         if (!cur) return prev;
-        const next = Math.max(0, (cur[kind][grade] ?? 0) + delta);
-        return { ...prev, [blockId]: { ...cur, [kind]: { ...cur[kind], [grade]: next } } };
+        const raw = Math.max(0, (cur[kind][grade] ?? 0) + delta);
+        const next =
+          kind === 'attempts'
+            ? normalizeTallies({ ...cur.attempts, [grade]: raw }, cur.sends)
+            : normalizeTallies(cur.attempts, { ...cur.sends, [grade]: raw });
+        return { ...prev, [blockId]: { ...cur, attempts: next.attempts, sends: next.sends } };
       });
     },
     [],
@@ -376,7 +382,13 @@ export default function SessionPage() {
                     >
                       <span></span>
                       <span style={{ textAlign: 'center' }}>attempts</span>
-                      <span style={{ textAlign: 'center' }}>sends</span>
+                      <span
+                        className="flex items-center justify-center gap-1"
+                        style={{ textAlign: 'center' }}
+                      >
+                        sends
+                        <MetricExplainer explainer={explainAttemptsSends()} />
+                      </span>
                     </div>
                     {gradeChoices(b.targetGrade).map((g) => (
                       <div

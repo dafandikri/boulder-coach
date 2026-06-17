@@ -8,6 +8,7 @@
 // the load-engine threat.) Pure: no I/O, safe to import anywhere.
 
 import type { SessionLog } from '@/domain/types';
+import { clampSentToAttempted } from '@/domain/sessionLog';
 
 export type Validated<T> = { ok: true; value: T } | { ok: false; reason: string };
 
@@ -43,6 +44,17 @@ export function validateLog(raw: unknown): Validated<SessionLog> {
   return { ok: true, value: raw as unknown as SessionLog };
 }
 
+/** BC-65 — repair recoverable per-block corruption rather than dropping it. */
+function sanitizeLog(log: SessionLog): SessionLog {
+  return {
+    ...log,
+    blocks: log.blocks.map((b) => ({
+      ...b,
+      gradesSent: clampSentToAttempted(b.gradesAttempted, b.gradesSent),
+    })),
+  };
+}
+
 /** Split raw stored logs into the usable ones and the corrupt ones to quarantine. */
 export function partitionLogs(rawLogs: unknown[]): {
   valid: SessionLog[];
@@ -52,7 +64,7 @@ export function partitionLogs(rawLogs: unknown[]): {
   const quarantined: QuarantinedRecord[] = [];
   for (const raw of rawLogs) {
     const result = validateLog(raw);
-    if (result.ok) valid.push(result.value);
+    if (result.ok) valid.push(sanitizeLog(result.value));
     else quarantined.push({ reason: result.reason, raw });
   }
   return { valid, quarantined };
