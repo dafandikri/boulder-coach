@@ -28,8 +28,10 @@ file is the live position** — update it as the LAST step of any session (see "
     with plain-language copy in `src/app/lib/explainers.ts` (`explainAttemptsSends`).
 - **TDD:** new tests in `tests/domain/sessionForm.test.ts` (`normalizeTallies`),
   `tests/domain/sessionLog.test.ts` (`clampSentToAttempted` + round-trip), `tests/app/integrity.test.ts`
-  (legacy sanitization), and `tests/app/explainers.test.ts` (explainer copy). `pnpm gate` green
-  (490 tests, bundle 167.8 KB).
+  (legacy sanitization), and `tests/app/explainers.test.ts` (explainer copy).
+- **CI gotcha fixed:** the `quality` job's axe a11y e2e failed on an unrelated conditional warning
+  Callout (`#bf672d|#ffece0`) that had never been baselined; added it to `BASELINE_CONTRAST_PAIRS`
+  (real fix remains BC-25). `pnpm gate` green; full CI `quality` + `lighthouse` + `mutation` green.
 - **Next:** the logging cluster continues with **BC-64** (freeform / quick session logging) — it overlaps
   `session/page.tsx` and `sessionLog.ts`, so sequence it after BC-65, not in parallel. After that, the
   audience-correctness pair **BC-62 → BC-63** (content catalog → beginner-aware program content) both edit

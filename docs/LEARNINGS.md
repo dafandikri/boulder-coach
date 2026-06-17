@@ -71,6 +71,26 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 - **Attempts to green:** 2 (added brand pair; a later run rendered the danger Callout instead, so added
   that composited pair too — different conditional cards render on different runs).
 
+## 2026-06-17 — e2e/a11y.spec.ts — E2E a11y (test, CI-only)
+
+- **Task:** BC-65 attempts/sends invariant PR — `quality` CI failed on the axe a11y e2e despite no UI
+  changes to the Today page; the inner `pnpm gate` was green (it doesn't run Playwright/axe).
+- **What failed:** `color-contrast (serious) ×7` on Today after onboarding. One un-baselined pair
+  `#bf672d|#ffece0` from the **warning/eviction Callout** (`<Callout tone="warning">`) made
+  `isBaselined()` return false for the whole violation, so all nodes were reported.
+- **Root cause:** BC-31's eviction-warning Callout renders conditionally (only when storage is
+  `transient`). Its warning-deep-on-warning-tint composited pair was never baselined, so the e2e
+  failed whenever the runner/browser reported transient persistence. This is the same conditional-
+  Callout category as the 2026-06-15 brand/danger baseline gap.
+- **Fix:** added `#bf672d|#ffece0` to `BASELINE_CONTRAST_PAIRS`, consistent with the existing
+  brand/danger conditional-Callout baselines. The real contrast fix remains BC-25 (brand-owner pass).
+- **Prevention:** same as 2026-06-15 — any new conditional `<Callout>` must ship with its axe-reported
+  composited pair baselined. **Promotion:** this is the second occurrence of the same category; the
+  pattern is now documented twice, and the next agent that adds a conditional Callout should baseline
+  the pair in the same commit or extend `a11y.spec.ts` with a deterministic rendering test that forces
+  each Callout tone so the pair is exercised in CI.
+- **Attempts to green:** 1
+
 ## 2026-06-14 — MetricExplainer RpeScaleDiagram — SVG label clipping (gate-blind UI)
 
 - **Task:** PO report — "the RPE graph showed 'ry easy' and the hardest label is unreadable."
