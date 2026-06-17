@@ -74,4 +74,23 @@ describe('partitionLogs (BC-32)', () => {
     expect(valid).toHaveLength(2);
     expect(quarantined).toHaveLength(0);
   });
+
+  it('sanitizes a valid log with sends exceeding attempts (BC-65)', () => {
+    const raw = goodLog({
+      id: 'mock-corrupt',
+      blocks: [
+        {
+          blockId: 'm',
+          setsCompleted: 3,
+          gradesAttempted: [5, 5],
+          gradesSent: [5, 5, 5],
+          rpe: 8,
+        },
+      ],
+    });
+    const { valid, quarantined } = partitionLogs([raw]);
+    expect(quarantined).toHaveLength(0);
+    expect(valid[0]!.blocks[0]!.gradesSent).toEqual([5, 5]);
+    expect(valid[0]!.blocks[0]!.gradesAttempted).toEqual([5, 5]);
+  });
 });

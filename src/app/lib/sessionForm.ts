@@ -1,5 +1,8 @@
 import type { VGrade } from '@/domain/types';
 
+/** Per-grade tally used by the session player. */
+export type Tally = Partial<Record<VGrade, number>>;
+
 export function warmupDone(warmupBlockIds: string[], checked: Set<string>): boolean {
   if (warmupBlockIds.length === 0) return true;
   return warmupBlockIds.every((id) => checked.has(id));
@@ -23,4 +26,28 @@ export function expandTally(tally: Partial<Record<VGrade, number>>): VGrade[] {
     }
   }
   return result;
+}
+
+/**
+ * BC-65 — keep the attempts/sends counters coupled so a send (which is a successful
+ * attempt) can never exceed attempts. Returns new tallies: sends are clamped to
+ * attempts per grade, and attempts are bumped to match sends when needed.
+ */
+export function normalizeTallies(attempts: Tally, sends: Tally): { attempts: Tally; sends: Tally } {
+  const nextAttempts: Tally = { ...attempts };
+  const nextSends: Tally = { ...sends };
+  const grades = new Set<VGrade>([
+    ...Object.keys(attempts).map(Number),
+    ...Object.keys(sends).map(Number),
+  ]);
+
+  for (const grade of grades) {
+    const a = Math.max(0, nextAttempts[grade] ?? 0);
+    const s = Math.max(0, nextSends[grade] ?? 0);
+    const nextA = Math.max(a, s);
+    nextAttempts[grade] = nextA;
+    nextSends[grade] = Math.min(nextA, s);
+  }
+
+  return { attempts: nextAttempts, sends: nextSends };
 }

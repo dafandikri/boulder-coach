@@ -1199,7 +1199,7 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
 - **Sequencing:** edits `src/app/page.tsx` (Today), so it must run **sequentially** with other
   `page.tsx`-touching PBIs (BC-59); also edits `sessionLog.ts` (the id fix).
 
-### BC-65 · Attempts/sends logging — enforce `sends ≤ attempts` + explain what they mean — `open`
+### BC-65 · Attempts/sends logging — enforce `sends ≤ attempts` + explain what they mean — `done`
 
 - **Type:** bug/ux · **Priority:** P2 (high) · **Complexity:** M · **Depends on:** BC-04
 - **Problem (PO + user-reported 2026-06-16, verified against code):** the session player tallies

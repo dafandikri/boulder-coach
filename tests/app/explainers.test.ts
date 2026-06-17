@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { acwrBand, explainAcwr, explainRpe, RPE_SCALE } from '../../src/app/lib/explainers';
+import {
+  acwrBand,
+  explainAcwr,
+  explainRpe,
+  RPE_SCALE,
+  explainAttemptsSends,
+} from '../../src/app/lib/explainers';
 
 describe('acwrBand — mirrors the adaptation engine thresholds', () => {
   it('returns no-data only at exactly 0', () => {
@@ -65,5 +71,15 @@ describe('explainRpe', () => {
       expect(RPE_SCALE[i]!.value).toBeGreaterThan(RPE_SCALE[i - 1]!.value);
       expect(RPE_SCALE[i]!.label.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('explainAttemptsSends (BC-65)', () => {
+  it('defines attempt and send in plain language', () => {
+    const e = explainAttemptsSends();
+    expect(e.heading.toLowerCase()).toContain('attempt');
+    expect(e.body.toLowerCase()).toContain('attempt');
+    expect(e.body.toLowerCase()).toContain('send');
+    expect(e.body.toLowerCase()).toContain('flash');
   });
 });

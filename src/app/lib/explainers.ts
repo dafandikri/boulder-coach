@@ -78,3 +78,13 @@ export function explainRpe(): Explainer {
       'track your real load and dial intensity up or down — guessing high every time just makes it back you off.',
   };
 }
+
+export function explainAttemptsSends(): Explainer {
+  return {
+    heading: 'Attempts & sends',
+    body:
+      'An attempt is one go at a problem. A send is a go you finished clean (topped out). ' +
+      'Every send is also an attempt — a flash is 1 attempt, 1 send. ' +
+      'Tally all your goes as attempts and mark the ones you topped as sends.',
+  };
+}
