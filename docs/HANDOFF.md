@@ -20,6 +20,10 @@ file is the live position** — update it as the LAST step of any session (see "
   - **UI coupling:** `adjustTally` in `src/app/session/page.tsx` now routes every increment/decrement
     through the covered `normalizeTallies` helper in `src/app/lib/sessionForm.ts`. +1 send auto-bumps
     attempts; −1 attempt cannot drop below sends. The field never shows a contradictory state.
+  - **Sets-to-climbs coupling:** a new `ensureSetsForClimbs` helper enforces that if any attempts or
+    sends are logged, sets must be at least 1 (you cannot climb problems without doing at least one
+    set). Sets otherwise stays independent — a set can contain many attempts, and attempts can far
+    exceed sets.
   - **Domain boundary:** `createSessionLog` normalizes each block via `clampSentToAttempted`
     (`src/domain/sessionLog.ts`), so any writer (BC-64 included) persists only valid `gradesSent`.
   - **Legacy repair:** `partitionLogs` (`src/app/lib/integrity.ts`) sanitizes stored logs with
