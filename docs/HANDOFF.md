@@ -25,7 +25,8 @@ file is the live position** — update it as the LAST step of any session (see "
   - **Legacy repair:** `partitionLogs` (`src/app/lib/integrity.ts`) sanitizes stored logs with
     `sends > attempts` instead of quarantining them — recoverable corruption is repaired.
   - **In-app explanation:** the existing `MetricExplainer` pattern now sits beside the "sends" header
-    with plain-language copy in `src/app/lib/explainers.ts` (`explainAttemptsSends`).
+    with plain-language copy in `src/app/lib/explainers.ts` (`explainAttemptsSends`). A follow-up
+    change adds the same `(i)` explainer beside "Sets completed" (`explainSets`).
 - **TDD:** new tests in `tests/domain/sessionForm.test.ts` (`normalizeTallies`),
   `tests/domain/sessionLog.test.ts` (`clampSentToAttempted` + round-trip), `tests/app/integrity.test.ts`
   (legacy sanitization), and `tests/app/explainers.test.ts` (explainer copy).

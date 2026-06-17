@@ -5,6 +5,7 @@ import {
   explainRpe,
   RPE_SCALE,
   explainAttemptsSends,
+  explainSets,
 } from '../../src/app/lib/explainers';
 
 describe('acwrBand — mirrors the adaptation engine thresholds', () => {
@@ -81,5 +82,14 @@ describe('explainAttemptsSends (BC-65)', () => {
     expect(e.body.toLowerCase()).toContain('attempt');
     expect(e.body.toLowerCase()).toContain('send');
     expect(e.body.toLowerCase()).toContain('flash');
+  });
+});
+
+describe('explainSets (BC-65 follow-up)', () => {
+  it('defines a set in plain language', () => {
+    const e = explainSets();
+    expect(e.heading.toLowerCase()).toContain('set');
+    expect(e.body.toLowerCase()).toContain('set');
+    expect(e.body.length).toBeGreaterThan(0);
   });
 });

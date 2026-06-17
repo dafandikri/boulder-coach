@@ -1,8 +1,9 @@
-// Plain-language explainers for the two metrics climbers ask about most: RPE (how
-// hard a session felt) and ACWR (whether load is ramping safely). The band selection
-// and personalised copy are the testable logic, kept here in a covered lib so the
-// gate-blind UI only renders them (universal-quality-bar §2). Thresholds mirror the
-// adaptation engine: caution >= 1.3 (rule 4), high > 1.5 (rule 3).
+// Plain-language explainers for the metrics climbers ask about most: RPE (how
+// hard a session felt), ACWR (whether load is ramping safely), and the session
+// player's counts (sets, attempts, sends). The band selection and personalised
+// copy are the testable logic, kept here in a covered lib so the gate-blind UI
+// only renders them (universal-quality-bar §2). Thresholds mirror the adaptation
+// engine: caution >= 1.3 (rule 4), high > 1.5 (rule 3).
 
 export interface Explainer {
   heading: string;
@@ -86,5 +87,15 @@ export function explainAttemptsSends(): Explainer {
       'An attempt is one go at a problem. A send is a go you finished clean (topped out). ' +
       'Every send is also an attempt — a flash is 1 attempt, 1 send. ' +
       'Tally all your goes as attempts and mark the ones you topped as sends.',
+  };
+}
+
+export function explainSets(): Explainer {
+  return {
+    heading: 'Sets completed',
+    body:
+      'A set is one completed round of a block — for example, one pass through the prescribed ' +
+      'climbs, drills, or exercises. It counts the structure of the session, not the individual ' +
+      'problems. Log the number of sets you actually finished.',
   };
 }

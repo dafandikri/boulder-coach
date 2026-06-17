@@ -28,7 +28,7 @@ import { Spinner } from '@/app/components/Spinner';
 import { ExerciseDetail } from '@/app/components/ExerciseDetail';
 import { BlockSummary } from '@/app/components/BlockSummary';
 import { MetricExplainer } from '@/app/components/MetricExplainer';
-import { explainAttemptsSends } from '@/app/lib/explainers';
+import { explainAttemptsSends, explainSets } from '@/app/lib/explainers';
 import { hasRichContent } from '@/domain/exerciseContent';
 
 /** Audible + haptic "rest over" cue. Lives in the (gate-blind) component because
@@ -349,7 +349,10 @@ export default function SessionPage() {
                   className="flex items-center gap-2"
                   style={{ marginTop: 12, fontSize: 'var(--fs-sm)', fontWeight: 700 }}
                 >
-                  Sets completed
+                  <span className="flex items-center gap-1">
+                    Sets completed
+                    <MetricExplainer explainer={explainSets()} />
+                  </span>
                   <input
                     type="text"
                     inputMode="numeric"
