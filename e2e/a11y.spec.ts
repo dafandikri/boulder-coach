@@ -35,6 +35,7 @@ const BASELINE_CONTRAST_PAIRS = new Set([
   // baselined explicitly or the a11y e2e flakes. Composited ≠ raw CSS var (border/opacity blend).
   '#e84e1c|#ffe8dd', // --brand-deep on --brand-tint (<Callout tone="brand"> — BC-39 install/nudge)
   '#bf4135|#ffe4e2', // --danger-deep on --danger-tint, composited (<Callout tone="danger"> — error/data-damaged)
+  '#bf672d|#ffece0', // --warning-deep on --warning-tint, composited (<Callout tone="warning"> — eviction nudge)
 ]);
 
 function contrastPairs(node: ViolationNode): string[] {
