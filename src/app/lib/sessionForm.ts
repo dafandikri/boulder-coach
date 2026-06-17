@@ -51,3 +51,22 @@ export function normalizeTallies(attempts: Tally, sends: Tally): { attempts: Tal
 
   return { attempts: nextAttempts, sends: nextSends };
 }
+
+function sumTally(tally: Tally): number {
+  let sum = 0;
+  for (const count of Object.values(tally)) {
+    sum += Math.max(0, count ?? 0);
+  }
+  return sum;
+}
+
+/**
+ * BC-65 follow-up — you cannot log individual climbs without having done at least
+ * one set. Sets otherwise stay independent of attempts/sends (a set can contain many
+ * attempts, and you can finish sets without logging every grade).
+ */
+export function ensureSetsForClimbs(setsCompleted: number, attempts: Tally, sends: Tally): number {
+  const hasClimbs = sumTally(attempts) > 0 || sumTally(sends) > 0;
+  if (hasClimbs && setsCompleted <= 0) return 1;
+  return setsCompleted;
+}

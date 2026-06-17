@@ -4,6 +4,7 @@ import {
   canFinishSession,
   expandTally,
   normalizeTallies,
+  ensureSetsForClimbs,
 } from '../../src/app/lib/sessionForm';
 import type { VGrade } from '../../src/domain/types';
 
@@ -98,5 +99,36 @@ describe('normalizeTallies (BC-65)', () => {
     normalizeTallies(attempts, sends);
     expect(attempts[5]).toBe(1);
     expect(sends[5]).toBe(3);
+  });
+});
+
+describe('ensureSetsForClimbs (BC-65 follow-up)', () => {
+  it('bumps sets from 0 to 1 when attempts are logged', () => {
+    const result = ensureSetsForClimbs(0, { 5: 2 }, {});
+    expect(result).toBe(1);
+  });
+
+  it('bumps sets from 0 to 1 when sends are logged', () => {
+    const result = ensureSetsForClimbs(0, {}, { 5: 1 });
+    expect(result).toBe(1);
+  });
+
+  it('leaves sets unchanged when no climbs are logged', () => {
+    expect(ensureSetsForClimbs(0, {}, {})).toBe(0);
+    expect(ensureSetsForClimbs(3, {}, {})).toBe(3);
+  });
+
+  it('leaves positive sets unchanged even with climbs logged', () => {
+    expect(ensureSetsForClimbs(2, { 5: 10 }, { 5: 3 })).toBe(2);
+    expect(ensureSetsForClimbs(1, { 5: 1 }, {})).toBe(1);
+  });
+
+  it('treats zero and negative sets the same as zero when climbs exist', () => {
+    expect(ensureSetsForClimbs(-2, { 5: 1 }, {})).toBe(1);
+  });
+
+  it('ignores undefined tally entries defensively', () => {
+    const attempts = { 5: 2, 6: undefined as unknown as number };
+    expect(ensureSetsForClimbs(0, attempts, {})).toBe(1);
   });
 });

@@ -6,7 +6,13 @@ import { getRepo } from '@/data/repoInstance';
 import { getTodaySession, type TodayResult } from '@/app/lib/bootstrap';
 import { localDateIso } from '@/app/lib/date';
 import { toLoadState, type LoadState } from '@/app/lib/loadState';
-import { canFinishSession, expandTally, normalizeTallies, warmupDone } from '@/app/lib/sessionForm';
+import {
+  canFinishSession,
+  ensureSetsForClimbs,
+  expandTally,
+  normalizeTallies,
+  warmupDone,
+} from '@/app/lib/sessionForm';
 import { sanitizeCountInput, normalizeCount } from '@/app/lib/sessionInput';
 import {
   formatRest,
@@ -198,7 +204,15 @@ export default function SessionPage() {
     setEntries((prev) => {
       const cur = prev[blockId];
       if (!cur) return prev;
-      return { ...prev, [blockId]: { ...cur, setsRaw: String(cur.setsCompleted) } };
+      const setsCompleted = ensureSetsForClimbs(cur.setsCompleted, cur.attempts, cur.sends);
+      return {
+        ...prev,
+        [blockId]: {
+          ...cur,
+          setsCompleted,
+          setsRaw: String(setsCompleted),
+        },
+      };
     });
   }, []);
 
@@ -212,7 +226,16 @@ export default function SessionPage() {
           kind === 'attempts'
             ? normalizeTallies({ ...cur.attempts, [grade]: raw }, cur.sends)
             : normalizeTallies(cur.attempts, { ...cur.sends, [grade]: raw });
-        return { ...prev, [blockId]: { ...cur, attempts: next.attempts, sends: next.sends } };
+        return {
+          ...prev,
+          [blockId]: {
+            ...cur,
+            attempts: next.attempts,
+            sends: next.sends,
+            setsCompleted: ensureSetsForClimbs(cur.setsCompleted, next.attempts, next.sends),
+            setsRaw: String(ensureSetsForClimbs(cur.setsCompleted, next.attempts, next.sends)),
+          },
+        };
       });
     },
     [],
@@ -265,11 +288,14 @@ export default function SessionPage() {
   async function finish(): Promise<void> {
     const blocks: BlockActual[] = session.blocks.map((b) => {
       const e = entries[b.id];
+      const attempts = e?.attempts ?? {};
+      const sends = e?.sends ?? {};
+      const setsCompleted = ensureSetsForClimbs(e?.setsCompleted ?? b.sets, attempts, sends);
       return {
         blockId: b.id,
-        setsCompleted: e?.setsCompleted ?? b.sets,
-        gradesAttempted: expandTally(e?.attempts ?? {}),
-        gradesSent: expandTally(e?.sends ?? {}),
+        setsCompleted,
+        gradesAttempted: expandTally(attempts),
+        gradesSent: expandTally(sends),
         rpe: e?.rpe ?? b.targetRPE,
       };
     });
