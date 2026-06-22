@@ -30,6 +30,43 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-23 — scripts/gate.sh — format (lint) — **PROMOTED to automated self-heal (3rd occurrence)**
+
+- **Task:** BC-67/BC-68/BC-69 backlog + HANDOFF edits (hand-authored markdown).
+- **What failed:** `pnpm gate` step 1 (`format:check`) failed on `docs/BACKLOG.md` — hand-written
+  markdown wasn't Prettier-clean. Fixed silently with `prettier --write` and **did NOT append a ledger
+  entry at the time** — violating AGENTS.md "Definition of done" (append LEARNINGS for any gate failure).
+- **Root cause:** two layers. (1) Inline-authored docs aren't Prettier-formatted until `pnpm format` or
+  the pre-commit lint-staged hook runs, but the inner-loop `pnpm gate` only `--check`s, so it trips.
+  (2) The category was logged as **prose** on 2026-06-09 (`docs (markdown)`) and again on 2026-06-13
+  (`docs/research + docs/specs`) — this is the **3rd occurrence**, far past the ledger's own "≥2× →
+  promote to an automated check" rule, yet it was still being re-written as prose and re-hit.
+- **Fix:** promoted prose → automation. `scripts/gate.sh` step 1 now **self-heals locally**
+  (`pnpm format` = `prettier --write`) and stays **strict in CI** (`pnpm format:check`), gated on
+  `${CI:-}`. Committed files are already Prettier-clean via the pre-commit lint-staged hook, so CI's
+  `--check` still passes and still fails on any unformatted commit (the merge guarantee is intact).
+  `prettier --write` is deterministic + idempotent, so auto-fixing never masks a real failure.
+- **Prevention (Tier-1):** `tests/harness/gate-format-selfheal.test.ts` reads `scripts/gate.sh` and
+  asserts the format step keeps BOTH paths (CI `--check`, local auto-fix). Reverting to a plain
+  `format:check` (re-opening the recurrence) or dropping the CI strict path now fails the gate by name.
+  The recurring inner-loop format trip is now structurally impossible. (BC-70.)
+- **Attempts to green:** 1 (the silent `prettier --write` at the time; this entry + automation closes it).
+
+## 2026-06-23 — PR-merge workflow (`gh pr checks` watch) — process (no gate stage)
+
+- **Task:** Watching CI on PR #73 before a supervised merge.
+- **What failed:** an `until [ "$(… --json state …)" != "PENDING" ]` loop exited **early** — it treated
+  any non-`PENDING` state as terminal, but an in-flight GitHub check reports `IN_PROGRESS` (and `QUEUED`),
+  not `PENDING`. The loop "completed" while `quality` was still running, risking a merge decision on
+  incomplete CI.
+- **Root cause:** GitHub check `state` is a multi-value enum; only `SUCCESS`/`FAILURE`/`ERROR`/
+  `CANCELLED`/`TIMED_OUT` are terminal. Negating a single in-flight value (`!= PENDING`) is wrong.
+- **Fix:** loop until the state is explicitly one of the **terminal** values (`case "$s" in SUCCESS|
+FAILURE|ERROR|CANCELLED|TIMED_OUT) break ;; esac`), or just use `gh pr checks <n> --watch`.
+- **Prevention:** when polling `gh pr checks`/`gh run`, match the terminal set, never the negation of one
+  in-flight value. Prefer `--watch` (blocks until all checks finish) for supervised merges.
+- **Attempts to green:** 1 (re-polled with the terminal-set loop; `quality` resolved `SUCCESS`).
+
 ## 2026-06-23 — src/app/lib/integrity.ts — review (test)
 
 - **Task:** Reviewing OpenCode's merged BC-65 (attempts/sends invariant) for quality.
