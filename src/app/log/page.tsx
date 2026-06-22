@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { getRepo } from '@/data/repoInstance';
 import { localDateIso } from '@/app/lib/date';
@@ -20,6 +20,24 @@ import { GradePill } from '@/app/components/GradePill';
 import { BackLink } from '@/app/components/BackLink';
 
 type Tally = Partial<Record<VGrade, number>>;
+
+/**
+ * BC-67: the same field look the rest of the app uses (mirrors profile's
+ * `SELECT_STYLE`) so the quick-log form doesn't read as a different, smaller,
+ * monospaced screen. Spread it and override only width per field.
+ */
+const FIELD_STYLE: CSSProperties = {
+  display: 'block',
+  marginTop: 6,
+  borderRadius: 'var(--r-md)',
+  border: '2px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-body)',
+  fontWeight: 700,
+  fontSize: 'var(--fs-base)',
+  padding: '10px 12px',
+};
 
 export default function QuickLogPage() {
   const router = useRouter();
@@ -93,16 +111,7 @@ export default function QuickLogPage() {
             onChange={(e) => {
               setDate(e.target.value);
             }}
-            style={{
-              display: 'block',
-              marginTop: 6,
-              borderRadius: 'var(--r-sm)',
-              border: '2px solid var(--border)',
-              background: 'var(--surface)',
-              padding: '6px 10px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--fs-sm)',
-            }}
+            style={FIELD_STYLE}
           />
         </label>
 
@@ -119,17 +128,7 @@ export default function QuickLogPage() {
             onChange={(e) => {
               setDurationMin(Math.trunc(Number(e.target.value)));
             }}
-            style={{
-              display: 'block',
-              marginTop: 6,
-              width: 96,
-              borderRadius: 'var(--r-sm)',
-              border: '2px solid var(--border)',
-              background: 'var(--surface)',
-              padding: '6px 10px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--fs-sm)',
-            }}
+            style={{ ...FIELD_STYLE, width: 120 }}
           />
         </label>
 
@@ -208,16 +207,7 @@ export default function QuickLogPage() {
             }}
             rows={3}
             placeholder="Felt strong on overhangs…"
-            style={{
-              display: 'block',
-              marginTop: 6,
-              width: '100%',
-              borderRadius: 'var(--r-sm)',
-              border: '2px solid var(--border)',
-              background: 'var(--surface)',
-              padding: '8px 10px',
-              fontSize: 'var(--fs-sm)',
-            }}
+            style={{ ...FIELD_STYLE, width: '100%', fontWeight: 400 }}
           />
         </label>
       </Card>
