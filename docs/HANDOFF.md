@@ -12,6 +12,30 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (reviewed OpenCode's merged BC-65; fixed a crash-safety regression — PR #69, last touched by: Claude Opus 4.8)
+
+- **Scrutinized OpenCode's already-merged BC-65 work (PRs #66/#67/#68)** end to end (domain
+  `clampSentToAttempted`, the live `normalizeTallies`/`ensureSetsForClimbs` coupling, read-path
+  `sanitizeLog`, the explainers, and all tests) with an independent code-review agent + hands-on
+  tracing. **Core is high quality** — the invariant, the layered "UI raises attempts / domain drops
+  sends" strategy, and the tests are sound, and `pnpm gate` is green on main.
+- **Found + fixed one real regression (PR #69, merged):** `sanitizeLog` ran `clampSentToAttempted`
+  on every valid log inside `partitionLogs`, iterating each block's `gradesAttempted`/`gradesSent`.
+  But `validateLog` never deep-validated block shape, so a top-level-valid log with a **malformed
+  block** (truncated write / hand-edit → non-array grade tallies) threw `TypeError: grades is not
+iterable` **synchronously inside the BC-32 quarantine boundary** — one bad block took down the
+  ENTIRE `getLogs` load instead of quarantining the single record. Fix: `validateLog` now checks each
+  block's grade tallies are arrays, so a malformed block is quarantined + surfaced (upholding BC-32)
+  and `sanitizeLog` can't throw. TDD: failing `partitionLogs` test (malformed block must not throw,
+  must quarantine that record while loading the good ones) → guard. See LEARNINGS 2026-06-23.
+- **Lesson (logged):** a repair/sanitize step added on the **read path** must be at least as
+  defensive as the validation that precedes it — `validateLog`'s "blocks not deep-validated" scope
+  silently became unsafe the moment BC-65 started iterating block internals there.
+- **Leftover branches (not deleted — not in scope):** the three squash-merged BC-65 branches
+  (`fix/bc65-attempts-sends-invariant`, `feat/bc65-sets-explainer`, `fix/bc65-sets-attempts-coupling`)
+  and the stale, superseded `docs/backlog-reminders-cv-triage` remain on origin; their content is
+  already on main (or obsolete). `pnpm gate` green (bundle 167.8 KB).
+
 ## Current state — 2026-06-17 (BC-65 attempts/sends invariant + explainer shipped — last touched by: OpenCode)
 
 - **BC-65 DONE — the session player now enforces the physical `sends ≤ attempts` invariant and explains

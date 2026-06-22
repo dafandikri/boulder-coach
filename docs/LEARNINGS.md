@@ -30,6 +30,31 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-23 — src/app/lib/integrity.ts — review (test)
+
+- **Task:** Reviewing OpenCode's merged BC-65 (attempts/sends invariant) for quality.
+- **What failed:** BC-65 added `sanitizeLog` → `clampSentToAttempted(b.gradesAttempted, b.gradesSent)`
+  for every valid log inside `partitionLogs`. `validateLog` only checks `blocks` is an array, never
+  each block's shape (its header explicitly said block contents aren't deep-validated). A
+  top-level-valid log with a malformed block (non-array grade tallies — truncated write / hand-edit)
+  threw `TypeError: grades is not iterable` synchronously inside `partitionLogs` — the BC-32
+  quarantine boundary called during bootstrap. One bad block took down the ENTIRE `getLogs` load
+  instead of quarantining that single record. The gate stayed green (the existing "never throws" test
+  only exercised `validateLog`, not the new `sanitizeLog` path); an agent code-review caught it.
+- **Root cause:** a repair/sanitize step was added on the READ path that reads block internals, but
+  the validation preceding it was scoped to top-level fields only — the new code's assumptions outran
+  its guards. "Block contents not deep-validated" was safe until something started iterating them.
+- **Fix:** `validateLog` now validates each block's `gradesAttempted`/`gradesSent` are arrays (the
+  exact fields `sanitize` + the adaptation engine read); a malformed block is quarantined + surfaced
+  (upholding BC-32) and `sanitizeLog` can no longer throw. TDD: failing `partitionLogs` test
+  (`blocks: [{}]` must not throw, must quarantine that record while loading the good ones) → guard.
+- **Prevention:** rule of thumb — when you add a transform on the read/quarantine path, it must be at
+  least as defensive as the validation in front of it; validate every field you iterate. This is the
+  "review caught what the gate missed" class again (cf. BC-26 dep-placement, BC-11): if a
+  sanitize-throws-past-validation slip recurs, promote to a Tier-1 property test that fuzzes
+  `partitionLogs` with structurally-malformed blocks.
+- **Attempts to green:** 1 (TDD: red → fix → green first pass).
+
 ## 2026-06-15 — src/app/components/ThemeToggle.tsx — lint (lint)
 
 - **Task:** BC-25 dark mode — the Settings theme toggle.
