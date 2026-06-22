@@ -81,6 +81,7 @@ const ROUTES = [
   '/drills',
   '/exercises',
   '/history',
+  '/log',
 ];
 
 for (const route of ROUTES) {

@@ -12,6 +12,26 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (BC-64 freeform/quick logging shipped — last touched by: Claude Opus 4.8)
+
+- **BC-64 DONE — off-plan climbing can now be captured.** A "Log a session" entry point on the Today
+  **rest-day** card and on **/history** opens a new `/log` page (date / duration / session-RPE slider /
+  optional sends / optional note); no planned session required. All decisions live in the pure, covered
+  `src/app/lib/quickLog.ts` (`validateQuickLog`, `freeformLogId`, `buildQuickLogInput`); the page only does
+  repo I/O. The freeform log writes through the same `IClimbRepo.saveLog`, so ACWR / streak / Insights
+  pick it up with **no engine change** (an integration test drives `computeLoadMetrics` +
+  `computeConsistency` to prove it).
+- **Fixed the verified log-id collision (BC-64 AC):** `createSessionLog` keyed `id` as `log-<date>`, so a
+  second log on a day overwrote the first. `SessionLogInput` now takes an optional `id`; the planned
+  player omits it (stays `log-<date>`, idempotent per day), and `freeformLogId` issues a unique
+  `log-<date>-q<n>` that can never collide with the planned id. Multiple logs per local day now coexist.
+- **TDD:** `tests/app/quickLog.test.ts` (10, ≥95% branch) + `sessionLog.test.ts` id default-vs-override.
+  `/log` added to the axe a11y route sweep (`e2e/a11y.spec.ts`). `pnpm gate` green (bundle 167.8 KB).
+- **Next:** the logging cluster is now BC-60 ✓ / BC-65 ✓ / BC-64 ✓. Remaining open code: **BC-62**
+  (content catalog + validation gate — note its validation test will flag the 5 known missing SVGs, so
+  pair with adding those or omitting the imageIds), **BC-63** (beginner program content, after BC-62),
+  **BC-66** (back-to-back hard days — filed this session, needs a PO call on the n=2 case).
+
 ## Current state — 2026-06-23 (broad scrutiny of OpenCode's shipped work; filed BC-66 — docs only, last touched by: Claude Opus 4.8)
 
 - **Extended the review beyond BC-65 to the whole OpenCode-authored logic surface** (two independent

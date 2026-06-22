@@ -283,9 +283,15 @@ export default function TodayPage() {
         }
       >
         {isRest ? (
-          <Link href="/exercises" className="bc-btn bc-btn--secondary bc-btn--full">
-            See mobility &amp; prehab
-          </Link>
+          <div className="flex flex-col gap-2.5">
+            <Link href="/exercises" className="bc-btn bc-btn--secondary bc-btn--full">
+              See mobility &amp; prehab
+            </Link>
+            {/* BC-64: a rest day still lets you capture an off-plan climb so load/streak stay honest. */}
+            <Link href="/log" className="bc-btn bc-btn--secondary bc-btn--full">
+              Log a session
+            </Link>
+          </div>
         ) : (
           <div className="flex gap-2.5">
             <Button
