@@ -4,8 +4,10 @@
 // engine (sessionRPE × durationMin) — so `validateLog` guards the top-level fields the
 // engine reads (finite sessionRPE/durationMin, string id/date, array blocks). A bad record
 // is QUARANTINED and surfaced ("your data looks damaged — re-import a backup"), never
-// crashed on mid-render. (Block-level contents are not deep-validated — out of scope for
-// the load-engine threat.) Pure: no I/O, safe to import anywhere.
+// crashed on mid-render. Block-level contents are validated only as far as the load
+// engine / BC-65 sanitize step actually read them (each block's gradesAttempted/gradesSent
+// must be arrays) — deeper per-field validation stays out of scope. Pure: no I/O, safe to
+// import anywhere.
 
 import type { SessionLog } from '@/domain/types';
 import { clampSentToAttempted } from '@/domain/sessionLog';
@@ -35,6 +37,19 @@ export function validateLog(raw: unknown): Validated<SessionLog> {
     return { ok: false, reason: 'log warmupCompleted is not a boolean' };
   }
   if (!Array.isArray(raw.blocks)) return { ok: false, reason: 'log blocks is not an array' };
+  // BC-65: the sanitize step (and the adaptation engine) iterate each block's
+  // gradesAttempted/gradesSent. A truncated write / hand-edit can leave those non-array,
+  // so validate them here — a malformed block is corruption to QUARANTINE, never a record
+  // that throws mid-iteration inside this boundary (which would take down the whole load).
+  for (const block of raw.blocks) {
+    if (
+      !isRecord(block) ||
+      !Array.isArray(block.gradesAttempted) ||
+      !Array.isArray(block.gradesSent)
+    ) {
+      return { ok: false, reason: 'log block grade tallies are malformed' };
+    }
+  }
   if (!isFiniteNumber(raw.sessionRPE)) {
     return { ok: false, reason: 'log sessionRPE is not a finite number' };
   }

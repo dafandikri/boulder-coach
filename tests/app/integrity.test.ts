@@ -93,4 +93,28 @@ describe('partitionLogs (BC-32)', () => {
     expect(valid[0]!.blocks[0]!.gradesSent).toEqual([5, 5]);
     expect(valid[0]!.blocks[0]!.gradesAttempted).toEqual([5, 5]);
   });
+
+  // BC-65 regression guard: validateLog does NOT deep-validate block contents, so a
+  // top-level-valid log can carry a malformed block (truncated write / hand-edit). The
+  // BC-65 sanitize step iterates block.gradesAttempted/gradesSent — if those aren't
+  // arrays it must NOT throw inside the quarantine boundary (one bad block previously
+  // took down the ENTIRE getLogs load). A malformed block is corruption → quarantine it,
+  // and never crash partitionLogs.
+  it('quarantines (never throws on) a log whose block grade fields are not arrays (BC-65)', () => {
+    const malformed = goodLog({
+      id: 'mock-bad-block',
+      blocks: [
+        { blockId: 'm', setsCompleted: 1, rpe: 8 } as unknown as SessionLog['blocks'][number],
+      ],
+    });
+    const good = goodLog({ id: 'mock-ok' });
+    let result!: ReturnType<typeof partitionLogs>;
+    expect(() => {
+      result = partitionLogs([malformed, good]);
+    }).not.toThrow();
+    // the good log still loads; the malformed one is quarantined, not silently dropped
+    expect(result.valid.map((l) => l.id)).toEqual(['mock-ok']);
+    expect(result.quarantined).toHaveLength(1);
+    expect(result.quarantined[0]?.reason.length).toBeGreaterThan(0);
+  });
 });
