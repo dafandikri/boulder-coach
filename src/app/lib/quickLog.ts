@@ -6,6 +6,7 @@
 
 import type { VGrade } from '@/domain/types';
 import type { SessionLogInput } from '@/domain/sessionLog';
+import { VB, MAX_GRADE } from '@/domain/grade';
 
 /** The raw freeform-log form, already normalized by the page (grades expanded to a flat list). */
 export interface QuickLogForm {
@@ -18,6 +19,17 @@ export interface QuickLogForm {
 
 const MAX_DURATION_MIN = 600; // a 10-hour cap guards against a fat-fingered entry
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const BAND_WIDTH = 7;
+
+/**
+ * A 7-grade band for the sends picker, centred on the climber's current grade but
+ * kept entirely within the VB…MAX_GRADE scale — so a beginner never sees sub-VB pills
+ * and a strong climber never gets out-of-scale pills that would log an invalid grade.
+ */
+export function gradeBand(currentGrade: VGrade): VGrade[] {
+  const lo = Math.min(Math.max(VB, currentGrade - 3), MAX_GRADE - (BAND_WIDTH - 1));
+  return Array.from({ length: BAND_WIDTH }, (_, i) => lo + i);
+}
 
 /** First human-readable problem with the form, or null when it's well-formed. */
 export function validateQuickLog(form: QuickLogForm): string | null {

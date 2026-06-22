@@ -3,9 +3,11 @@ import {
   validateQuickLog,
   freeformLogId,
   buildQuickLogInput,
+  gradeBand,
   type QuickLogForm,
 } from '../../src/app/lib/quickLog';
 import { createSessionLog } from '../../src/domain/sessionLog';
+import { VB, MAX_GRADE, isValidGrade } from '../../src/domain/grade';
 import { computeLoadMetrics } from '../../src/domain/loadMetrics';
 import { computeConsistency } from '../../src/domain/consistency';
 import type { UserProfile } from '../../src/domain/types';
@@ -45,6 +47,25 @@ describe('validateQuickLog (BC-64)', () => {
     expect(validateQuickLog(form({ sessionRPE: 0 }))).toMatch(/rpe/i);
     expect(validateQuickLog(form({ sessionRPE: 11 }))).toMatch(/rpe/i);
     expect(validateQuickLog(form({ sessionRPE: 7.5 }))).toMatch(/rpe/i);
+  });
+});
+
+describe('gradeBand (BC-64 — sends picker range)', () => {
+  it('centres a 7-grade band on the current grade', () => {
+    expect(gradeBand(5)).toEqual([2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  it('floors the band at VB for a beginner (never below the scale)', () => {
+    const band = gradeBand(VB);
+    expect(band[0]).toBe(VB);
+    expect(band.every((g) => isValidGrade(g))).toBe(true);
+  });
+
+  it('clamps the band at MAX_GRADE for a strong climber (never above the scale)', () => {
+    const band = gradeBand(MAX_GRADE);
+    expect(band[band.length - 1]).toBe(MAX_GRADE);
+    expect(band.every((g) => isValidGrade(g))).toBe(true);
+    expect(Math.max(...band)).toBeLessThanOrEqual(MAX_GRADE);
   });
 });
 

@@ -5,9 +5,13 @@ import { useRouter } from 'next/navigation';
 import { getRepo } from '@/data/repoInstance';
 import { localDateIso } from '@/app/lib/date';
 import { expandTally } from '@/app/lib/sessionForm';
-import { validateQuickLog, buildQuickLogInput, type QuickLogForm } from '@/app/lib/quickLog';
+import {
+  validateQuickLog,
+  buildQuickLogInput,
+  gradeBand,
+  type QuickLogForm,
+} from '@/app/lib/quickLog';
 import { createSessionLog } from '@/domain/sessionLog';
-import { VB } from '@/domain/grade';
 import type { VGrade } from '@/domain/types';
 import { Card } from '@/app/components/Card';
 import { Button } from '@/app/components/Button';
@@ -16,12 +20,6 @@ import { GradePill } from '@/app/components/GradePill';
 import { BackLink } from '@/app/components/BackLink';
 
 type Tally = Partial<Record<VGrade, number>>;
-
-/** A compact grade band centred on the climber's current grade, floored at VB. */
-function gradeBand(currentGrade: VGrade): VGrade[] {
-  const lo = Math.max(VB, currentGrade - 3);
-  return Array.from({ length: 7 }, (_, i) => lo + i);
-}
 
 export default function QuickLogPage() {
   const router = useRouter();
