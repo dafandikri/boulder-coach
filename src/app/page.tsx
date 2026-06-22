@@ -293,26 +293,34 @@ export default function TodayPage() {
             </Link>
           </div>
         ) : (
-          <div className="flex gap-2.5">
-            <Button
-              variant="secondary"
-              icon="clipboard-check"
-              fullWidth
-              onClick={() => {
-                router.push('/checkin');
-              }}
-            >
-              Check-in
-            </Button>
-            <Button
-              icon="flame"
-              fullWidth
-              onClick={() => {
-                router.push('/session');
-              }}
-            >
-              Start
-            </Button>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex gap-2.5">
+              <Button
+                variant="secondary"
+                icon="clipboard-check"
+                fullWidth
+                onClick={() => {
+                  router.push('/checkin');
+                }}
+              >
+                Check-in
+              </Button>
+              <Button
+                icon="flame"
+                fullWidth
+                onClick={() => {
+                  router.push('/session');
+                }}
+              >
+                Start
+              </Button>
+            </div>
+            {/* BC-68: a missed check-in / planned session shouldn't strand off-plan
+                climbing — let the climber log a different session from Today, not
+                just from rest days (BC-64) or /history. */}
+            <Link href="/log" className="bc-btn bc-btn--secondary bc-btn--full">
+              Log a different session
+            </Link>
           </div>
         )}
       </SessionCard>

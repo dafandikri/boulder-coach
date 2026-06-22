@@ -12,6 +12,33 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (BC-67 + BC-68 logging-UX consistency shipped, BC-69 social PBI filed — last touched by: Claude Opus 4.8)
+
+- **Two minor logging-UX gaps from a PO walkthrough — fixed this session (TDD-exempt: pure presentational
+  changes on gate-blind pages, no decision logic; `/log` + Today are already in the axe a11y route sweep):**
+  - **BC-67 DONE — the quick-log form no longer looks like a different app.** BC-64's `/log` inputs
+    (date / duration / note) were hand-rolled with a divergent inline style (`--r-sm`, `--font-mono`,
+    `--fs-sm`, `6px 10px`, no text colour) — visibly smaller, tighter, monospaced vs the app's canonical
+    field look (profile's `SELECT_STYLE`: `--r-md`, `--font-body`, `--fs-base`, bold, `10px 12px`,
+    `--text`). Extracted a local `FIELD_STYLE` in `src/app/log/page.tsx` mirroring that and applied it to
+    all three fields (note `<textarea>` keeps `fontWeight: 400` — it's prose, not a value).
+  - **BC-68 DONE — a missed check-in / planned session is no longer a logging dead end.** BC-64 surfaced
+    "Log a session" only on the **rest-day** Today card and /history; a **training day** offered just
+    Check-in / Start. Added a "Log a different session" secondary link to the training-day `SessionCard`
+    (same `/log` route + `bc-btn` styling), so off-plan / missed-day climbing is loggable from Today and
+    load/streak/Insights stay honest. The covered `quickLog.ts` write path is unchanged.
+- **BC-69 FILED (P3, design-first) — social layer.** The PO's "social platform + share to social media"
+  idea: slice (a) share-to-social-media via the **Web Share API** (no backend — the posture-preserving
+  win), slice (b) read-only friend/coach snapshot (**must be specced with BC-43, not divergently**), slice
+  (c) a full social platform (feed/follows) — the big bet that **breaks the no-backend, on-device,
+  health-private posture**, so it's a deliberate PO/architecture call, not assumed. No app code.
+- **Verified:** `pnpm gate` green (9/9, bundle 167.8 KB); `tests/crew/backlog-hygiene.test.ts` green
+  (BC-67/68/69 unique ids, Files declared, BC-69→BC-43 resolves). **Not committed/pushed** — working-tree
+  changes only (`src/app/log/page.tsx`, `src/app/page.tsx`, `docs/BACKLOG.md`, this file); a supervised
+  commit/push/PR is the next step if you want them on `main`.
+- **Next:** unchanged open code — **BC-62** (content catalog + validation gate), **BC-63** (beginner
+  program content, after BC-62), **BC-66** (back-to-back hard days, needs PO call on the n=2 case).
+
 ## Current state — 2026-06-23 (BC-64 freeform/quick logging shipped — last touched by: Claude Opus 4.8)
 
 - **BC-64 DONE — off-plan climbing can now be captured.** A "Log a session" entry point on the Today

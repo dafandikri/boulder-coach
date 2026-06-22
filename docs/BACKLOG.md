@@ -1307,6 +1307,38 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
 - **Files:** `src/domain/periodization.ts`, `src/domain/schedule.ts`, `tests/domain/periodization.test.ts`,
   possibly `src/app/lib/bootstrap.ts` (if onboarding-time validation/warning is chosen)
 
+### BC-67 · Quick-log form fields look different (smaller, monospaced) from the rest of the app — `done`
+
+- **Shipped (2026-06-23):** BC-64's `/log` quick-log inputs (date, duration, note) were hand-rolled with a
+  **divergent** inline style — `--r-sm` radius, `--font-mono`, `--fs-sm`, tight `6px 10px` padding, no
+  explicit text colour — so the form read as a smaller, monospaced, off-brand screen next to the rest of
+  the app, whose fields use profile's `SELECT_STYLE` (`--r-md`, `--font-body`, `--fs-base`, bold,
+  `10px 12px`, `--text`). Extracted a local `FIELD_STYLE` in `src/app/log/page.tsx` mirroring that
+  canonical look and applied it to all three fields (the note `<textarea>` keeps `fontWeight: 400` —
+  prose, not a value). Pure presentational change on a gate-blind page; `/log` is already in the axe a11y
+  route sweep. `pnpm gate` green.
+- **Type:** ux/design · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-64
+- **Problem:** the quick-log page shipped with bespoke field styling that doesn't match the form look
+  used everywhere else (profile / onboarding / check-in) — visibly different and worse.
+- **Acceptance criteria:** `/log` fields render with the same radius/font/size/padding/colour tokens as
+  the rest of the app; no new design tokens invented; gate stays green.
+- **Files:** `src/app/log/page.tsx`
+
+### BC-68 · Can't log an off-plan session from a training day (only rest days / history) — `done`
+
+- **Shipped (2026-06-23):** BC-64 surfaced "Log a session" only on the **rest-day** Today card and
+  /history. On a **training day** the Today card offered just Check-in / Start, so a climber who **missed
+  their check-in or planned session** — or climbed something different — had no log affordance from Today,
+  and the load/streak/Insights signals silently undercounted. Added a "Log a different session" secondary
+  link to the training-day `SessionCard` (same `/log` route + `bc-btn` styling as the rest-day link). Pure
+  markup on a gate-blind page; the covered `quickLog.ts` write path is unchanged. `pnpm gate` green.
+- **Type:** ux/feature · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-64
+- **Problem:** the only Today entry point to freeform logging was the rest-day card; a missed or off-plan
+  training day was a dead end for capturing real load.
+- **Acceptance criteria:** a "log a session" affordance reaches `/log` from a training day too; no change
+  to the write path or the planned-session flow; gate green.
+- **Files:** `src/app/page.tsx`
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**
@@ -1402,6 +1434,29 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   shareable without leaking injury/health data (privacy default: progress yes, raw pain logs no), and how
   it relates to BC-18 (sync) so the two don't diverge. **No app code** until scheduled.
 - **Files:** `docs/specs/shareable-progress-design.md`
+
+### BC-69 · Social layer — share activity + share to social media (and a future social platform) — `open` (design-first)
+
+- **Type:** system-design/social · **Priority:** P3 · **Complexity:** L (share slice) → XL (full platform) · **Depends on:** BC-43
+- **Vision (PO idea 2026-06-23):** make training shareable and, longer-term, social — (a) **share to
+  social media**: a one-tap "share my session / week / pyramid" producing a branded image or text via the
+  **Web Share API** (`navigator.share`, with a copy-link / download-image fallback on desktop), no
+  backend; (b) **share activity to a friend or coach** (read-only snapshot — this is exactly BC-43's
+  "shareable program/progress snapshot," so the two MUST be specced together, not divergently); (c) a
+  **social platform** (feed, follows, kudos) — the big bet.
+- **The hard call this PBI must make (PO):** a real social _platform_ needs accounts + a backend +
+  multi-user data, which **breaks the app's defining no-backend, on-device, health-data-private posture**
+  (the same tension as BC-18 sync and BC-57 observability). Slice (a) is the cheap, posture-preserving win
+  and ships without any of that; slice (b) reuses BC-10 serialization; slice (c) is a separate
+  product/architecture decision that may not be worth the privacy trade-off. The spec must decide where
+  the line is, not assume the platform.
+- **Acceptance criteria:** **design spec only** (`docs/specs/`). Explore: Web Share API image/card
+  generation (what's on the card — pyramid + streak + ACWR trend + brand mark — and the **privacy
+  default: progress yes, raw pain/injury logs NEVER**, mirroring BC-43); the fallback when
+  `navigator.share` is absent; whether (c) the social platform is in scope at all given the no-backend
+  posture, and if so the minimal multi-user architecture + its data-privacy contract. **Fold the
+  read-only-snapshot half into BC-43 so the two don't diverge.** No app code until scheduled.
+- **Files:** `docs/specs/social-sharing-design.md`
 
 ### BC-55 · Indonesian-first i18n with EN/ID language toggle — `open` (**design spec + plan drafted 2026-06-16**)
 
