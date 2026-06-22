@@ -12,6 +12,29 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (broad scrutiny of OpenCode's shipped work; filed BC-66 — docs only, last touched by: Claude Opus 4.8)
+
+- **Extended the review beyond BC-65 to the whole OpenCode-authored logic surface** (two independent
+  code-review agent passes + hands-on verification): `insights.ts`, `reminders.ts`, `install.ts`,
+  `theme.ts`, `storage.ts`, `backupReminder.ts`, `frequencyNotes.ts` (all **clean** — no real bugs),
+  and the **prescription engine** (`periodization.ts`, `schedule.ts`, `assessment.ts`, `warmup.ts`,
+  `injuryBaseline.ts`, `grade.ts`).
+- **Filed BC-66 (verified bug, P2, injury-adjacent):** BC-45's promised "never two limit/PE days
+  back-to-back" (DUP tenet) **is not enforced.** `sessionPlanFor` lists the two hardest sessions first
+  and `pickDaySession` maps available weekdays ascending onto slots, so `{ sessionsPerWeek: 2,
+availableWeekdays: [1,2] }` (Mon/Tue) prescribes `limit-boulder` (RPE 9) Monday then `power-endurance`
+  (RPE 8) Tuesday. The BC-45 test only checks per-week counts, not calendar adjacency, so the gate
+  stayed green. **Not silently patched** — the n≥3 case is a clean interleave, but the unavoidable
+  n=2-adjacent-days case needs a PO decision (warn / downgrade / accept), and this touches
+  injury-adjacent prescription logic, so it's filed for a proper TDD fix with PO input.
+- **Two sub-threshold observations (noted, not filed):** end-of-cycle deload carries marginally more
+  main volume than the mid-cycle deload (overload bump leaks into deload weeks — still below any hard
+  week, contradicts the "back right off" copy); and `generateWarmup({ injuryActive: true })` is a
+  dead-in-production branch (only `applyInjuryHistory` is wired). Both below the bug bar.
+- **Net:** OpenCode's shipped work is high quality overall — one real crash bug fixed this session
+  (PR #69) and one real contract gap filed (BC-66). `pnpm gate` green (bundle 167.8 KB). **No app code
+  changed in this scrutiny pass** — docs only (BACKLOG BC-66 + this cursor).
+
 ## Current state — 2026-06-23 (reviewed OpenCode's merged BC-65; fixed a crash-safety regression — PR #69, last touched by: Claude Opus 4.8)
 
 - **Scrutinized OpenCode's already-merged BC-65 work (PRs #66/#67/#68)** end to end (domain

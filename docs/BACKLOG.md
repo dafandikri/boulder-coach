@@ -1264,6 +1264,36 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   **BC-64** (freeform logging) — run **sequentially** with those; cleanest **after BC-60** since both
   touch the same logging form.
 
+### BC-66 · Two max-effort days can land back-to-back — BC-45's "no consecutive hard days" contract isn't enforced — `open`
+
+- **Type:** bug/safety-adjacent · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-45
+- **Problem (found 2026-06-23 reviewing BC-45):** BC-45's acceptance criteria explicitly promise
+  "never two limit/PE days back-to-back, per the DUP tenet," and the BACKLOG claims a tested
+  "no-back-to-back-limit invariant." **It is not enforced.** `sessionPlanFor` (`periodization.ts`)
+  returns the two hardest sessions first (`['limit-boulder'` RPE 9`, 'power-endurance'` RPE 8`, …]`),
+  and `pickDaySession` (`schedule.ts`) maps `availableWeekdays` (sorted ascending) onto rotation slots
+  in order. So a climber who trains on **adjacent weekdays** gets both max-effort days on consecutive
+  calendar days. **Verified failing input:** `{ sessionsPerWeek: 2, availableWeekdays: [1, 2] }` (Mon/Tue)
+  → Monday = `limit-boulder` (RPE 9), Tuesday = `power-endurance` (RPE 8). The existing BC-45 test only
+  asserts the per-week **count** (≤1 limit, ≤1 PE), which holds — adjacency is a calendar property
+  `sessionPlanFor` alone can't express, so the gate stayed green. This is injury-adjacent: stacked
+  high-intensity load is precisely the failure mode the DUP contract exists to prevent.
+- **Decision needed (PO):** the fix space involves a product call, so it's filed not silently patched:
+  - **Avoidable cases (n ≥ 3):** interleave the rotation so a hard day is never adjacent to the other
+    hard day in the day-mapped sequence (e.g. `[limit, volume, PE, antagonist]` instead of
+    `[limit, PE, volume, antagonist]`) — pure improvement, no content change, just ordering.
+  - **Structurally-unavoidable case (n = 2 on adjacent weekdays):** there is no easy day to interleave.
+    Options: (a) warn at onboarding/profile when chosen days force adjacency; (b) downgrade the second
+    hard day to volume/technique for that layout; (c) accept + document. Pick one.
+- **Acceptance criteria:**
+  - A pure invariant test asserts that, for every `sessionsPerWeek` 1–7 mapped onto **any** weekday
+    layout, no two `limit-boulder`/`power-endurance` sessions fall on consecutive calendar days (or, for
+    the unavoidable n=2-adjacent case, the chosen mitigation fires deterministically).
+  - Whatever the resolution, the BACKLOG/spec claim and the code agree. Additive-safety: the change may
+    only spread or reduce intensity, never raise it. `adaptation.ts`/`loadMetrics.ts` untouched.
+- **Files:** `src/domain/periodization.ts`, `src/domain/schedule.ts`, `tests/domain/periodization.test.ts`,
+  possibly `src/app/lib/bootstrap.ts` (if onboarding-time validation/warning is chosen)
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**
