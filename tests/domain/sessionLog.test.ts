@@ -42,6 +42,38 @@ describe('createSessionLog', () => {
     expect(log.notes).toBe('felt strong');
   });
 
+  it('defaults the id to log-<date> when none is given (planned-session idempotency)', () => {
+    const log = createSessionLog({
+      date: '2026-06-09',
+      warmupCompleted: true,
+      blocks: actuals,
+      durationMin: 60,
+    });
+    // BC-64: the planned-session player passes no id, so re-finishing the same day
+    // overwrites (stable id) rather than duplicating.
+    expect(log.id).toBe('log-2026-06-09');
+  });
+
+  it('uses an explicit id when given, so two logs can coexist on one date (BC-64)', () => {
+    // BC-64: a freeform log on a day that already has a planned-session log must not
+    // collide with `log-<date>` and overwrite it — the caller supplies a unique id.
+    const planned = createSessionLog({
+      date: '2026-06-09',
+      warmupCompleted: true,
+      blocks: actuals,
+      durationMin: 60,
+    });
+    const freeform = createSessionLog({
+      id: 'log-2026-06-09-q1',
+      date: '2026-06-09',
+      warmupCompleted: true,
+      blocks: actuals,
+      durationMin: 45,
+    });
+    expect(freeform.id).toBe('log-2026-06-09-q1');
+    expect(freeform.id).not.toBe(planned.id);
+  });
+
   it('falls back to the suggested session RPE when none is given', () => {
     const log = createSessionLog({
       date: '2026-06-10',

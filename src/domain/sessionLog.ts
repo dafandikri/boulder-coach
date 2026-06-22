@@ -40,6 +40,10 @@ export interface BlockActual {
 
 export interface SessionLogInput {
   date: string; // ISO yyyy-mm-dd
+  /** BC-64: explicit id. Omitted by the planned-session player so it stays
+   *  `log-<date>` (idempotent — re-finishing a day overwrites). Freeform logs
+   *  supply a unique id so multiple logs can coexist on one local day. */
+  id?: string;
   plannedSessionId?: string;
   warmupCompleted: boolean;
   blocks: BlockActual[];
@@ -63,7 +67,7 @@ export function createSessionLog(input: SessionLogInput): SessionLog {
     rpe: b.rpe,
   }));
   return {
-    id: `log-${input.date}`,
+    id: input.id ?? `log-${input.date}`,
     date: input.date,
     plannedSessionId: input.plannedSessionId,
     warmupCompleted: input.warmupCompleted,

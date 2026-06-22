@@ -1159,8 +1159,21 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
 - **Sequencing:** edits `periodization.ts`, which **BC-62** also moves/edits — run **sequentially** with
   BC-62 (ideally after BC-62's content move lands), never as a parallel Crew pair.
 
-### BC-64 · Freeform / quick session logging — off-plan climbing never gets captured — `open`
+### BC-64 · Freeform / quick session logging — off-plan climbing never gets captured — `done`
 
+- **Shipped:** a **"Log a session"** entry point on the Today **rest-day** card and on **/history** opens a
+  new lightweight `/log` page (date default today, duration, session-RPE slider, optional sends, optional
+  note) — no planned session required. All decision logic lives in the covered, pure
+  `src/app/lib/quickLog.ts` (`validateQuickLog`, `freeformLogId`, `buildQuickLogInput`); the page only does
+  repo I/O. A freeform log writes through the same `IClimbRepo.saveLog` path, so `loadMetrics` (ACWR),
+  `computeConsistency` (streak), and Insights pick it up with **no engine change** (verified by an
+  integration test that drives both engines). **Fixed the verified log-id collision:** `createSessionLog`
+  keyed `id` as `log-<date>`, so a second log on a day would overwrite the first; `SessionLogInput` now
+  takes an optional `id` — the planned player still omits it (stays `log-<date>`, idempotent), and
+  `freeformLogId` hands freeform logs a unique `log-<date>-q<n>` that never collides with the planned id.
+  Sends are recorded as attempts too (every send is an attempt — BC-65 invariant). `/log` added to the
+  axe a11y route sweep. TDD: `tests/app/quickLog.test.ts` (10, helper ≥95% branch) + extended
+  `sessionLog.test.ts` (id default vs. override). `pnpm gate` green (bundle 167.8 KB).
 - **Type:** feature · **Priority:** P2 · **Complexity:** M · **Depends on:** BC-04, BC-10
 - **Problem (PO-diagnosed 2026-06-16, verified against code):** the **only** writer of a `SessionLog` is
   the planned-session player — `/session` loads today's _planned_ session via `getTodaySession` and

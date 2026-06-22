@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getRepo } from '@/data/repoInstance';
 import type { SessionLog } from '@/domain/types';
@@ -22,6 +23,11 @@ export default function HistoryPage() {
         <div className="bc-eyebrow">Your logbook</div>
         <h1 style={{ fontSize: 'var(--fs-2xl)' }}>History</h1>
       </header>
+
+      {/* BC-64: capture an off-plan / other-gym session that never went through the player. */}
+      <Link href="/log" className="bc-btn bc-btn--secondary bc-btn--full">
+        Log a session
+      </Link>
 
       {logs.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-10 text-center">
