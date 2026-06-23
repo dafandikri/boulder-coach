@@ -1314,14 +1314,92 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   - **Structurally-unavoidable case (n = 2 on adjacent weekdays):** there is no easy day to interleave.
     Options: (a) warn at onboarding/profile when chosen days force adjacency; (b) downgrade the second
     hard day to volume/technique for that layout; (c) accept + document. Pick one.
+- **PO decision (2026-06-23):** **(b) downgrade, applied automatically + deterministically.** Rank the
+  rotation so a hard day is never adjacent to the other hard day where avoidable (n ≥ 3 → interleave,
+  e.g. `[limit, volume, PE, antagonist]`); for the structurally-unavoidable **n = 2 on adjacent
+  weekdays**, **downgrade the second max-effort day to `volume-technique`** for that layout. Rationale:
+  it is the only option that is _automatic_ (no onboarding friction, no blaming the user's real schedule),
+  strictly **additive-safety** (it only spreads/reduces intensity), and keeps the calendar honest without
+  a warning the user can't act on. Option (a)'s warning is rejected (puts the burden on the user for a
+  problem the engine can just solve); (c) is rejected (leaves a known injury-load footgun shipped).
 - **Acceptance criteria:**
   - A pure invariant test asserts that, for every `sessionsPerWeek` 1–7 mapped onto **any** weekday
-    layout, no two `limit-boulder`/`power-endurance` sessions fall on consecutive calendar days (or, for
-    the unavoidable n=2-adjacent case, the chosen mitigation fires deterministically).
-  - Whatever the resolution, the BACKLOG/spec claim and the code agree. Additive-safety: the change may
-    only spread or reduce intensity, never raise it. `adaptation.ts`/`loadMetrics.ts` untouched.
+    layout, no two `limit-boulder`/`power-endurance` sessions fall on consecutive calendar days. For the
+    unavoidable n=2-adjacent layout, the downgrade fires deterministically (the second hard day becomes
+    `volume-technique`), proven by a calendar-adjacency test (not just a per-week count).
+  - The BACKLOG/spec claim and the code agree. Additive-safety: the change may only spread or reduce
+    intensity, never raise it. `adaptation.ts`/`loadMetrics.ts` untouched.
 - **Files:** `src/domain/periodization.ts`, `src/domain/schedule.ts`, `tests/domain/periodization.test.ts`,
-  possibly `src/app/lib/bootstrap.ts` (if onboarding-time validation/warning is chosen)
+  `tests/domain/schedule.test.ts`
+
+### BC-72 · Adaptation banner is missing from the session player — the climber loses the "why" after tapping Start — `open`
+
+- **Type:** ux/feature · **Priority:** P2 (high) · **Complexity:** S · **Depends on:** —
+- **Problem (PO diagnosis 2026-06-23, verified against code):** the spec's **Screen 3 (Session player)**
+  explicitly promises an **"adaptation banner."** The engine IS wired — `getTodaySession` runs
+  `adapt(planned, checkIn, logs, metrics)` and surfaces `changes` (the human-readable reasons) on
+  `TodayResult` — and **Today renders them** (`page.tsx:474`). But the **session player renders none**
+  (`session/page.tsx` has zero references to `changes`/`reason`). The player loads its own
+  `getTodaySession`, so the blocks the climber sees ARE adapted (volume cut, grips swapped, deload), but
+  the **reason vanishes the moment they tap Start.** A climber doing a reduced session has no on-screen
+  explanation of why it changed — eroding trust in exactly the feature that differentiates the app
+  ("adapts to how you feel"). It also strands the future persistent-pain escalation (BC-73), which needs
+  the same surface.
+- **Value:** the adaptation feels intentional and trustworthy where it matters most — during the session —
+  instead of looking like a buggy/short plan.
+- **Acceptance criteria:**
+  - The session player renders `today.changes` as a banner (reuse Today's rendering; ideally extract a
+    small shared presentational `AdaptationBanner` component so Today and the player can't drift — the
+    BC-54/BC-71 "one render path" lesson).
+  - Safety-flagged changes (rule 1 pain, ACWR deload) read with appropriate prominence; the warm-up
+    mandatory state (already shown) stays.
+  - No domain change — purely surfacing data already on `TodayResult`. Logic stays out of the gate-blind
+    page; the banner is presentational. `/session` stays in the axe a11y sweep.
+- **Files:** `src/app/session/page.tsx`, `src/app/components/AdaptationBanner.tsx`, `src/app/page.tsx`
+
+### BC-73 · Persistent-pain escalation — "see a physio if it persists" is only a string, never detected — `open` (**design spec drafted 2026-06-23**)
+
+- **Type:** feature/safety · **Priority:** P1 · **Complexity:** M · **Depends on:** BC-72
+- **Design spec:** [`docs/specs/persistent-pain-escalation-design.md`](specs/persistent-pain-escalation-design.md).
+- **Problem (PO diagnosis 2026-06-23, verified against code):** the core promise is "keeps you out of
+  injury", but the engine only reacts to **today's** pain flag. `adapt()` (rule 1) cuts volume 50% +
+  open-hand + prehab same-day and its reason says _"See a physio if it persists"_ — yet **nothing
+  detects persistence.** A climber flagging the same body part across many check-ins gets the identical
+  gentle handling each time; the "if it persists" clause is passive copy, not behaviour. That is exactly
+  the tweak-vs-real-injury line (recurring A2 pulley / PIP synovitis / TFCC) the product exists to catch.
+  Check-ins are already stored as a queryable series (`IClimbRepo.getCheckIns()`), so the signal is
+  available and unused.
+- **Value:** closes the most credible remaining injury-prevention gap — escalating a multi-session pain
+  **pattern** to real rest + a professional referral, with a hard intensity cap.
+- **Acceptance criteria (full design in the spec):**
+  - Pure `src/domain/painTrend.ts` `assessPersistentPain(checkIns, asOf) → { part, sessions, windowDays }
+| null` — a body part flagged in **≥ 3 check-ins within 14 days** escalates; window/future/tie-break/
+    cold-start cases tested; never NaN, never a false alarm.
+  - `getTodaySession` surfaces `TodayResult.persistentPain`; Today + the session player (BC-72 surface)
+    show a distinct **danger** Callout (rest + see a climbing physio), warm-up forced, intensity hard-capped
+    (no max-effort) even on a day the user didn't re-flag.
+  - **Additive-safety invariant (tested):** escalation may only lower today's intensity/volume, never
+    raise it — kept OUT of `adaptation.ts`/`loadMetrics.ts` (no safety-reviewer), mirroring BC-29/BC-63.
+- **Files:** `src/domain/painTrend.ts`, `src/app/lib/bootstrap.ts`, `src/app/page.tsx`,
+  `src/app/session/page.tsx`, `tests/domain/painTrend.test.ts`, `tests/app/bootstrap.test.ts`
+
+### BC-74 · First-week "calibration" orientation — a cold-start user doesn't know the light week is intentional — `open`
+
+- **Type:** ux/onboarding · **Priority:** P2 · **Complexity:** S · **Depends on:** —
+- **Problem (PO diagnosis 2026-06-23):** the spec's edge cases say **"Cold start (no data) → week 1 is a
+  conservative calibration baseline."** The engine does this, but the app **never tells the user.** A
+  brand-new climber finishing onboarding sees a deliberately easy first week with no framing — which
+  reads as "is this it?" / under-delivering, rather than "we're calibrating to you safely." First-session
+  comprehension is the activation moment; an unexplained light week risks early churn.
+- **Value:** turns a safety decision the climber can't see into a confidence builder ("week 1 calibrates
+  to you — it ramps as we learn your real load"), improving activation/retention.
+- **Acceptance criteria:**
+  - A pure predicate (e.g. in `src/app/lib/bootstrap.ts` or a small covered helper) detects the cold-start
+    first-week state (no logs yet AND within program week 0) and surfaces a one-time, dismissible info
+    Callout on Today explaining the calibration intent. Decision logic in a covered layer, not the page.
+  - Dismissal persists (localStorage); it never reappears once the user has logged a session or dismissed.
+  - Tested at the boundary (week 0 no-logs → show; after first log / week 1 → hide).
+- **Files:** `src/app/lib/bootstrap.ts` (or a new covered helper), `src/app/page.tsx`
 
 ### BC-67 · Quick-log form fields look different (smaller, monospaced) from the rest of the app — `done`
 
