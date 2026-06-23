@@ -1339,6 +1339,27 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   to the write path or the planned-session flow; gate green.
 - **Files:** `src/app/page.tsx`
 
+### BC-70 · Self-healing gate format step + Tier-1 guard — kill the most-recurring inner-loop failure — `done`
+
+- **Shipped (2026-06-23):** hand-editing docs (BACKLOG / HANDOFF / specs) and tripping `pnpm gate` step 1
+  (`format:check`) was the **single most-recurring inner-loop gate failure** — logged as prose three
+  times (LEARNINGS 2026-06-09, 2026-06-13, 2026-06-23) and re-hit each time, far past the ledger's own
+  "≥2× → promote to an automated check" rule. Promoted prose → automation: `scripts/gate.sh` step 1 now
+  **self-heals locally** (`pnpm format` = `prettier --write`) and stays **strict in CI** (`format:check`),
+  branched on `${CI:-}`. Commits are already Prettier-clean via the pre-commit lint-staged hook, so CI's
+  `--check` still passes and still fails any unformatted commit — the merge guarantee is intact;
+  `prettier --write` is deterministic + idempotent so it never masks a real failure. New Tier-1 guard
+  `tests/harness/gate-format-selfheal.test.ts` reads `gate.sh` and asserts both paths stay wired, so the
+  fix can't silently regress. The recurring format trip is now structurally impossible. `pnpm gate` green.
+- **Type:** infra/ci · **Priority:** P2 · **Complexity:** S · **Depends on:** —
+- **Problem:** the inner-loop gate `--check`s formatting but never fixes it, so every agent that hand-edits
+  a doc and runs `pnpm gate` before committing burns a cycle on step 1. The lesson was written as prose
+  ≥3× instead of being automated, exactly the "mistake seen but not promoted" anti-pattern.
+- **Acceptance criteria:** the gate auto-fixes formatting locally and keeps the strict `--check` in CI; a
+  Tier-1 test asserts both paths so a revert fails the gate by name; the merge-time guarantee (no
+  unformatted commit reaches `main`) is preserved.
+- **Files:** `scripts/gate.sh`, `tests/harness/gate-format-selfheal.test.ts`
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**

@@ -12,6 +12,28 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (BC-70 self-healing gate format step + ledger hardening — last touched by: Claude Opus 4.8)
+
+- **Retrospective + harden pass: promoted the most-recurring inner-loop failure from prose to
+  automation, and logged the mistakes that hadn't been logged.**
+- **BC-70 DONE — the gate's format step now self-heals.** Hand-editing docs and tripping `pnpm gate`
+  step 1 (`format:check`) was logged as prose **3×** (LEARNINGS 2026-06-09, 2026-06-13, 2026-06-23) and
+  re-hit each time — past the ledger's own "≥2× → automate" rule. `scripts/gate.sh` step 1 now runs
+  `pnpm format` (`prettier --write`) **locally** and `pnpm format:check` **in CI** (branched on
+  `${CI:-}`). Commits are already clean via the pre-commit lint-staged hook, so CI stays strict and the
+  no-unformatted-commit-reaches-`main` guarantee is intact; `prettier --write` is idempotent so it never
+  masks a failure. New Tier-1 guard `tests/harness/gate-format-selfheal.test.ts` asserts both paths stay
+  wired (a revert fails the gate by name).
+- **Logged the unlogged mistakes (the gap the PO flagged):** (1) this session's `format:check` trip that
+  I'd fixed silently without a ledger entry — now recorded AND automated; (2) a `gh pr checks` watch loop
+  that exited early on `IN_PROGRESS` because it negated a single in-flight state (`!= PENDING`) instead of
+  matching the terminal set — fix: loop on `SUCCESS|FAILURE|ERROR|CANCELLED|TIMED_OUT` or use `--watch`.
+- **Docs synced same-commit:** `CLAUDE.md` gate line now states the format step's local-vs-CI behavior.
+- **Verified:** `pnpm gate` green (now auto-formats locally), guard test green. **Pushing via the same
+  supervised PR flow** (commit → push → PR → CI → merge if green + certain).
+- **Next:** unchanged open code — **BC-62** (content catalog + validation gate), **BC-63** (beginner
+  program content, after BC-62), **BC-66** (back-to-back hard days, needs PO call on the n=2 case).
+
 ## Current state — 2026-06-23 (BC-67 + BC-68 logging-UX consistency shipped, BC-69 social PBI filed — last touched by: Claude Opus 4.8)
 
 - **Two minor logging-UX gaps from a PO walkthrough — fixed this session (TDD-exempt: pure presentational
