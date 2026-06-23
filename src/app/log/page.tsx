@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getRepo } from '@/data/repoInstance';
 import { localDateIso } from '@/app/lib/date';
@@ -12,6 +12,7 @@ import {
   type QuickLogForm,
 } from '@/app/lib/quickLog';
 import { createSessionLog } from '@/domain/sessionLog';
+import { FIELD_STYLE } from '@/app/lib/fieldStyles';
 import type { VGrade } from '@/domain/types';
 import { Card } from '@/app/components/Card';
 import { Button } from '@/app/components/Button';
@@ -21,23 +22,9 @@ import { BackLink } from '@/app/components/BackLink';
 
 type Tally = Partial<Record<VGrade, number>>;
 
-/**
- * BC-67: the same field look the rest of the app uses (mirrors profile's
- * `SELECT_STYLE`) so the quick-log form doesn't read as a different, smaller,
- * monospaced screen. Spread it and override only width per field.
- */
-const FIELD_STYLE: CSSProperties = {
-  display: 'block',
-  marginTop: 6,
-  borderRadius: 'var(--r-md)',
-  border: '2px solid var(--border)',
-  background: 'var(--surface)',
-  color: 'var(--text)',
-  fontFamily: 'var(--font-body)',
-  fontWeight: 700,
-  fontSize: 'var(--fs-base)',
-  padding: '10px 12px',
-};
+// BC-71: the canonical field box is the shared FIELD_STYLE; spread it and add
+// only layout (display/margin/width) so /log never re-rolls a divergent field.
+const FIELD = { ...FIELD_STYLE, display: 'block', marginTop: 6 } as const;
 
 export default function QuickLogPage() {
   const router = useRouter();
@@ -111,7 +98,7 @@ export default function QuickLogPage() {
             onChange={(e) => {
               setDate(e.target.value);
             }}
-            style={FIELD_STYLE}
+            style={FIELD}
           />
         </label>
 
@@ -128,7 +115,7 @@ export default function QuickLogPage() {
             onChange={(e) => {
               setDurationMin(Math.trunc(Number(e.target.value)));
             }}
-            style={{ ...FIELD_STYLE, width: 120 }}
+            style={{ ...FIELD, width: 120 }}
           />
         </label>
 
@@ -207,7 +194,7 @@ export default function QuickLogPage() {
             }}
             rows={3}
             placeholder="Felt strong on overhangs…"
-            style={{ ...FIELD_STYLE, width: '100%', fontWeight: 400 }}
+            style={{ ...FIELD, width: '100%', fontWeight: 400 }}
           />
         </label>
       </Card>

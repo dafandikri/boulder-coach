@@ -1360,6 +1360,29 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
   unformatted commit reaches `main`) is preserved.
 - **Files:** `scripts/gate.sh`, `tests/harness/gate-format-selfheal.test.ts`
 
+### BC-71 · Frontend form-field consistency — one canonical `FIELD_STYLE` + Tier-1 anti-drift guard — `done`
+
+- **Shipped (2026-06-23):** the **same design-drift bug shipped twice** — a page hand-rolled an inline
+  form-field box with off-canonical tokens (`--r-sm`, `--font-mono`, `--fs-sm`) instead of the app's look:
+  **BC-67** (`/log` date/duration/note) and **BC-60** (session "sets" input). Both were caught by eye and
+  fixed by hand; the canonical box was also **duplicated** across `profile`/`log`/`session`. Promoted the
+  lesson from prose → automation: consolidated the canonical box into one covered module
+  `src/app/lib/fieldStyles.ts` (`FIELD_STYLE`, design-system tokens only), and `profile`/`log`/`session`
+  now spread it (overriding only layout/size). New Tier-1 guard
+  `tests/harness/design-consistency.test.ts` scans every `src/app/**/page.tsx` and fails by file name if
+  any inlines the **field-box signature** (`borderRadius` + `border:` + `padding` + `fontFamily` — unique
+  to text-entry fields, so false-positive-free; a `...FIELD_STYLE` spread inherits and passes). The
+  detector ships with its own non-vacuous self-tests. `pnpm gate` green (bundle 167.8 KB, behavior-preserving).
+- **Type:** ux/infra · **Priority:** P2 · **Complexity:** S · **Depends on:** BC-67
+- **Problem:** inline `style={{…}}` on a form control is invisible to the gate (gate-blind pages, no
+  token-usage lint), so a divergent field passes every check — exactly how BC-67/BC-60 shipped. The
+  lesson was being fixed by hand each time instead of promoted to a check.
+- **Acceptance criteria:** one shared canonical field style; all page form controls use it; a Tier-1
+  test fails when a page re-rolls the field box inline; no false positives on Cards/dividers/steppers; no
+  behavior change; gate green.
+- **Files:** `src/app/lib/fieldStyles.ts`, `tests/harness/design-consistency.test.ts`,
+  `src/app/log/page.tsx`, `src/app/profile/page.tsx`, `src/app/session/page.tsx`
+
 ### BC-21 · Single repo instance — `done`
 
 - **Shipped:** `src/data/repoInstance.ts` exports `getRepo(): IClimbRepo` — a **lazily-constructed**

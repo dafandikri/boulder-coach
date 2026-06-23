@@ -12,6 +12,28 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (BC-71 frontend form-field consistency now an automated gate check — last touched by: Claude Opus 4.8)
+
+- **BC-71 DONE — the design-drift class that the PO kept catching by eye is now a gate check.** The same
+  bug shipped twice (BC-67 `/log` fields, BC-60 session "sets" input): a page hand-rolled an inline
+  form-field box with off-canonical tokens (`--r-sm`/`--font-mono`/`--fs-sm`) instead of the app's look,
+  and the canonical box was duplicated across `profile`/`log`/`session`. Promoted prose → automation:
+  - **One source of truth:** `src/app/lib/fieldStyles.ts` exports `FIELD_STYLE` (design-system tokens
+    only). `profile` (`SELECT_STYLE`), `log`, and `session` now spread it (override only layout/size).
+    The session "sets" field shed its mono-font/`--r-sm` drift in the process.
+  - **Tier-1 guard:** `tests/harness/design-consistency.test.ts` scans every `src/app/**/page.tsx`,
+    extracts each style object by balanced-brace matching, and fails by file name if any inlines the
+    field-box signature (`borderRadius` + `border:` + `padding` + `fontFamily` — unique to text fields, so
+    no false positives on Cards/dividers/steppers). A `...FIELD_STYLE` spread inherits and passes. The
+    detector has its own non-vacuous self-tests. Components are intentionally exempt.
+  - **Docs synced same-commit:** `CLAUDE.md` quality-bar now states the FIELD_STYLE rule.
+- **Pattern (now 2 in a row this session):** a hand-fixed mistake that recurs ≥2× gets promoted to an
+  executable check, per the repo's own promotion rule — BC-70 (format self-heal) and BC-71 (field drift).
+- **Verified:** `pnpm gate` green (behavior-preserving refactor; bundle 167.8 KB); guard 16/16.
+  **Shipping via the supervised PR flow** (commit → push → PR → CI → merge if green + certain).
+- **Next:** unchanged open code — **BC-62** (content catalog + validation gate), **BC-63** (beginner
+  program content, after BC-62), **BC-66** (back-to-back hard days, needs PO call on the n=2 case).
+
 ## Current state — 2026-06-23 (BC-70 self-healing gate format step + ledger hardening — last touched by: Claude Opus 4.8)
 
 - **Retrospective + harden pass: promoted the most-recurring inner-loop failure from prose to

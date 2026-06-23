@@ -30,6 +30,31 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-23 — frontend form-field consistency — design (test) — **PROMOTED to automated check (2nd occurrence)**
+
+- **Task:** harden against the design-drift class after the PO flagged it ("the custom log has a
+  different component … the vibe is just bad and different from the rest" → BC-67).
+- **What failed:** the SAME bug shipped twice — a page hand-rolled an inline form-field box with
+  off-canonical tokens (`--r-sm`, `--font-mono`, `--fs-sm`, tight padding) instead of matching the rest
+  of the app: **BC-67** (the `/log` date/duration/note fields) and **BC-60** (the session "sets" input).
+  Both read as smaller / monospaced / off-brand. Each was caught by **eye** and fixed by **hand** — no
+  gate caught the divergence, and the canonical field box was **duplicated** in three places
+  (`profile`'s `SELECT_STYLE`, `/log`'s `FIELD_STYLE`, the session inline style), inviting more drift.
+- **Root cause:** there was no single source of truth for the field box and no check that pages use it.
+  Inline `style={{…}}` on a form control is invisible to the gate (gate-blind page, no React harness,
+  and there's no token-usage lint), so a divergent field passes every existing step.
+- **Fix:** consolidated the canonical box into one covered module `src/app/lib/fieldStyles.ts`
+  (`FIELD_STYLE`, tokens only); `profile` / `log` / `session` now spread it (override only
+  layout/size). The session "sets" field lost its `--font-mono`/`--r-sm` drift in the process.
+- **Prevention (Tier-1):** `tests/harness/design-consistency.test.ts` scans every `src/app/**/page.tsx`,
+  extracts each `style={{…}}` / `CSSProperties` object by balanced-brace matching, and fails (by file
+  name) if any inlines the **field-box signature** (`borderRadius` + `border:` + `padding` +
+  `fontFamily` together — unique to text-entry fields; Cards/dividers/steppers never set all four, so
+  it's false-positive-free). A spread `...FIELD_STYLE` inherits these, so the correct pattern passes.
+  The detector has its own non-vacuous self-tests (flags a bad box, ignores spread/caption/stepper).
+  Components (`src/app/components/**`) own box styling and are intentionally exempt. (BC-71.)
+- **Attempts to green:** 1 (consolidation + guard landed green; the refactor was behavior-preserving).
+
 ## 2026-06-23 — scripts/gate.sh — format (lint) — **PROMOTED to automated self-heal (3rd occurrence)**
 
 - **Task:** BC-67/BC-68/BC-69 backlog + HANDOFF edits (hand-authored markdown).
