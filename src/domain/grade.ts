@@ -24,3 +24,20 @@ export function formatGrade(grade: VGrade): string {
 export function isValidGrade(grade: number): boolean {
   return Number.isInteger(grade) && grade >= VB && grade <= MAX_GRADE;
 }
+
+/** Training audience by ability. BC-44 made VB/V0 onboardable, so the program engine
+ *  must coach them differently from the spec's original V4–V6 audience. */
+export type GradeBand = 'beginner' | 'intermediate';
+
+/** The highest beginner grade — VB/V0/V1/V2 are beginners; V3+ are intermediate. */
+const MAX_BEGINNER_GRADE: VGrade = 2;
+
+/**
+ * BC-63: classify a climber so the program can prescribe safely. A true beginner
+ * (`currentGrade ≤ MAX_BEGINNER_GRADE`) needs easy mileage + technique and a capped
+ * sub-limit stimulus — never the RPE-9 limit / 4×4 power-endurance work that is an
+ * A2/PIP injury vector on undeveloped tendons. Pure; the single source of the band rule.
+ */
+export function gradeBand(currentGrade: VGrade): GradeBand {
+  return currentGrade <= MAX_BEGINNER_GRADE ? 'beginner' : 'intermediate';
+}

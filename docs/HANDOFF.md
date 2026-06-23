@@ -12,6 +12,28 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (BC-63 beginner-aware program content shipped — last touched by: Claude Opus 4.8)
+
+- **BC-63 DONE — a VB/V0/V1/V2 beginner is no longer prescribed a V6's RPE-9 limit day or 4×4
+  power-endurance day** (the A2/PIP injury vectors the app exists to prevent). New pure
+  `gradeBand(currentGrade) → 'beginner' | 'intermediate'` in `grade.ts` (beginner = `currentGrade ≤ 2`);
+  `generateProgram` derives the band and `sessionPlanFor` is band-aware. **Rotation-only fix:** a
+  beginner's week is built only from the existing, unchanged low-intensity types (`volume-technique` RPE 6
+  - `antagonist-prehab` RPE 6) — no `limit-boulder`/`power-endurance` at any frequency 1..7, any phase.
+- **Additive-safety holds under EVERY reading** because no block's RPE is ever raised — we removed the two
+  hard days and added only the already-safe ones. `mainBlocksFor`/`buildSession` are untouched, so the
+  intermediate (V3+) program is byte-identical (regression-tested). Stayed out of
+  `adaptation.ts`/`loadMetrics.ts` (no safety-reviewer needed).
+- **Process win (logged):** the `feature-dev:code-reviewer` agent caught — pre-commit — that my first
+  design (a beginner "project" day at RPE 7) violated additive-safety under the per-session-type reading.
+  Redesigned to rotation-only; a second agent pass confirmed all findings resolved. Lesson: pick the design
+  that's safe under the STRICTEST contract reading, don't reframe the contract to keep a feature.
+- **Verified:** TDD (boundary, 1..7 frequency sweep × every beginner grade, RPE ≤6 all phases, both
+  deloads + peak, intermediate byte-identical). `pnpm gate` green; `periodization.ts` ≥92% branch.
+- **Next (PO grooming this session):** diagnosing the whole backlog/codebase/specs for new + revised PBIs
+  (separate effort). Open code remains **BC-62** (content catalog + validation gate — note its test will
+  flag 5 known missing SVGs), **BC-66** (back-to-back hard days — needs a PO call on the n=2 case).
+
 ## Current state — 2026-06-23 (BC-71 frontend form-field consistency now an automated gate check — last touched by: Claude Opus 4.8)
 
 - **BC-71 DONE — the design-drift class that the PO kept catching by eye is now a gate check.** The same

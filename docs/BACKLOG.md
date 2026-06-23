@@ -1120,8 +1120,24 @@ currentStreakWeeks }` in `src/domain/consistency.ts` — counts sessions in the 
 > and Insights of real load (and weakening the deload-safety math, which underestimates risk on partial
 > data). Both are verified against the code below.
 
-### BC-63 · Beginner-aware program content — a VB/V0 climber still gets a V6's RPE-9 limit day — `open`
+### BC-63 · Beginner-aware program content — a VB/V0 climber still gets a V6's RPE-9 limit day — `done`
 
+- **Shipped (2026-06-23):** new pure `gradeBand(currentGrade) → 'beginner' | 'intermediate'` in
+  `grade.ts` (beginner = `currentGrade ≤ 2`, i.e. VB/V0/V1/V2). `generateProgram` derives the band once
+  and `sessionPlanFor` is now band-aware: a beginner's week is built **only** from the existing,
+  unchanged low-intensity session types (`volume-technique` RPE 6 + `antagonist-prehab` RPE 6) — **never**
+  `limit-boulder` (RPE 9) or the `power-endurance` 4×4 (RPE 8), the A2/PIP injury vectors. **The fix is
+  rotation-only:** the blocks those safe types produce are byte-identical, so a beginner's per-block
+  intensity is never above the grade-agnostic equivalent — **additive-safety holds under every reading**
+  (we removed the two hard days and raised nothing), keeping the change out of
+  `adaptation.ts`/`loadMetrics.ts` (no safety-reviewer needed). Intermediate (V3+) output is byte-identical
+  (`mainBlocksFor`/`buildSession` untouched). A `weekSummary` build-week line was made band-neutral so it
+  no longer claims a beginner does "limit, power-endurance and technique". **TDD** + a code-review agent
+  (two passes — it caught an earlier RPE-7 design that broke additive-safety under the per-session-type
+  reading; redesigned to rotation-only). Tests: `gradeBand` boundary (V2 vs V3); a frequency **sweep
+  1..7** × every beginner grade asserting no limit/4×4 type or `main-limit`/`main-4x4` block; RPE ≤ 6
+  across all blocks/phases; both deload weeks + the peak week kept easy; intermediate-byte-identical
+  regression. `periodization.ts` ≥ 92% branch; `pnpm gate` green.
 - **Type:** feature/safety · **Priority:** P2 (high) · **Complexity:** M · **Depends on:** BC-44, BC-45
 - **Problem (PO-diagnosed 2026-06-16, verified against code):** BC-44 lowered the onboarding floor to
   **VB/V0** and BC-45 opened frequency to **1–7×**, but the program engine never learned to _coach_ a

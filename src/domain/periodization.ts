@@ -13,7 +13,7 @@ import type {
 } from './types';
 import { generateWarmup } from './warmup';
 import { applyInjuryHistory } from './injuryBaseline';
-import { VB } from './grade';
+import { VB, gradeBand, type GradeBand } from './grade';
 import type { ExerciseContent } from './exerciseContent';
 import { getDrillsByCategory } from './drills';
 
@@ -86,18 +86,27 @@ const PHASE_VOLUME: Record<PhaseKind, number> = {
 };
 
 /**
- * Session rotation by weekly frequency (BC-45: 1..7). Additive-safety contract: the
- * week has at most ONE limit day and ONE power-endurance day; every extra session is
- * low-intensity volume/technique or antagonist-prehab, never more max-effort climbing.
- * So raising frequency adds easy volume, never injury-risking intensity.
+ * Session rotation by weekly frequency (BC-45: 1..7) and ability band (BC-63).
+ *
+ * Intermediate additive-safety contract: the week has at most ONE limit day and ONE
+ * power-endurance day; every extra session is low-intensity volume/technique or
+ * antagonist-prehab, never more max-effort climbing — so raising frequency adds easy
+ * volume, not injury-risking intensity.
+ *
+ * Beginner (BC-63): NO `limit-boulder` (RPE 9) or `power-endurance` (4×4) day at all —
+ * those are the A2/PIP injury vectors on undeveloped tendons. The week is built only from
+ * the two already-safe low-intensity session types: `volume-technique` (their capped,
+ * sub-limit RPE-6 mileage + technique stimulus) and `antagonist-prehab` (RPE 6). The blocks
+ * those types produce are UNCHANGED — only the rotation differs — so a beginner's per-block
+ * intensity is never above the grade-agnostic equivalent (additive-safety holds by
+ * construction; we removed the two hard days and added only the easy ones). The day-5+
+ * filler logic is identical, so the beginner week stays a subset of safe types at every 1..7.
  */
-function sessionPlanFor(sessionsPerWeek: number): SessionType[] {
-  const base: SessionType[] = [
-    'limit-boulder',
-    'power-endurance',
-    'volume-technique',
-    'antagonist-prehab',
-  ];
+function sessionPlanFor(sessionsPerWeek: number, band: GradeBand): SessionType[] {
+  const base: SessionType[] =
+    band === 'beginner'
+      ? ['volume-technique', 'antagonist-prehab', 'volume-technique', 'antagonist-prehab']
+      : ['limit-boulder', 'power-endurance', 'volume-technique', 'antagonist-prehab'];
   const n = Math.max(1, Math.min(7, Math.trunc(sessionsPerWeek)));
   const plan = base.slice(0, Math.min(n, base.length));
   // Days 5+ alternate volume/technique and antagonist-prehab — low-intensity fillers.
@@ -333,7 +342,10 @@ function buildSession(
 
 export function generateProgram(profile: UserProfile, startDate: string): Program {
   const programId = `prog-${startDate}`;
-  const rotation = sessionPlanFor(profile.sessionsPerWeek);
+  // BC-63: the ability band steers BOTH the rotation (no limit/4×4 for beginners) and the
+  // per-block intensity (capped sub-limit stimulus). Derived once from the climber's grade.
+  const band = gradeBand(profile.currentGrade);
+  const rotation = sessionPlanFor(profile.sessionsPerWeek, band);
 
   const weeks: ProgramWeek[] = PHASE_PATTERN.map((phase, weekIndex) => {
     // How many earlier weeks share this phase — drives progressive overload (BC-48).
@@ -409,7 +421,7 @@ export function weekSummary(week: ProgramWeek): WeekSummary {
   const build = ordinal + 1;
   const detail =
     ordinal === 0
-      ? 'Lay your base: repeatable quality volume across limit, power-endurance and technique. ' +
+      ? 'Lay your base: repeatable quality volume across your sessions this week. ' +
         'Climb hard but leave a rep in reserve — clean form beats grinding.'
       : `Progressive overload: a little more main volume than last week (+${ordinal} set${
           ordinal > 1 ? 's' : ''
