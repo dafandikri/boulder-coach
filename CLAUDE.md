@@ -21,6 +21,9 @@
   defensive branches; restructure so the meaningful case is tested.
 - **Logic belongs in covered layers** (`src/domain/**`, `src/app/lib/**`), never in gate-blind
   `page.tsx` (no React test harness). An unused tested helper is a smell — use it, don't re-implement.
+- **Form fields use the shared canonical box** `FIELD_STYLE` (`src/app/lib/fieldStyles.ts`) — never
+  hand-roll an inline field `style={{…}}`. `tests/harness/design-consistency.test.ts` fails the gate if a
+  page re-rolls the field-box signature (BC-71, after the BC-67/BC-60 drift shipped twice).
 - TDD mandatory: write the failing test FIRST, watch it fail, then minimal impl, then refactor.
 - Integration over unit tests where they catch more (drive the engine end-to-end).
 - Test data must include a test/mock/dummy/example marker.

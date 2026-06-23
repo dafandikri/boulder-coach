@@ -22,7 +22,7 @@ import { Spinner } from '@/app/components/Spinner';
 import { VB, MAX_GRADE, formatGrade } from '@/domain/grade';
 import { frequencyGuidance } from '@/domain/frequencyNotes';
 import type { BodyPart } from '@/domain/types';
-import type { CSSProperties } from 'react';
+import { FIELD_STYLE } from '@/app/lib/fieldStyles';
 
 const WEEKDAYS: { n: number; label: string }[] = [
   { n: 0, label: 'Sun' },
@@ -46,17 +46,9 @@ const BODY_PARTS: { part: BodyPart; label: string }[] = [
   { part: 'elbow', label: 'Elbow' },
 ];
 
-const SELECT_STYLE: CSSProperties = {
-  width: '100%',
-  borderRadius: 'var(--r-md)',
-  border: '2px solid var(--border)',
-  background: 'var(--surface)',
-  color: 'var(--text)',
-  fontFamily: 'var(--font-body)',
-  fontWeight: 700,
-  fontSize: 'var(--fs-base)',
-  padding: '10px 12px',
-};
+// BC-71: selects use the shared canonical field box (FIELD_STYLE) + full width,
+// so onboarding/profile never drift from the rest of the app's form look.
+const SELECT_STYLE = { ...FIELD_STYLE, width: '100%' } as const;
 
 /** Onboarding (first run) and profile editing share one form. All validation and
  *  persistence live in bootstrap.ts (covered); this component only collects input

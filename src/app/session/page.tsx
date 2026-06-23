@@ -14,6 +14,7 @@ import {
   warmupDone,
 } from '@/app/lib/sessionForm';
 import { sanitizeCountInput, normalizeCount } from '@/app/lib/sessionInput';
+import { FIELD_STYLE } from '@/app/lib/fieldStyles';
 import {
   formatRest,
   restConfigFor,
@@ -391,13 +392,12 @@ export default function SessionPage() {
                     onBlur={() => {
                       blurSets(b.id);
                     }}
+                    // BC-71: compact variant of the shared canonical field box —
+                    // inherits the app's radius/border/font, overrides only size.
                     style={{
+                      ...FIELD_STYLE,
                       width: 64,
-                      borderRadius: 'var(--r-sm)',
-                      border: '2px solid var(--border)',
-                      background: 'var(--surface)',
                       padding: '4px 8px',
-                      fontFamily: 'var(--font-mono)',
                       fontSize: 'var(--fs-sm)',
                     }}
                   />
