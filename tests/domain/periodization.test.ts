@@ -240,6 +240,109 @@ describe('generateProgram', () => {
   });
 });
 
+// BC-63: a beginner (VB/V0/V1/V2) must NOT be programmed an intermediate's max-effort plan —
+// no RPE-9 limit-boulder day, no 4×4 power-endurance day — both injury vectors on undeveloped
+// tendons/skin/pulleys. The fix is rotation-only: a beginner's week is built from the EXISTING,
+// unchanged low-intensity session types (volume-technique RPE 6 + antagonist-prehab RPE 6), so
+// every beginner block is identical-to-or-absent-versus the grade-agnostic output — additive-
+// safety holds under every reading (we removed the two hard days, never raised a block). This
+// keeps the change out of adaptation.ts/loadMetrics.ts (no safety-reviewer needed).
+describe('generateProgram — beginner-aware content (BC-63)', () => {
+  const beginnerGrades = [-1, 0, 1, 2]; // VB, V0, V1, V2
+  const allBlocks = (p: ReturnType<typeof generateProgram>) =>
+    p.weeks.flatMap((w) => w.sessions.flatMap((s) => s.blocks));
+  /** The grade-agnostic engine's peak intensity (limit day, hard phase). The whole point of
+   *  BC-63 is that a beginner never reaches this. */
+  const GRADE_AGNOSTIC_PEAK_RPE = 9;
+
+  it.each(beginnerGrades)(
+    'never gives a V%d-and-below climber a max-effort block (RPE never exceeds 6, strictly below the grade-agnostic peak)',
+    (g) => {
+      const p = generateProgram({ ...profile, currentGrade: g, goalGrade: 4 }, '2026-06-09');
+      for (const b of allBlocks(p)) {
+        // ≤ 6 across EVERY phase (hard, deload, peak) — and well below the RPE-9 limit work.
+        expect(b.targetRPE, `block ${b.id} (grade ${g}) exceeds RPE 6`).toBeLessThanOrEqual(6);
+        expect(b.targetRPE).toBeLessThan(GRADE_AGNOSTIC_PEAK_RPE);
+      }
+    },
+  );
+
+  it.each(beginnerGrades)(
+    'never gives a V%d-and-below climber a limit-boulder or power-endurance main, at ANY frequency 1..7',
+    (g) => {
+      for (let n = 1; n <= 7; n++) {
+        const p = generateProgram(
+          { ...profile, currentGrade: g, goalGrade: 4, sessionsPerWeek: n },
+          '2026-06-09',
+        );
+        const types = p.weeks.flatMap((w) => w.sessions.map((s) => s.type));
+        expect(types, `grade ${g}, ${n}×/week`).not.toContain('limit-boulder');
+        expect(types, `grade ${g}, ${n}×/week`).not.toContain('power-endurance');
+        const ids = allBlocks(p).map((b) => b.id);
+        expect(ids).not.toContain('main-limit');
+        expect(ids).not.toContain('main-4x4');
+        expect(p.weeks[0]!.sessions).toHaveLength(n); // frequency still honoured
+      }
+    },
+  );
+
+  it('gives a beginner a credible sub-limit stimulus every climbing day (volume-technique RPE 6, never RPE 9 limit)', () => {
+    const p = generateProgram({ ...profile, currentGrade: -1, goalGrade: 4 }, '2026-06-09');
+    const hardWeek = p.weeks[0]!; // PHASE_PATTERN[0] === 'hard'
+    const mains = hardWeek.sessions.flatMap((s) => s.blocks.filter((b) => b.category === 'main'));
+    // not an empty/placeholder plan — real moderate (RPE 6) climbing + technique work…
+    expect(mains.length).toBeGreaterThan(0);
+    expect(mains.some((b) => b.id === 'main-volume' && b.targetRPE === 6)).toBe(true);
+    // …and capped: nothing reaches the RPE-9 limit / RPE-8 4×4 the engine gives intermediates.
+    expect(mains.every((b) => b.targetRPE <= 6)).toBe(true);
+  });
+
+  it('keeps BOTH deload weeks genuinely easy for a beginner (mid-cycle and end-of-cycle, RPE ≤ 6)', () => {
+    const p = generateProgram({ ...profile, currentGrade: -1, goalGrade: 4 }, '2026-06-09');
+    for (const wi of [2, 5]) {
+      // PHASE_PATTERN = hard,hard,deload,hard,peak,deload → indices 2 and 5 are deloads.
+      expect(p.weeks[wi]!.phase).toBe('deload');
+      const mains = p.weeks[wi]!.sessions.flatMap((s) =>
+        s.blocks.filter((b) => b.category === 'main'),
+      );
+      for (const b of mains) expect(b.targetRPE).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it('keeps the beginner PEAK week safe too — no max-effort despite the peak label', () => {
+    const p = generateProgram({ ...profile, currentGrade: 0, goalGrade: 4 }, '2026-06-09');
+    const peak = p.weeks[4]!; // PHASE_PATTERN[4] === 'peak'
+    expect(peak.phase).toBe('peak');
+    const types = peak.sessions.map((s) => s.type);
+    expect(types).not.toContain('limit-boulder');
+    expect(types).not.toContain('power-endurance');
+    for (const b of peak.sessions.flatMap((s) => s.blocks)) {
+      expect(b.targetRPE).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it('still programs a V3 climber an intermediate plan (band boundary holds)', () => {
+    const p = generateProgram({ ...profile, currentGrade: 3 }, '2026-06-09');
+    const types = p.weeks.flatMap((w) => w.sessions.map((s) => s.type));
+    expect(types).toContain('limit-boulder'); // V3 = intermediate → still gets limit work
+  });
+
+  it('leaves the intermediate (V5) program byte-identical — no regression for the original audience', () => {
+    // The default profile is V5; assert the max-effort prescription the spec's v1 audience
+    // depends on is untouched: a hard-week limit day at RPE 9 and a 4×4 day at RPE 8.
+    const p = generateProgram(profile, '2026-06-09');
+    const hard = p.weeks[0]!;
+    const limit = hard.sessions
+      .find((s) => s.type === 'limit-boulder')!
+      .blocks.find((b) => b.id === 'main-limit')!;
+    const pe = hard.sessions
+      .find((s) => s.type === 'power-endurance')!
+      .blocks.find((b) => b.id === 'main-4x4')!;
+    expect(limit.targetRPE).toBe(9);
+    expect(pe.targetRPE).toBe(8);
+  });
+});
+
 const asOf = new Date('2026-06-11');
 
 describe('detectLayoff', () => {

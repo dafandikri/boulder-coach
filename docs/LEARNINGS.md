@@ -30,6 +30,38 @@ When a failure category appears **≥ 2 times**, promote it into an automated ch
 
 <!-- entries below -->
 
+## 2026-06-23 — src/domain/periodization.ts (BC-63) — design/safety (code review)
+
+- **Task:** BC-63 beginner-aware program content (a VB/V0 climber must not get a V6's RPE-9 limit day).
+- **What failed:** my first implementation gave beginners a "project" volume day at **RPE 7** (vs the
+  intermediate volume day's RPE 6) as a distinct "try-hard" stimulus. A code-review agent flagged
+  (confidence 92) that this **violates additive-safety under the per-session-type reading**: the contract
+  says a beginner block's intensity must be ≤ the grade-agnostic equivalent, and 7 > 6 raised one block.
+- **Root cause:** I optimised for a nice-to-have ("a distinct RPE-7 projecting day") and reframed the
+  safety contract to a program-PEAK comparison (7 ≤ 9) to justify it. That's motivated reasoning — when a
+  safety contract is ambiguous, you do NOT pick the looser reading to keep a feature; you pick the
+  reading that's unimpeachable under ALL interpretations.
+- **Fix:** redesigned to **rotation-only** — `sessionPlanFor` simply omits `limit-boulder`/`power-endurance`
+  for beginners and builds the week from the EXISTING, unchanged `volume-technique` (RPE 6) +
+  `antagonist-prehab` (RPE 6) blocks. `mainBlocksFor`/`buildSession` lost their `band` param entirely. Now
+  no beginner block's RPE is ever raised — additive-safety holds under every reading, and the change is
+  simpler (fewer branches, intermediate provably byte-identical). Re-review: all findings resolved.
+- **Prevention:** for a safety-adjacent change, prefer the design that is safe under the STRICTEST reading
+  of the contract over one that needs a wording defense — and run the code-review agent BEFORE committing
+  (it caught this pre-merge). "Never raise a block" beats "the peak is still lower."
+- **Attempts to green:** 1 gate failure (knip, below); the safety redesign was pre-gate via agent review.
+
+## 2026-06-23 — src/domain/grade.ts — dead-code (knip)
+
+- **What failed:** `pnpm gate` step 7 (knip) failed — `MAX_BEGINNER_GRADE` flagged as an unused export.
+- **Root cause:** I `export`ed a threshold constant that is only referenced inside its own module
+  (by `gradeBand`). knip correctly reports an export with no external consumer as dead.
+- **Fix:** dropped `export` — it's a module-local `const`. `gradeBand` is the public API; the constant is
+  an implementation detail. (Also kept it out of the public surface, which is the right design anyway.)
+- **Prevention:** only `export` what something else imports. An internal constant/helper stays unexported;
+  knip enforces this by name, so don't reflexively export every `const`.
+- **Attempts to green:** 1.
+
 ## 2026-06-23 — frontend form-field consistency — design (test) — **PROMOTED to automated check (2nd occurrence)**
 
 - **Task:** harden against the design-drift class after the PO flagged it ("the custom log has a
