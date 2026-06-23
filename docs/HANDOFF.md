@@ -12,6 +12,34 @@ file is the live position** — update it as the LAST step of any session (see "
 
 ---
 
+## Current state — 2026-06-23 (PO diagnosis: 3 new PBIs + 1 spec, BC-66 decision resolved — docs only, last touched by: Claude Opus 4.8)
+
+- **Product-owner grooming pass over the spec, code, research and backlog. No app code changed** — filed
+  three verified gaps (each traced to an exact line, not assumed) and resolved an open PO decision:
+  - **BC-72 (P2, S) — the adaptation banner is missing from the session player.** The spec's Screen 3
+    promises it; the engine IS wired (`bootstrap.ts:246` runs `adapt()`, surfaces `changes`) and **Today
+    renders the reasons** (`page.tsx:474`), but **`session/page.tsx` renders none** — so the blocks the
+    climber sees are adapted while the _why_ vanishes after "Start". Surfacing-only; extract a shared
+    `AdaptationBanner` so Today + player can't drift.
+  - **BC-73 (P1, M, safety) — persistent-pain escalation.** Rule 1's "see a physio if it persists" is a
+    passive **string**; nothing detects a body part flagged across many check-ins, so a tweak that becomes
+    a real injury (A2/PIP/TFCC) is never escalated. **Design spec drafted:**
+    [`docs/specs/persistent-pain-escalation-design.md`](specs/persistent-pain-escalation-design.md) — a
+    pure `painTrend.ts` (≥3 flags in 14 days → escalate), surfaced as a danger Callout + hard intensity
+    cap, additive-safety, kept OUT of `adaptation.ts`. Depends on BC-72's player surface.
+  - **BC-74 (P2, S) — first-week calibration orientation.** Cold-start week 1 is a deliberate light
+    calibration baseline (spec edge case) the app never explains, so it reads as under-delivering at the
+    activation moment. A dismissible "we're calibrating to you" Callout.
+  - **BC-66 resolved (PO decision):** for the back-to-back-hard-days problem, **(b) auto-downgrade** the
+    second adjacent max-effort day to `volume-technique` (interleave where n≥3; downgrade the unavoidable
+    n=2-adjacent case). Automatic, additive-safety, no user friction — the warning option (a) and
+    accept-it (c) were rejected.
+- **Verified:** `tests/crew/backlog-hygiene.test.ts` expected green (BC-72/73/74 unique, Files declared,
+  BC-73→BC-72 resolves); `pnpm gate` green. Shipping the docs via the supervised PR flow.
+- **Next (recommended build order):** **BC-72** (small, unblocks BC-73's surface) → **BC-73** (the
+  injury-safety win) → **BC-66** (now decided) → **BC-74**. Also still open: **BC-62** (content catalog,
+  flags 5 missing SVGs).
+
 ## Current state — 2026-06-23 (BC-63 beginner-aware program content shipped — last touched by: Claude Opus 4.8)
 
 - **BC-63 DONE — a VB/V0/V1/V2 beginner is no longer prescribed a V6's RPE-9 limit day or 4×4
